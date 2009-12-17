@@ -4,18 +4,19 @@ class IntegerType extends Type {
     public function getSQLType() {
         return "int";
     }
-    public function SQLize($data) {
-        return intval($data);
+    public function getSQLValue() {
+        return intval($this->value);
     }
-    public function getInterface($label, $data, $name) {
-        $data = intval($data);
-        return "$label <input type=\"text\" name=\"$name\" value=\"$data\" />";
+    public function getInterface($label) {
+        $name = $this->name;
+        $value = intval($this->value);
+        return "$label <input type=\"text\" name=\"$name\" value=\"$value\" />";
     }
-    public function read($name, &$value) {
-        $value = intval(@$_POST[$name]);
+    public function readInterface() {
+        $this->value = intval(@$_POST[$this->name]);
     }
-    public function write($value) {
-        return strval(intval($value));
+    public function __toString() {
+        return strval(intval($this->value));
     }
 }
 

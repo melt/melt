@@ -254,17 +254,17 @@ class api_database {
     * @desc Syncronizes a table in the database with
     * @desc the generic table model used by nanoMVC.
     * @param String $raw_table_name The name of the table to syncronize layout on.
-    * @param Array $nmvc_columns The columns in the table (not the special ID column). [name] => [type classname]
+    * @param Model $example_model An example of the model instance of the table to sync.
     */
-    public static function sync_table_layout($raw_table_name, $nmvc_columns) {
+    public static function sync_table_layout($raw_table_name, $example_model) {
         if (api_database::$initialized == false)
             api_database::init();
         // Make an array where [name] => sql_type
         $columns = array();
         // Check names and translate types.
-        foreach ($nmvc_columns as $name => $nmvc_type_class) {
+        foreach ($example_model->getColumns() as $name => $column) {
             self::verify_keyword($name);
-            $nmvc_type = forward_static_call(array($nmvc_type_class, 'getSQLType'));
+            $nmvc_type = $column->getSQLType();
             $columns[strtolower($name)] = self::translate_nmvc_type($nmvc_type);
         }
         $database = Config::$sql_database;

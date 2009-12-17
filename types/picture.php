@@ -7,14 +7,15 @@ class PictureType extends Type {
     public function getSQLType() {
         return "text";
     }
-    public function SQLize($data) {
-        return api_database::strfy($data);
+    public function getSQLValue() {
+        return api_database::strfy($this->value);
     }
-    public function getInterface($label, $data, $name) {
+    public function getInterface($label) {
+        $name = $this->name;
         // Returns the status and a file upload control.
-        $purl = api_images::get_picture_url($data);
+        $purl = api_images::get_picture_url($this->value);
         if ($purl !== FALSE) {
-            $thumburl = api_images::get_picture_url($data, $this->thumb_width, $this->thumb_height);
+            $thumburl = api_images::get_picture_url($this->value, $this->thumb_width, $this->thumb_height);
             $remname = $name."_rem";
             $status = "<br /><a target=\"_blank\" href=\"$purl\">" . __("Current image:")
                 . " <img alt=\"" . __("Current image") . "\" src=\"$thumburl\" /></a><br /><input title=\""
@@ -25,23 +26,24 @@ class PictureType extends Type {
         $supported = api_images::get_supported_formats();
         return $status."<br /><input type=\"file\" name=\"$name\" /><br /><small>$supported</small>";
     }
-    public function read($name, &$value) {
+    public function readInterface() {
+        $name = $this->name;
         if (isset($_FILES[$name]) && intval($_FILES[$name]['size']) > 0) {
             // Replacing image.
-            api_images::remove_picture($value);
-            $value = api_images::import_uploaded_picture($name);
-            if ($value === false)
+            api_images::remove_picture($this->value);
+            $this->value = api_images::import_uploaded_picture($name);
+            if ($this->value === false)
                 Flash::doFlashRedirect(REQURL, __("Unable to import image, invalid format."));
         } else if (isset($_POST[$name . '_rem']) && $_POST[$name . '_rem'] == 'delete') {
             // Removing image.
-            api_images::remove_picture($value);
-            $value = null;
+            api_images::remove_picture($this->value);
+            $this->value = null;
         }
     }
-    public function write($value) {
-        $purl = api_images::get_picture_url($value);
+    public function __toString() {
+        $purl = api_images::get_picture_url($this->value);
         if ($purl !== false) {
-            $thumburl = api_images::get_picture_url($value, $this->thumb_width, $this->thumb_height);
+            $thumburl = api_images::get_picture_url($this->value, $this->thumb_width, $this->thumb_height);
             return "<a target=\"_blank\" href=\"$purl\"><img alt=\"" . __("Current image") . "\" src=\"$thumburl\" /></a>";
         } else
             return "<i>" . __("No image uploaded.") . "</i>";

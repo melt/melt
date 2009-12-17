@@ -23,6 +23,7 @@ include "api/class.Mailer.php";
 include "api/class.Model.php";
 include "api/class.Object.php";
 include "api/class.Type.php";
+include "api/class.Reference.php";
 include "api/class.View.php";
 include "api/class.VoidLayout.php";
 

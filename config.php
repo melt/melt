@@ -8,7 +8,7 @@ Config::$site_id = 'noid';
 Config::$site_name = 'Some nanoMVC Site';
 
 // The root url is used when generating anchors and links.
-Config::$rooturl = 'http://localhost/';
+Config::$rooturl = 'http://nanomvc.dev.coops.se/nanomvc.dev.coops.se/';
 
 
 /**** MAIL CONFIGURATION ****/
@@ -27,8 +27,8 @@ Config::$email_admin = 'admin@localhost';
 
 Config::$sql_driver = 'mysql';
 Config::$sql_host = 'localhost';
-Config::$sql_user = 'root';
-Config::$sql_password = '';
+Config::$sql_user = 'coops';
+Config::$sql_password = 'sqlpassword';
 Config::$sql_database = 'nmvc';
 Config::$sql_prefix = 'nmvc';
 
@@ -39,7 +39,7 @@ Config::$maintence = true;
 // Optional. Will replace "Please try again in a moment." with any better EST message in the 503 Service Unavailable notification.
 Config::$downshedule = '';
 // Desired developer cookie key to access the site in development/maintence mode.
-Config::$dev_key = 'dev_key_123';
+Config::$dev_key = 'aldilagi';
 
 // The maximum error log size in kilobytes. When this limit is reached, errors will not be appended.
 Config::$max_logsize = 1000;

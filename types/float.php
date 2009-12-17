@@ -4,18 +4,19 @@ class FloatType extends Type {
     public function getSQLType() {
         return "float";
     }
-    public function SQLize($data) {
-        return floatval($data);
+    public function getSQLValue() {
+        return floatval($this->value);
     }
-    public function getInterface($label, $data, $name) {
-        $data = floatval($data);
-        return "$label <input type=\"text\" name=\"$name\" value=\"$data\" />";
+    public function getInterface($label) {
+        $name = $this->name;
+        $value = floatval($this->value);
+        return "$label <input type=\"text\" name=\"$name\" value=\"$value\" />";
     }
-    public function read($name, &$value) {
-        $value = floatval(@$_POST[$name]);
+    public function readInterface() {
+        $this->value = floatval(@$_POST[$this->name]);
     }
-    public function write($value) {
-        return strval(floatval($value));
+    public function __toString() {
+        return strval(floatval($this->value));
     }
 }
 

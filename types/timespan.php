@@ -25,18 +25,20 @@ class TimespanType extends Type {
     public function getSQLType() {
         return "int";
     }
-    public function SQLize($data) {
-        return intval($data);
+    public function getSQLValue() {
+        return intval($this->value);
     }
-    public function getInterface($label, $data, $name) {
+    public function getInterface($label) {
+        $name = $this->name;
         $title = ($this->title != "")? ' title="' . $this->title . '" ': '';
-        $span = ($data != 0)? $this->write($data): $date_syntax_helper;
+        $span = ($this->value != 0)? (string) $this: $date_syntax_helper;
         if (!$dateonly)
             $stamp .= $time_syntax_helper;
         return "$label <input$title type=\"text\" name=\"$name\" value=\"$span\" />"
             . "<br /><span style=\"font-size: 9px;\">" . __("Tidsintervall, exempel: 3 dagar, 5 timmar och 9 sekunder") . "</span>";
     }
-    public function read($name, &$value) {
+    public function readInterface() {
+        $name = $this->name;
         $human_string = strval(@$_POST[$name]);
         $tokens = preg_split("#\s+#", trim($human_string));
         // Numbers + valid token = add.
@@ -59,9 +61,10 @@ class TimespanType extends Type {
             } else
                 $last_number = "";
         }
+        $this->value = $value;
     }
-    public function write($value) {
-        $value = floatval($value);
+    public function __toString() {
+        $value = floatval($this->value);
         $unit_spans = array(60, 3600, 86400, 604800, 2629744, 31557600);
         $value_united = array();
         foreach (array_reverse($unit_spans) as $span) {

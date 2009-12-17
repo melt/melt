@@ -7,18 +7,19 @@ class BooleanType extends Type {
     public function getSQLType() {
         return "boolean";
     }
-    public function SQLize($data) {
-        return $data? "TRUE": "FALSE";
+    public function getSQLValue() {
+        return $this->value? "TRUE": "FALSE";
     }
-    public function getInterface($label, $data, $name) {
-        $data = ($data == true)? "checked=\"checked\"": "";
-        return "<input type=\"checkbox\" name=\"$name\" $data value=\"checked\" /> $label";
+    public function getInterface($label) {
+        $name = $this->name;
+        $value = ($this->value == true)? "checked=\"checked\"": "";
+        return "<input type=\"checkbox\" name=\"$name\" $value value=\"checked\" /> $label";
     }
-    public function read($name, &$value) {
-        $value = (@$_POST[$name] == "checked");
+    public function readInterface() {
+        $this->value = (@$_POST[$this->name] == "checked");
     }
-    public function write($value) {
-        return $value? $this->true_str: $this->false_str;
+    public function __toString() {
+        return $this->value? $this->true_str: $this->false_str;
     }
 }
 

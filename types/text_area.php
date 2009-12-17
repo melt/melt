@@ -4,18 +4,19 @@ class TextAreaType extends Type {
     public function getSQLType() {
         return "text";
     }
-    public function SQLize($data) {
-        return api_database::strfy($data);
+    public function getSQLValue() {
+        return api_database::strfy($this->value);
     }
-    public function getInterface($label, $data, $name) {
-        $data = api_html::escape($data);
-        return "$label <textarea name=\"$name\">$data</textarea>";
+    public function getInterface($label) {
+        $name = $this->name;
+        $value = api_html::escape($this->value);
+        return "$label <textarea name=\"$name\">$value</textarea>";
     }
-    public function read($name, &$value) {
-        $value = @$_POST[$name];
+    public function read() {
+        $this->value = @$_POST[$this->name];
     }
-    public function write($value) {
-        return api_html::escape(strval($value));
+    public function __toString() {
+        return api_html::escape(strval($this->value));
     }
 }
 

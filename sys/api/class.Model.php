@@ -31,19 +31,80 @@ class Model {
         return;
     }
 
-
     /**
-    * @desc Direct instancing is not availible anywhere else.
-    * @desc The creator functions must be used.
+    * @desc Verify that the specified classname exists and extends the parent.
     */
-    private function __construct() { }
+    private static function existsAndExtends($class_name, $parent) {
+        if (!class_exists($class_name)) {
+            _nanomvc_autoload($class_name);
+            if (!class_exists($class_name))
+                throw new Exception("The class '$class_name' is unknown or does not exist!");
+        }
+        if (!is_subclass_of($class_name, $parent))
+            throw new Exception("The class '$class_name' was expected to extend the '$parent' class but didn't!");
+    }
 
     /**
-    * @desc Returns a list of the columns of the specified model.
+    * @desc Translates the field specifiers to type handler instances.
+    */
+    private function __construct($id) {
+        $name = get_class($this);
+        static $parsed_model_cache = array();
+        if (!isset($parsed_model_cache[$name])) {
+            $parsed_model = array();
+            $vars = get_class_vars($name);
+            $columns = array();
+            foreach ($vars as $colname => $coltype) {
+                // Ignore non column members.
+                if ($colname[0] == '_')
+                    continue;
+                // Parse attributes.
+                $attributes = explode(",", $coltype);
+                $clsname = $attributes[0];
+                if ($clsname == "")
+                    throw new Exception("Invalid type: Column '$colname' has nothing specified in type field.");
+                $clsname .= "Type";
+                if (substr($colname, -3) == "_id") {
+                    // Expects the type handler of this class to extend the special reference type.
+                    $ptr_model_name = substr($colname, 0, -3);
+                    self::existsAndExtends($ptr_model_name, "Model");
+                    self::existsAndExtends($clsname, "Reference");
+                    $type_handler = new $clsname($colname, null, $ptr_model_name);
+                } else {
+                    // Standard type handles must extend the type class.
+                    self::existsAndExtends($clsname, "Type");
+                    if (is_subclass_of($clsname, "Reference"))
+                        throw new Exception("Invalid type: Column '$colname' has a Reference Type, without beeing a reference.");
+                    $type_handler = new $clsname($colname, null);
+                }
+                if (count($attributes) > 1) {
+                    for ($i = 1; $i < count($attributes); $i++) {
+                        $attribute = $attributes[$i];
+                        $eqp = strpos($attribute, "=");
+                        if ($eqp === false)
+                            throw new Exception("Syntax Error: The attribute token '$eqp' lacks equal sign (=).");
+                        $key = substr($attribute, 0, $eqp);
+                        $val = substr($attribute, $eqp + 1);
+                        $type_handler->$key = $val;
+                    }
+                }
+                // Cache this untouched type instance and clone it to other new instances.
+                $parsed_model[$colname] = $type_handler;
+            }
+            $parsed_model_cache[$name] = $parsed_model;
+        } else
+            $parsed_model = $parsed_model_cache[$name];
+        foreach ($parsed_model as $colname => $type_instance)
+            $this->$colname = clone $type_instance;
+        $this->_id = intval($id);
+    }
+
+    /**
+    * @desc Returns a list of the column names of the specified model.
     * @desc Note: Does not return the implicit ID column.
     * @return Array An array of the column names in the specified model.
     */
-    public static function getColumns($name) {
+    public static function getColumnNames($name) {
         $columns = array();
         if (!class_exists($name) || !is_subclass_of($name, 'Model'))
             throw new Exception("'$name' is not a valid class and/or not a valid Model!");
@@ -54,49 +115,20 @@ class Model {
     }
 
     /**
-    * @desc Returns a list of the column types.
-    * @desc Note: Does not return the implicit ID column.
-    * @return Array An array of key values where keys are column names and values are their type handler instances.
+    * @desc Returns a list of the columns in this model for dynamic iteration.
+    * @return Array An array of the columns in this model.
     */
-    public static function getColumnTypes($name) {
-        static $col_cache = array();
-        if (isset($col_cache[$name]))
-            return $col_cache[$name];
-        $vars = get_class_vars($name);
-        // Remap to an array that contains non storing columns.
+    public function getColumns() {
+        $vars = get_object_vars($this);
         $columns = array();
-        foreach ($vars as $colname => $coltype) {
-            // Ignore non column members.
-            if ($colname[0] == '_')
-                continue;
-            // Parse attributes.
-            $attributes = explode(",", $coltype);
-            $clsname = $attributes[0];
-            if ($clsname == "")
-                throw new Exception("Invalid type: Column '$colname' has nothing specified in type field.");
-            $clsname .= "Type";
-            // Soft crash if expected type does not exist.
-            if (!class_exists($clsname)) {
-                _nanomvc_autoload($clsname);
-                if (!class_exists($clsname))
-                    throw new Exception("Invalid type: No type handler class declared/found called '$clsname' for column '$colname'.");
+        foreach ($vars as $colname => $value) {
+            if ($colname[0] != '_') {
+                $columns[$colname] = $value;
+                if (!is_object($value))
+                    throw new Exception("The column '$colname' is corrupt. Expected object, found: " . var_export($value, true) . ".");
             }
-            $type_handler = new $clsname();
-            if (count($attributes) > 1) {
-                for ($i = 1; $i < count($attributes); $i++) {
-                    $attribute = $attributes[$i];
-                    $eqp = strpos($attribute, "=");
-                    if ($eqp === false)
-                        throw new Exception("Syntax Error: The attribute token '$eqp' lacks equal sign (=).");
-                    $key = substr($attribute, 0, $eqp);
-                    $val = substr($attribute, $eqp + 1);
-                    $type_handler->$key = $val;
-                }
-            }
-            $columns[$colname] = $type_handler;
         }
-        // Cache and return.
-        return $col_cache[$name] = $columns;
+        return $columns;
     }
 
     /**
@@ -115,26 +147,26 @@ class Model {
         return $this->removeByID($id);
     }
 
-    private function getInsertSQL($name) {
-        $columns = self::getColumnTypes($name);
+    private function getInsertSQL() {
+        $name = get_class($this);
         static $key_list_cache = array();
         if (!isset($key_list_cache[$name])) {
-            $key_list = implode(',', array_keys($columns));
+            $key_list = implode(',', Model::getColumnNames($name));
             $key_list_cache[$name] = $key_list;
         } else
             $key_list = $key_list_cache[$name];
         $value_list = array();
-        foreach ($columns as $colname => $coltype)
-            $value_list[] = $coltype->SQLize($this->$colname);
+        foreach ($this->getColumns() as $colname => $column)
+            $value_list[] = $column->getSQLValue();
         $value_list = implode(',', $value_list);
         return "INSERT INTO `"._tblprefix."$name` ($key_list) VALUES ($value_list)";
     }
 
-    private function getUpdateSQL($name) {
-        $columns = self::getColumnTypes($name);
+    private function getUpdateSQL() {
+        $name = get_class($this);
         $value_list = array();
-        foreach ($columns as $colname => $coltype)
-            $value_list[] = "`$colname`=" . $coltype->SQLize($this->$colname);
+        foreach ($this->getColumns() as $colname => $column)
+            $value_list[] = "`$colname`=" . $column->getSQLValue();
         $value_list = implode(',', $value_list);
         $id = intval($this->_id);
         return "UPDATE `"._tblprefix."$name` SET $value_list WHERE id=$id";
@@ -145,19 +177,15 @@ class Model {
     * @desc If this is a new instance, it's inserted, otherwise, it's updated.
     */
     public function store() {
-        $name = get_class($this);
-        $columns = self::getColumnTypes($name);
-        // Generate query.
-        $value_list = implode(',', $columns);
         $update_ex = null;
         if ($this->_id > 0) {
             // Updating existing row.
             $this->beforeUpdate();
-            api_database::query($this->getUpdateSQL($name));
+            api_database::query($this->getUpdateSQL());
         } else {
             // Inserting.
             $this->beforeInsert();
-            api_database::query($this->getInsertSQL($name));
+            api_database::query($this->getInsertSQL());
             $this->_id = api_database::insert_id();
         }
     }
@@ -167,8 +195,8 @@ class Model {
     */
     public static function syncLayout() {
         $name = get_called_class();
-        $columns = self::getColumnTypes($name, true);
-        api_database::sync_table_layout($name, $columns);
+        $model = new $name(-1);
+        api_database::sync_table_layout($name, $model);
     }
 
     /**
@@ -177,11 +205,7 @@ class Model {
     */
     public static final function insertNew() {
         $name = get_called_class();
-        $model = new $name();
-        $columns = self::getColumnTypes($name);
-        foreach ($columns as $colname => $coltype)
-            $model->$colname = null;
-        $model->id = -1;
+        $model = new $name(-1);
         return $model;
     }
 
@@ -190,35 +214,49 @@ class Model {
     * @return Model The model with the ID specified or FALSE.
     */
     public static final function selectByID($id) {
+        $id = intval($id);
         $name = get_called_class();
-        $model = new $name();
-        $res = api_database::query("SELECT * FROM `"._tblprefix."$name` WHERE id = ".intval($id));
-        if (api_database::get_num_rows($res) != 1)
-            return false;
-        $sql_row = api_database::next_assoc($res);
-        $columns = self::getColumnTypes($name, true);
-        foreach ($columns as $colname => $coltype)
-            $model->$colname = $sql_row[$colname];
-        $model->_id = $sql_row['id'];
+        static $cache = array();
+        if (isset($cache[$name][$id])) {
+            $model = $cache[$name][$id];
+        } else {
+            $id = intval($id);
+            $model = new $name($id);
+            $res = api_database::query("SELECT * FROM `"._tblprefix."$name` WHERE id = ".$id);
+            if (api_database::get_num_rows($res) != 1)
+                return false;
+            $sql_row = api_database::next_assoc($res);
+            foreach ($model->getColumns() as $colname => $column)
+                $column->set($sql_row[strtolower($colname)]);
+            $model->_id = $id;
+            $cache[$name][$id] = $model;
+        }
         return $model;
     }
-
 
     private static final function makeArrayOf($name, $sql_result) {
         $length = api_database::get_num_rows($sql_result);
         if ($length == 0)
             return array();
         $array = array();
-        $columns = self::getColumnTypes($name, true);
         for ($at = 0; $at < $length; $at++) {
             $row = api_database::next_assoc($sql_result);
-            $on = new $name();
+            $id = intval($row['id']);
+            $on = new $name($id);
             $array[] = $on;
-            foreach ($columns as $colname => $coltype)
-                $on->$colname = $row[$colname];
-            $on->_id = $row['id'];
+            foreach ($on->getColumns() as $colname => $column)
+                $column->set($row[strtolower($colname)]);
         }
         return $array;
+    }
+
+
+    /**
+    * @desc Makes a deep selection that also resolves any referenced models specified by the contains attribute
+    *       or resolves ALL referenced models if the contains attribute is null.
+    */
+    public static final function deepSelect($contains = null) {
+
     }
 
     /**
@@ -370,6 +408,7 @@ class Model {
     /**
     * @desc Returns an simple but useful navigation array for the last enlistment.
     *       The navigation array consists of pagenumbers and triple dots that indicate number jumps.
+    *       Tip: Use is_integer() to separate page numbers from tripple dot "jump" indicators.
     */
     public static final function enlist_navigation() {
         // TODO: Write navigatior.
@@ -408,7 +447,7 @@ class Model {
             foreach (self::$_invalid_mif_data as $col_name => $data)
                 $this->$col_name = $data;
         // Get columns.
-        $columns = self::getColumnTypes($name);
+        $columns = $this->getColumns();
         $fields_found = array();
         // Create user interfaces.
         $fields = (is_array($fields)? $fields: array());
@@ -502,12 +541,11 @@ class Model {
                     return;
                 }
                 // Loop trough and read all specified data.
-                $col_types = self::getColumnTypes($mif_name, true);
-                foreach ($col_types as $name => $type)
+                foreach ($model->getColumns() as $name => $column)
                     if (in_array($name, $mif_fields))
-                        $col_types[$name]->read($name, $model->$name);
+                        $column->readInterface();
                     else if (isset($mif_defaults[$name]))
-                        $model->$name = $mif_defaults[$name];
+                        $column($mif_defaults[$name]);
                 // Validate all data.
                 $invalid_fields = $model->validate();
                 if (count($invalid_fields) > 0) {

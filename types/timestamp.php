@@ -7,23 +7,24 @@ class TimestampType extends Type {
     public function getSQLType() {
         return "int";
     }
-    public function SQLize($data) {
-        return intval($data);
+    public function getSQLValue() {
+        return intval($this->value);
     }
-    public function getInterface($label, $data, $name) {
+    public function getInterface($label) {
+        $name = $this->name;
         $title = ($this->title != "")? ' title="' . $this->title . '" ': '';
         $dateonly = $this->only_date == "true";
         $date_syntax_helper = __('YYYY-MM-DD');
         $time_syntax_helper = __(', HH:MM:SS');
-        $stamp = ($data != 0)? $this->write($data): $date_syntax_helper;
-        if (!$dateonly && $data == 0)
+        $stamp = ($this->value != 0)? (string) $this: $date_syntax_helper;
+        if (!$dateonly && $this->value == 0)
             $stamp .= $time_syntax_helper;
         return "$label <input$title type=\"text\" name=\"$name\" value=\"$stamp\" />"
             . "<br /><span style=\"font-size: 9px;\">" . __('Timestamp Format')
             . ": " . $date_syntax_helper . ($dateonly? "": $time_syntax_helper) . "</span>";
     }
-    public function read($name, &$value) {
-        $newstamp = strval(@$_POST[$name]);
+    public function readInterface() {
+        $newstamp = strval(@$_POST[$this->name]);
         // Get the numeric clusters.
         $m = preg_split('#[^0-9]+#', $newstamp);
         // Filter all empty positions.
@@ -54,11 +55,11 @@ class TimestampType extends Type {
             } else
                 $time = 0;
         }
-        $value = intval($time);
+        $this->value = intval($time);
     }
-    public function write($value) {
+    public function __toString() {
         $dateonly = $this->only_date == "true";
-        return date(!$dateonly? 'Y-m-d, H:i:s': 'Y-m-d', intval($value));
+        return date(!$dateonly? 'Y-m-d, H:i:s': 'Y-m-d', intval($this->value));
     }
 
 }

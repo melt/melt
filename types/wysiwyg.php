@@ -1,6 +1,9 @@
 <?php
 /**
-* @desc Requires OpenWYSIWYG installed in the webroot /openwysiwyg/.
+* @desc This type requires OpenWYSIWYG installed in the webroot /openwysiwyg/.
+*
+* Warning: Using this type enables the user to inject javascript so it's a potential XSS vunerability.
+*          It should only be passed to authorized and trused users, such as administrators.
 */
 
 
@@ -44,26 +47,27 @@ class WysiwygType extends Type {
     public function getSQLType() {
         return "text";
     }
-    public function SQLize($data) {
-        return api_database::strfy($data);
+    public function getSQLValue() {
+        return api_database::strfy($this->value);
     }
-    public function getInterface($label, $data, $name) {
+    public function getInterface($label) {
+        $name = $this->name;
         if (!$this->initialized)
             $this->initialize();
         $sms = (strtolower(@$this->size) == "full")? ', full': ', small';
         $myid = "i_" . api_string::random_hex_str(8);
         return "$label
                 <textarea id=\"$myid\" name=\"$name\">" .
-                    api_html::escape($data) .
+                    api_html::escape($this->value) .
                "</textarea>" .
                "<script type=\"text/javascript\">WYSIWYG.attach('$myid'$sms);</script>";
     }
-    public function read($name, &$value) {
-        $value = @$_POST[$name];
+    public function readInterface() {
+        $this->value = @$_POST[$this->name];
     }
 
-    public function write($value) {
-        return strval($value);
+    public function __toString() {
+        return strval($this->value);
     }
 }
 

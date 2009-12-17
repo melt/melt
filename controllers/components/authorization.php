@@ -1,4 +1,13 @@
 <?php
+/**
+* Preconditions:
+*
+* This components expects there to be a "user" model with the fields:
+* username (text)
+* password (text)
+* lastlogin (int)
+* lvl (int)
+*/
 
 // Configuration for the authorization component.
 define("REGISTRATION_TIMEOUT_DAYS", 3);
@@ -100,7 +109,7 @@ class AuthorizationComponent {
             Flash::doFlash(__("Invalid username or password!"));
         } else {
             $usr = $rows[0];
-            $lvl = intval($usr->lvl);
+            $lvl = intval($usr->lvl->get());
             if ($lvl == 0)
                 throw new Exception("The zero user level is reserved for non authorized sessions only.");
             if ($lvl == -1) {
@@ -116,9 +125,9 @@ class AuthorizationComponent {
             }
             $_SESSION['auth']['timeout'] = self::getLoginTimeout();
             $_SESSION['auth']['level'] = $lvl;
-            $_SESSION['auth']['usr'] = strval($usr->username);
+            $_SESSION['auth']['usr'] = strval($usr->username->get());
             $_SESSION['auth']['usrid'] = intval($usr->getID());
-            $usr->lastlogin = time();
+            $usr->lastlogin->set(time());
             $usr->store();
             if (isset($_SESSION['login_return'])) {
                 $goto = $_SESSION['login_return']['from'];
