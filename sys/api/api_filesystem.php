@@ -14,6 +14,7 @@ class api_filesystem {
     }
 
     /**
+    * @param Returns the fstat() info of a file.
     * @param String $file File to open.
     * @return An fstat() information array.
     */
@@ -39,6 +40,7 @@ class api_filesystem {
         api_filesystem::get_dir_subtree($dir, $recursive, $with_directories, $ret);
         return $ret;
     }
+
     private static function get_dir_subtree($dir, $recursive, $with_directories, &$ret) {
         if ($with_directories)
             $ret[$dir] = filemtime($dir . '.');
