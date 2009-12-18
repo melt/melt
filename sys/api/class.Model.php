@@ -105,20 +105,26 @@ class Model {
     * @return Array An array of the column names in the specified model.
     */
     public static function getColumnNames($name) {
+        static $columns_name_cache = array();
+        if (isset($columns_name_cache[$name]))
+            return $columns_name_cache[$name];
         $columns = array();
         if (!class_exists($name) || !is_subclass_of($name, 'Model'))
             throw new Exception("'$name' is not a valid class and/or not a valid Model!");
         foreach (get_class_vars($name) as $colname => $def)
             if ($colname[0] != '_')
                 $columns[] = $colname;
-        return $columns;
+        return $columns_name_cache[$name] = $columns;
     }
 
+    private $_columns_cache = null;
     /**
     * @desc Returns a list of the columns in this model for dynamic iteration.
     * @return Array An array of the columns in this model.
     */
     public function getColumns() {
+        if ($this->_columns_cache !== null)
+            return $this->_columns_cache;
         $vars = get_object_vars($this);
         $columns = array();
         foreach ($vars as $colname => $value) {
@@ -128,7 +134,7 @@ class Model {
                     throw new Exception("The column '$colname' is corrupt. Expected object, found: " . var_export($value, true) . ".");
             }
         }
-        return $columns;
+        return $this->_columns_cache = $columns;
     }
 
     /**
@@ -216,47 +222,68 @@ class Model {
     public static final function selectByID($id) {
         $id = intval($id);
         $name = get_called_class();
-        static $cache = array();
-        if (isset($cache[$name][$id])) {
-            $model = $cache[$name][$id];
-        } else {
+        $model = self::touchModelInstance($name, $id);
+        if ($model === false) {
             $id = intval($id);
             $model = new $name($id);
             $res = api_database::query("SELECT * FROM `"._tblprefix."$name` WHERE id = ".$id);
             if (api_database::get_num_rows($res) != 1)
                 return false;
             $sql_row = api_database::next_assoc($res);
-            foreach ($model->getColumns() as $colname => $column)
-                $column->set($sql_row[strtolower($colname)]);
-            $model->_id = $id;
-            $cache[$name][$id] = $model;
+            $model = self::touchModelInstance($name, $id, $sql_row);
         }
         return $model;
     }
 
+    /**
+    * @desc Creates an array of model instances from a given sql result.
+    */
     private static final function makeArrayOf($name, $sql_result) {
         $length = api_database::get_num_rows($sql_result);
         if ($length == 0)
             return array();
         $array = array();
         for ($at = 0; $at < $length; $at++) {
-            $row = api_database::next_assoc($sql_result);
-            $id = intval($row['id']);
-            $on = new $name($id);
-            $array[] = $on;
-            foreach ($on->getColumns() as $colname => $column)
-                $column->set($row[strtolower($colname)]);
+            $sql_row = api_database::next_assoc($sql_result);
+            $array[] = self::touchModelInstance($name, intval($sql_row['id']), $sql_row);
         }
         return $array;
     }
 
+    /**
+    * @desc Passing all sql result model instancing through this function to enable caching.
+    * @param Mixed $sql_row Either a sql row result or null if function should return false instead of instancing model.
+    */
+    private static final function touchModelInstance($name, $id, $sql_row = null) {
+        static $cache = array();
+        if (isset($cache[$name][$id]))
+            return $cache[$name][$id];
+        if ($sql_row === null)
+            return false;
+        $model = new $name($id);
+        foreach ($model->getColumns() as $colname => $column)
+            $column->set($sql_row[strtolower($colname)]);
+        return $cache[$name][$id] = $model;
+    }
 
     /**
-    * @desc Makes a deep selection that also resolves any referenced models specified by the contains attribute
-    *       or resolves ALL referenced models if the contains attribute is null.
+    * @desc Returns an array of all children of the specified child model. (Instances that point to this model.)
+    *       Will throw an exception if the specified child model does not point to this model.
+    * @param String $chold_model Name of the child model that points to this model.
+    * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
+    * @param Integer $offset (OFFSET xyz) The offset from the begining to select results from.
+    * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
+    * @param String $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
+    * @desc Array An array of the selected model instances.
     */
-    public static final function deepSelect($contains = null) {
-
+    public final function selectChildren($child_model, $where = "", $offset = 0, $limit = 0, $order = "") {
+        $name = get_class($this);
+        $column_names = self::getColumnNames($child_model);
+        $ptr_field = $name . "_id";
+        if (!in_array($ptr_field, $column_names))
+            throw new Exception("Invalid child model! Does not contain pointer to this model. (Expected field '$ptr_field' missing)");
+        $id = $this->getID();
+        return $this->selectWhere("$ptr_field = $id");
     }
 
     /**
