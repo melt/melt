@@ -57,7 +57,7 @@ class api_string {
     }
 
     /**
-    * @desc Generates a 16 byte random key.
+    * @desc Generates a random key. The key is 16 bytes and can contain ANY 00-FF byte.
     */
     public static function gen_key() {
         return md5(mt_rand() . mt_rand() . "\x23\x73\x35\x56" . mt_rand() . mt_rand(), true);
@@ -122,6 +122,13 @@ class api_string {
         $cleartext = substr($cleartext, 0, -16);
         // Verify and return result.
         return ($verification == md5(SIMPLE_CRYPT_SALT . $cleartext, true))? $cleartext: false;
+    }
+
+    /**
+    * @desc Takes a text that is cased like this: fooBarLol and converts it to underlined form: foo_bar_lol
+    */
+    function cased_to_underline($text) {
+        return strtolower(preg_replace('#([a-z])([A-Z])#', '\1_\2', $text));
     }
 }
 

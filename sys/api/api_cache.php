@@ -96,7 +96,8 @@ class api_cache {
     */
     static function delete_cache($tag, $key) {
         $path = api_cache::path($tag, $key);
-        unlink($path);
+        if (file_exists($path))
+            unlink($path);
     }
 
     /**

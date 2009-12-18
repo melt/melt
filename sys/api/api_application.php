@@ -43,7 +43,7 @@ function _nanomvc_autoload($class_name) {
     // Autoloading of incorrectly named classes unsupported.
     if (strpos($class_name, "_") !== false)
         return;
-    $file_name = strtolower(preg_replace('#([a-z])([A-Z])#', '\1_\2', $class_name));
+    $file_name = api_string::cased_to_underline($class_name);
     // Helpers are autoloaded trough convention, otherwise try loading as a model.
     if (substr($file_name, -7) == '_helper') {
         $file_name = substr($file_name, 0, -7);

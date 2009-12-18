@@ -1,5 +1,10 @@
 <?php
 
+/**
+* @desc This class is only used when rendering cake views.
+*       It allows transparent access to the view controller variables,
+*       and non transparent standard cake access trough getVar and set.
+*/
 class View {
     private $_controller;
 
@@ -79,30 +84,6 @@ class View {
         // Elements inherit the layout.
         $dummy_controller->layout = api_application::$_application_controller->layout;
         api_application::show("elements/$elementPath", $dummy_controller);
-    }
-
-    /**
-     * @desc Generates a unique, non-random DOM ID for an object, based on the object type and the target URL.
-     * @param string $object Type of object, i.e. 'form' or 'link'
-     * @param string $url The object's target URL
-     * @return string
-     */
-    function uuid($object, $url) {
-        static $i = 0;
-        $i++;
-        // Parse Cake PHP url's.
-        if (is_array($url))
-            $url = '/' . implode('/', $url);
-        return "i" . $i . "_" . substr(md5($object . '$' . api_string::str_represent($url), 0, 8));
-    }
-
-    /**
-    * @desc Adds content to the internal scripts buffer. This buffer is made available in the layout as $scripts_for_layout. This method is helpful when creating helpers that need to add javascript or css directly to the layout. Keep in mind that scripts added from the layout, or elements in the layout will not be added to $scripts_for_layout. This method is most often used from inside helpers, like the Javascript and Html Helpers.
-    * @param string $name NOT USED IN nanoMVC
-    * @param string $content Content of script to add. Will insert this buffer into the <head> of the xhtml document if api_html is used as a layout.
-    */
-    function addScript(string $name, string $content) {
-        api_html::insert_head($content);
     }
 }
 
