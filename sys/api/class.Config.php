@@ -1,9 +1,6 @@
 <?php
 
 class Config {
-    // The site unique identifier.
-    public static $site_id = 'noid';
-
     // The name of the site.
     public static $site_name = 'Nameless Site';
 
@@ -37,6 +34,14 @@ class Config {
     public static $email_smtp = 'localhost';
     // An e-mail address that reaches an administrator for administrative notifications and other site related messages.
     public static $email_admin = 'admin@localhost';
+
+    // Set to true to enable translation.
+    public static $translation = true;
+    // Set to true to enable translation capture. If capture is disabled, translations not found in the language file will not be added to the translation table (so the translation table will not be used).
+    public static $translation_capture = false;
+    // SQL table used for translation.
+    public static $translation_table = "nanomvc_translations";
+
 
     // Database configuration.
     public static $sql_driver = 'mysql';
