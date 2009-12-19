@@ -40,6 +40,10 @@ function _handle_request() {
         $topic = "503 Service Unavailable";
         $msg = "<p>" . __("Temporary maintence is in effect so the site is currently not availible.") . "</p>" . $est;
         api_navigation::info($topic, $msg);
+    } else if (devmode && REQURL == "/dev/export") {
+        // Export translation.
+        $lang = $_GET['lang'];
+        _export_translation($lang);
     } else {
         // Pass request to application.
         api_application::execute(REQURL);
