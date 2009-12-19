@@ -213,7 +213,7 @@ class api_application {
     */
     public static function send_static_file($path, $show_404 = false) {
         $webroot_path = "webroot/$path";
-        if (file_exists($webroot_path))
+        if (file_exists($webroot_path) && !is_dir($webroot_path))
             api_navigation::send_file($webroot_path, api_filesystem::resolve_mime($path));
         else if ($show_404)
             api_navigation::show_404();
