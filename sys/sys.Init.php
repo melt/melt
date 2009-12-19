@@ -21,7 +21,7 @@ restore_workdir();
 ob_implicit_flush(true);
 
 // Evaluate version.
-define('nmvc_version', '0.3.2');
+define('nmvc_version', '0.3.3');
 
 // Define the core directory.
 define("CORE_DIR", dirname(__FILE__));
