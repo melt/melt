@@ -1,0 +1,41 @@
+# Only utf-8 policy.
+AddDefaultCharset utf-8
+
+# Turn off indexing.
+Options -Indexes
+
+# Enable symlinks.
+Options +FollowSymLinks
+
+# Start the rewrite engine.
+RewriteEngine On
+
+# Use Vector to display error documents.
+ErrorDocument 400 /bootstrap.php
+ErrorDocument 401 /bootstrap.php
+ErrorDocument 402 /bootstrap.php
+ErrorDocument 403 /bootstrap.php
+ErrorDocument 404 /bootstrap.php
+ErrorDocument 405 /bootstrap.php
+ErrorDocument 406 /bootstrap.php
+ErrorDocument 407 /bootstrap.php
+ErrorDocument 408 /bootstrap.php
+ErrorDocument 409 /bootstrap.php
+ErrorDocument 410 /bootstrap.php
+ErrorDocument 411 /bootstrap.php
+ErrorDocument 412 /bootstrap.php
+ErrorDocument 413 /bootstrap.php
+ErrorDocument 414 /bootstrap.php
+ErrorDocument 415 /bootstrap.php
+ErrorDocument 416 /bootstrap.php
+ErrorDocument 417 /bootstrap.php
+ErrorDocument 500 /bootstrap.php
+ErrorDocument 501 /bootstrap.php
+ErrorDocument 502 /bootstrap.php
+ErrorDocument 503 /bootstrap.php
+ErrorDocument 504 /bootstrap.php
+ErrorDocument 505 /bootstrap.php
+
+# Rewrite everything to nanoMVC.
+RewriteCond %{REQUEST_URI} !^bootstrap.php
+RewriteRule .* bootstrap.php
