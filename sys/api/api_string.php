@@ -66,7 +66,7 @@ class api_string {
     /**
     * @desc Encrypts the cleartext, returns an encrypted base64 encoded string with a linear sized compared to input size.
     */
-    function simple_crypt($cleartext, $password) {
+    public static function simple_crypt($cleartext, $password) {
         // Append verification.
         $cleartext .= md5(SIMPLE_CRYPT_SALT . $cleartext, true);
         // Append padding.
@@ -93,7 +93,7 @@ class api_string {
     * @desc Decrypts the cryptotext outputted from simple_crypt with the given password.
     * @desc Returns FALSE if decryption failed.
     */
-    function simple_decrypt($crypttext, $password) {
+    public static function simple_decrypt($crypttext, $password) {
         // Decode.
         $crypttext = base64_decode($crypttext);
         // Need to contain at least 3 blocks.
@@ -127,9 +127,22 @@ class api_string {
     /**
     * @desc Takes a text that is cased like this: fooBarLol and converts it to underlined form: foo_bar_lol
     */
-    function cased_to_underline($text) {
+    public static function cased_to_underline($text) {
         return strtolower(preg_replace('#([a-z])([A-Z])#', '\1_\2', $text));
     }
+
+    /**
+    * @desc Verifies that the given string length is within a certain range.
+    */
+    public static function in_range($string, $min = -1, $max = -1) {
+        if (strlen($string) < $min)
+            return false;
+        else if ($max >= 0 && strlen($string) > $max)
+            return false;
+        else
+            return true;
+    }
+
 }
 
 ?>
