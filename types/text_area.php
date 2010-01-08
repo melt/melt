@@ -12,7 +12,7 @@ class TextAreaType extends Type {
         $value = api_html::escape($this->value);
         return "$label <textarea name=\"$name\">$value</textarea>";
     }
-    public function read() {
+    public function readInterface() {
         $this->value = @$_POST[$this->name];
     }
     public function __toString() {

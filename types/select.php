@@ -51,7 +51,7 @@ class SelectType extends Reference {
             $where .= " AND ";
         $where .= "id = $value";
         $count = forward_static_call(array($this->to_model, 'count'), $where);
-        if ($count != 1 || ($this->may_self_target != "true" && $value == $this->value))
+        if ($count != 1)
             $value = 0;
         $this->value = $value;
     }

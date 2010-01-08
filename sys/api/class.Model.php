@@ -32,6 +32,19 @@ class Model {
     }
 
     /**
+    * @desc Useful for additional calculations you need to do
+    *       after any changes where made to any model instances in the database.
+    * @desc Designed to be overriden.
+    */
+    public static function afterChange() {
+        return;
+    }
+    private static function afterChangeCallback($model_name) {
+        if (api_database::affected_rows() > 0)
+            call_user_func(array($model_name, "afterChange"));
+    }
+
+    /**
     * @desc Verify that the specified classname exists and extends the parent.
     */
     private static function existsAndExtends($class_name, $parent) {
@@ -85,6 +98,8 @@ class Model {
                             throw new Exception("Syntax Error: The attribute token '$eqp' lacks equal sign (=).");
                         $key = substr($attribute, 0, $eqp);
                         $val = substr($attribute, $eqp + 1);
+                        if (!isset($type_handler->$key))
+                            throw new Exception("Error in $name.$colname attribute list: The type '$clsname' does not have an attribute named '$key'.");
                         $type_handler->$key = $val;
                     }
                 }
@@ -194,6 +209,8 @@ class Model {
             api_database::query($this->getInsertSQL());
             $this->_id = api_database::insert_id();
         }
+        // Invoke after change callback. (if rows changed)
+        self::afterChangeCallback(get_class($this));
     }
 
     /**
@@ -267,23 +284,54 @@ class Model {
     }
 
     /**
-    * @desc Returns an array of all children of the specified child model. (Instances that point to this model.)
+    * @desc Returns an array of all children of the specified child model. (Instances that point to this instance.)
     *       Will throw an exception if the specified child model does not point to this model.
+    * @desc For security reasons, use api_database::strfy() to escape and quote
+    *       any strings you want to build your sql query from.
     * @param String $chold_model Name of the child model that points to this model.
     * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
     * @param Integer $offset (OFFSET xyz) The offset from the begining to select results from.
     * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
     * @param String $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
-    * @desc Array An array of the selected model instances.
+    * @return Array An array of the selected model instances.
     */
     public final function selectChildren($child_model, $where = "", $offset = 0, $limit = 0, $order = "") {
+        $ptr_field = $this->getChildPointer($child_model);
+        $id = $this->getID();
+        $where = trim($where);
+        if (strlen($where) > 0)
+            $where = " AND $where";
+        return call_user_func(array($child_model, "selectWhere"), "$ptr_field = $id$where", $offset, $limit, $order);
+    }
+
+    /**
+    * @desc Returns the number of children of the specified child model. (Instances that point to this instance.)
+    *       Will throw an exception if the specified child model does not point to this model.
+    * @desc For security reasons, use api_database::strfy() to escape and quote
+    *       any strings you want to build your sql query from.
+    * @param String $chold_model Name of the child model that points to this model.
+    * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
+    * @return Integer Count of child models.
+    */
+    public final function countChildren($child_model, $where = "") {
+        $ptr_field = $this->getChildPointer($child_model);
+        $id = $this->getID();
+        $where = trim($where);
+        if (strlen($where) > 0)
+            $where = " AND $where";
+        return call_user_func(array($child_model, "count"), "$ptr_field = $id$where");
+    }
+
+    /**
+    * @desc Returns the name of the child pointer field and validates the child.
+    */
+    private function getChildPointer($child_model) {
         $name = get_class($this);
         $column_names = self::getColumnNames($child_model);
-        $ptr_field = $name . "_id";
+        $ptr_field = strtolower($name . "_id");
         if (!in_array($ptr_field, $column_names))
             throw new Exception("Invalid child model! Does not contain pointer to this model. (Expected field '$ptr_field' missing)");
-        $id = $this->getID();
-        return $this->selectWhere("$ptr_field = $id");
+        return $ptr_field;
     }
 
     /**
@@ -292,10 +340,11 @@ class Model {
     * @desc For security reasons, use api_database::strfy() to escape and quote
     * @desc any strings you want to build your sql query from.
     * @param String $where (WHERE xyz) If specified, any ammount of conditionals to filter out the row.
+    * @param String $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
     * @desc Model The model instance that matches or FALSE if there are no match.
     */
-    public static final function selectFirst($where) {
-        $match = self::selectWhere($where, 0, 1);
+    public static final function selectFirst($where, $order = "") {
+        $match = self::selectWhere($where, 0, 1, $order);
         return (count($match) == 0)? FALSE: $match[0];
     }
 
@@ -344,7 +393,9 @@ class Model {
     */
     public static final function removeByID($id) {
         $name = get_called_class();
-        return api_database::query("DELETE FROM `"._tblprefix."$name` WHERE id = ".$id);
+        $ret = api_database::query("DELETE FROM `"._tblprefix."$name` WHERE id = ".$id);
+        self::afterChangeCallback($name);
+        return $ret;
     }
     /**
     * @desc This function removes the selection of fields that matches the given SQL commands.
@@ -354,7 +405,9 @@ class Model {
     */
     public static final function removeFreely($sqldata) {
         $name = get_called_class();
-        return api_database::query("DELETE FROM `"._tblprefix."$name`".$sqldata);
+        $ret =  api_database::query("DELETE FROM `"._tblprefix."$name`".$sqldata);
+        self::afterChangeCallback($name);
+        return $ret;
     }
 
     /**
@@ -367,7 +420,9 @@ class Model {
         $name = get_called_class();
         if ($where != "")
             $where = " WHERE ".$where;
-        return api_database::query("DELETE FROM `"._tblprefix."$name`".$where);
+        $ret = api_database::query("DELETE FROM `"._tblprefix."$name`".$where);
+        self::afterChangeCallback($name);
+        return $ret;
     }
 
     /**
@@ -375,12 +430,10 @@ class Model {
     * @desc For security reasons, use api_database::strfy() to escape and quote
     * @desc any strings you want to build your sql query from.
     * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
-    * @param Integer $offset (OFFSET xyz) The offset from the begining to select results from.
     * @return Integer Number of matched rows.
     */
-    public static final function count($where = "", $offset = 0) {
+    public static final function count($where = "") {
         $name = get_called_class();
-        $offset = intval($offset);
         if ($where != "")
             $where = " WHERE ".$where;
         $result = api_database::query("SELECT COUNT(*) FROM `"._tblprefix."$name`".$where);
@@ -572,7 +625,7 @@ class Model {
                     if (in_array($name, $mif_fields))
                         $column->readInterface();
                     else if (isset($mif_defaults[$name]))
-                        $column($mif_defaults[$name]);
+                        $column->set($mif_defaults[$name]);
                 // Validate all data.
                 $invalid_fields = $model->validate();
                 if (count($invalid_fields) > 0) {
@@ -601,11 +654,10 @@ class Model {
     * @desc Writes this model interface to an array by calling write on each type.
     */
     public final function write() {
-        $name = get_class($this);
         $out = array();
-        $columns = self::getColumnTypes($name);
+        $columns = $this->getColumns();
         foreach ($columns as $name => $type)
-            $out[$name] = $type->write($this->$name);
+            $out[$name] = (string) $type;
         $out['id'] = $this->getID();
         return $out;
     }
