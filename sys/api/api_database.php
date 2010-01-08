@@ -150,7 +150,7 @@ class api_database {
     }
 
     /**
-    * @desc Returns the affected rows in the last query.
+    * @desc Returns the number of affected rows in the last query.
     */
     public static function affected_rows() {
         switch (_vcms_dbdriver) {
