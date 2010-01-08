@@ -190,7 +190,7 @@ class api_application {
         // Create an instance of the controller and invoke action.
         $controller = new $clsname();
         $controller->beforeFilter();
-        $show = $controller->$action_name($arguments);
+        $show = call_user_func_array(array($controller, $action_name), $arguments);
         $controller->beforeRender();
         // NULL = Display default view if it exists, FALSE = Display nothing, STRING = Force display of this view or crash, ELSE crash.
         if ($show === false)
@@ -284,9 +284,28 @@ class api_application {
     }
 
     /**
+    * @desc Renders a view (template) and then returns the output instead of showing it (flusing it to the browser).
+    * @param String $view_path The path of the view to show.
+    * @param Controller $controller The controller instance that runs this view.
+    * @param Boolean $just_try Set to true to not crash when view can't be found.
+    */
+    public static function render($view_path, $controller = null, $just_try = false) {
+        ob_start();
+        api_application::show($view_path, $controller, $just_try);
+        $output = ob_get_contents();
+        ob_end_clean();
+        return $output;
+    }
+
+    /**
     * @desc Makes sure given view is compiled.
     */
     private static function compile($view_path) {
+        // Clean the view path:
+        $view_path = strtolower(trim($view_path));
+        $view_path = str_replace("\\", "/", $view_path);
+        $view_path = preg_replace("#/{2,}#", "/", $view_path);
+        // Calculate identifiers.
         $wrap_func = "tw_" . substr(md5($view_path), 0, 8);
         $wrap_dir = "cache/" . dirname($view_path);
         if (!file_exists($wrap_dir))
@@ -516,7 +535,7 @@ class api_application {
                     foreach ($arg_list as $key => $val)
                         $pop .= "\$__controller->$key = $val;";
                     $ret = "<?php \$__element_controller = new Controller(); $pop \$__element_controller->layout = \$__controller->layout;" .
-                           "api_application::show('/elements/' . $path, \$__element_controller, false); ?>";
+                           "api_application::show('elements/' . $path, \$__element_controller, false); ?>";
                     break;
                 case 'url':
                     // Custom smarty function: creates a local url from path.

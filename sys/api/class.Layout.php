@@ -76,6 +76,13 @@ class Layout {
         $this->at = array_pop($this->at_stack);
         $this->reverse = array_pop($this->reverse_stack);
     }
+
+    /**
+    * @desc Sets the content of a section.
+    */
+    public function setSection($name, $value) {
+        $this->sections[$name] = $value;
+    }
 }
 
 
