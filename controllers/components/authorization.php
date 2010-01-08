@@ -87,7 +87,7 @@ class AuthorizationComponent {
             $days = 0;
             $daystime = $days * 24 * 60 * 60;
             $time = time();
-            User::removeWhere("(accesslvl = -2) AND (($time - registred) >= $daystime)");
+            User::removeWhere("(lvl = -2) AND (($time - registred) >= $daystime)");
         }
     }
 
