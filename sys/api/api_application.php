@@ -26,7 +26,7 @@ function _r($var, $args) {
 }
 
 /**
-* @desc Declaration enables PHP autoloading, this is a magic function name.
+* @desc Declaration enables PHP autoloading, this is a PHP "magic function".
 */
 function __autoload($class_name) {
     // Do not autoload if application hasn't started.
