@@ -295,4 +295,9 @@ class api_navigation {
     }
 }
 
+// Shortcut for make_local_url.
+function url($local_path) {
+    return api_navigation::make_local_url($local_path);
+}
+
 ?>
