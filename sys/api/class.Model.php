@@ -58,6 +58,23 @@ class Model {
     }
 
     /**
+    * @desc Returns the pointer model name from the column name or NULL if column is not of pointer type.
+    */
+    private static function getPointerModelName($colname) {
+        $colname_parts = array_reverse(explode("_", $colname));
+        $single_ptr = $colname_parts[0] == "id";
+        $multi_ptr = !$single_ptr && $colname_parts[1] == "id" && strval(intval($colname_parts[0])) === $colname_parts[0];
+        if ($single_ptr || $multi_ptr) {
+            // Evaluate the pointer model name.
+            unset($colname_parts[0]);
+            if ($multi_ptr)
+                unset($colname_parts[1]);
+            return implode("_", array_reverse($colname_parts));
+        } else
+            return null;
+    }
+
+    /**
     * @desc Translates the field specifiers to type handler instances.
     */
     private function __construct($id) {
@@ -77,9 +94,9 @@ class Model {
                 if ($clsname == "")
                     throw new Exception("Invalid type: Column '$colname' has nothing specified in type field.");
                 $clsname .= "Type";
-                if (substr($colname, -3) == "_id") {
+                $ptr_model_name = self::getPointerModelName($colname);
+                if ($ptr_model_name !== null) {
                     // Expects the type handler of this class to extend the special reference type.
-                    $ptr_model_name = substr($colname, 0, -3);
                     self::existsAndExtends($ptr_model_name, "Model");
                     self::existsAndExtends($clsname, "Reference");
                     $type_handler = new $clsname($colname, null, $ptr_model_name);
@@ -296,12 +313,13 @@ class Model {
     * @return Array An array of the selected model instances.
     */
     public final function selectChildren($child_model, $where = "", $offset = 0, $limit = 0, $order = "") {
-        $ptr_field = $this->getChildPointer($child_model);
+        $ptr_fields = $this->getChildPointers($child_model);
         $id = $this->getID();
         $where = trim($where);
         if (strlen($where) > 0)
             $where = " AND $where";
-        return call_user_func(array($child_model, "selectWhere"), "$ptr_field = $id$where", $offset, $limit, $order);
+        $where = "(" . implode(" = $id OR ", $ptr_fields) . " = $id)" . $where;
+        return call_user_func(array($child_model, "selectWhere"), $where, $offset, $limit, $order);
     }
 
     /**
@@ -314,24 +332,30 @@ class Model {
     * @return Integer Count of child models.
     */
     public final function countChildren($child_model, $where = "") {
-        $ptr_field = $this->getChildPointer($child_model);
+        $ptr_fields = $this->getChildPointers($child_model);
         $id = $this->getID();
         $where = trim($where);
         if (strlen($where) > 0)
             $where = " AND $where";
-        return call_user_func(array($child_model, "count"), "$ptr_field = $id$where");
+        $where = "(" . implode(" = $id OR ", $ptr_fields) . " = $id)" . $where;
+        return call_user_func(array($child_model, "count"), $where);
     }
 
     /**
-    * @desc Returns the name of the child pointer field and validates the child.
+    * @desc Returns the name of the child pointer fields and validates the child.
     */
-    private function getChildPointer($child_model) {
-        $name = get_class($this);
+    private function getChildPointers($child_model) {
+        $name = strtolower(get_class($this));
         $column_names = self::getColumnNames($child_model);
-        $ptr_field = strtolower($name . "_id");
-        if (!in_array($ptr_field, $column_names))
-            throw new Exception("Invalid child model! Does not contain pointer to this model. (Expected field '$ptr_field' missing)");
-        return $ptr_field;
+        $ptr_fields = array();
+        foreach ($column_names as $colname) {
+            $ptr_model_name = self::getPointerModelName($colname);
+            if (strtolower($ptr_model_name) == $name)
+                $ptr_fields[] = $colname;
+        }
+        if (count($ptr_fields) == 0)
+            throw new Exception("Invalid child model! Does not contain pointer(s) to this model. (Expected field(s) '" . $name . "_id[_...]' missing)");
+        return $ptr_fields;
     }
 
     /**
