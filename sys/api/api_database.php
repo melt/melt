@@ -222,32 +222,30 @@ class api_database {
     }
 
     /**
-    * @desc Returns true if the given table exits.
+    * @desc Returns false if the current column is a subset of the specified column.
+    * If current is int(9) or int(123) and specified is int, this returns false.
+    * However, if current is int(23) and specified is int(12), this returns true.
     */
-    public static function table_exists($table_name) {
-        $database = Config::$sql_database;
-        $table_name = _tblprefix . $table_name;
-        $res = self::query("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = '$database' AND TABLE_NAME = '$table_name'");
-        $ret = self::next_array($res);
-        return ($ret[0] == 1);
-    }
-
-    /**
-    * @desc Translates an nano mvc column type to the proper database one.
-    */
-    public static function translate_nmvc_type($ab_type) {
-        static $translate_map = array();
-        if (count($translate_map) == 0) {
-            // Initialize the translation map.
-            $translate_map[self::DRIVER_MYSQL]['text'] = 'text';
-            $translate_map[self::DRIVER_MYSQL]['int'] = 'int';
-            $translate_map[self::DRIVER_MYSQL]['float'] = 'float';
-            $translate_map[self::DRIVER_MYSQL]['boolean'] = 'boolean';
+    private static function sql_column_need_update($specified, $current) {
+        $lengthy_pattern = '#(\w+)\s*\((\d+)\)#';
+        $specified_is_lengthy = (1 == preg_match($lengthy_pattern, $specified, $lengthy_specified));
+        $current_is_lengthy = (1 == preg_match($lengthy_pattern, $current, $lengthy_current));
+        if (!$current_is_lengthy && !$specified_is_lengthy) {
+            // Needs update if they differ.
+            return strtolower($specified) != strtolower($current);
+        } else if ($current_is_lengthy && !$specified_is_lengthy) {
+            // Needs update if type differ.
+            $current_type = strtolower($lengthy_current[1]);
+            return $current_type != strtolower($specified);
+        } else if (!$current_is_lengthy && $specified_is_lengthy) {
+            // Needs update (specified has length).
+            return true;
+        } else {
+            // Needs update if lengths differ.
+            $current_length = intval($lengthy_current[2]);
+            $specified_length = intval($lengthy_specified[2]);
+            return $current_length != $specified_length;
         }
-        $ab_type = strtolower($ab_type);
-        if (!isset($translate_map[_vcms_dbdriver][$ab_type]))
-            throw new Exception("The nanoMVC column type '$ab_type' is not defined for current driver!");
-        return $translate_map[_vcms_dbdriver][$ab_type];
     }
 
     /**
@@ -259,34 +257,42 @@ class api_database {
     public static function sync_table_layout($raw_table_name, $example_model) {
         if (api_database::$initialized == false)
             api_database::init();
+        $raw_table_name = strtolower($raw_table_name);
         // Make an array where [name] => sql_type
         $columns = array();
-        // Check names and translate types.
+        // Check names and fetches types.
         foreach ($example_model->getColumns() as $name => $column) {
             self::verify_keyword($name);
-            $nmvc_type = $column->getSQLType();
-            $columns[strtolower($name)] = self::translate_nmvc_type($nmvc_type);
+            $columns[strtolower($name)] = $column->getSQLType();
+        }
+        // Gets all tables.
+        static $all_tables = null;
+        if ($all_tables === null) {
+            $all_tables = array();
+            $all_tables_query = self::query("SHOW TABLES");
+            while (false !== ($table = self::next_array($all_tables_query)))
+                $all_tables[] = strtolower($table[0]);
         }
         $database = Config::$sql_database;
         $table_name = _tblprefix . $raw_table_name;
-        if (self::table_exists($raw_table_name)) {
+        if (in_array($table_name, $all_tables)) {
             // Altering existing table.
-            $current_columns = self::query("SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = '$database' AND TABLE_NAME = '$table_name'");
+            $current_columns = self::query("DESCRIBE $table_name");
             while (false !== ($column = self::next_array($current_columns))) {
                 $current_name = strtolower($column[0]);
                 $current_type = strtolower($column[1]);
                 $expected_type = $columns[$current_name];
                 // ID column is special case.
                 if ($current_name == 'id') {
-                    if ($current_type != 'int')
-                        throw new Exception("ID column found in $table_name, but with unexpected type. Has it been tampered with? Script not written to handle this condition.");
+                    if (!api_string::starts_with($current_type, "int"))
+                        throw new Exception("ID column found in $table_name, but with unexpected type ($current_type). Has it been tampered with? Script not written to handle this condition.");
                     continue;
                 }
                 if (!isset($columns[$current_name])) {
                     // Unknown column, drop it.
                     self::query("ALTER TABLE `$table_name` DROP COLUMN $current_name");
                     continue;
-                } else if ($current_type != $expected_type) {
+                } else if (self::sql_column_need_update($expected_type, $current_type)) {
                     // Invalid datatype, alter it.
                     self::query("ALTER TABLE `$table_name` MODIFY COLUMN $current_name $expected_type");
                 }
