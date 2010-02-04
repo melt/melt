@@ -194,7 +194,7 @@ class api_navigation {
             throw new Exception("make_local_url: \$path must start with forward slash ('/')!");
         $path = (substr(CONFIG::$rooturl, -1) == '/') ?
                  substr(CONFIG::$rooturl, 0, -1) . $path :
-                 CONFIG::$rooturl . $path;
+                 CONFIG::$rooturl . urlencode(strtolower($path));
         return api_navigation::make_url($path, $get);
     }
 
@@ -240,7 +240,7 @@ class api_navigation {
             $url .= "?";
             foreach ($get as $key => $val)
                 if (!empty($val))
-                    $url .= urlencode($key)."=".urlencode($val)."&";
+                    $url .= urlencode($key) . "=" . urlencode($val) . "&";
             $url = substr($url, 0, -1);
         }
         return $url;
