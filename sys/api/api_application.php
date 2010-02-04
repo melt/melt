@@ -54,6 +54,8 @@ function _nanomvc_autoload($class_name) {
     } else if (substr($file_name, -10) == '_component') {
         $file_name = substr($file_name, 0, -10);
         $cls_path = "controllers/components/$file_name.php";
+    } else if (substr($file_name, -11) == '_controller') {
+        $cls_path = "controllers/$file_name.php";
     } else {
         $cls_path = "models/$file_name.php";
     }
@@ -86,9 +88,8 @@ class api_application {
 
     /**
     * @desc Syncs this applications model layout with the database.
-    *       WARNING: Can result in major data loss.
     */
-    public static function sync_layout() {
+    private static function sync_layout() {
         // Need to be in developer mode to do this.
         if (!devmode)
             api_navigation::show_xyz(403);
@@ -103,32 +104,38 @@ class api_application {
                 foreach ($cls_name_tokens as &$token)
                     $token = ucfirst($token);
                 $cls_name = implode($cls_name_tokens);
-                if (!class_exists($cls_name) || !in_array('Model', class_parents($cls_name)))
-                    throw new Exception("The model class file '$model' unexpectedly didn't declare a Model extended class with the name '$cls_name'.");
+                $parents = class_parents($cls_name);
+                if (class_exists($cls_name) && in_array('SingletonModel', $parents))
+                    continue; // Singletonmodels is not stored as tables.
+                if (!class_exists($cls_name) || !in_array('Model', $parents))
+                    throw new Exception("The model class file '$model' unexpectedly didn't declare a Model/SingletonModel extended class with the name '$cls_name'.");
                 // Syncronize this model.
                 forward_static_call(array($cls_name, 'syncLayout'));
             }
         }
+        SingletonModel::syncWithDatabase();
         exit;
     }
 
     /**
-    * @desc Executes the given path.
-    * @param String $path The full path to execute.
+    * @desc INTERNAL FUNCTION DO NOT CALL
+    * @desc Executes the application.
     */
-    public static function execute($path) {
+    public static function _application_execute() {
         self::$_application_state = self::STATE_EXECUTING;
+        $path = REQURL;
         // Include default application classes.
         require "app_controller.php";
         require "app_model.php";
         // First see if any model interface data was posted.
         if (isset($_POST['_mif_header']))
             Model::processInterfaceAction();
-        // Parse call tokens.
-        $arguments = explode('/', $path);
-        $controller = strtolower($arguments[1]);
-        $action = strtolower(@$arguments[2]);
-        // Reserved/special controllers.
+        // Parse the request into controllers, actions and arguments.
+        $parts = explode('/', strtolower($path));
+        $controller = $parts[1];
+        $action = @$parts[2];
+        $arguments = array_slice($parts, 3);
+        // Handle reserved/special controllers.
         if ($controller == "image" || $controller == "thumbnail") {
             api_images::send_picture();
             exit;
@@ -142,19 +149,57 @@ class api_application {
                 api_navigation::show_404();
             exit;
         }
-        // Default controller/action = index.
+        // Replace empty with index keyword. Also, the index keyword is reserved,
+        // prevent visiting "index" explicitly.
+        // This prevents double URL's and is good for consistancy and SEO.
+        // This also means that you can't pass arguments to index, unless you use request URL rewriting.
+        if ($controller == "index")
+            // Redirect to / page.
+            api_navigation::redirect(url("/"));
+        else if (strlen($controller) == 0) {
+            // This is only the / page.
+            if ($path != "/")
+                api_navigation::redirect(url("/"));
+            $controller = "index";
+            $action = "index";
+        } else {
+            if ($action == "index")
+                api_navigation::redirect(url("/$controller"));
+            else if (strlen($action) == 0) {
+                // This is only the /$controller page.
+                $action = "index";
+                if (count($parts) > 2)
+                    api_navigation::redirect(url("/$controller"));
+            }
+        }
+        // If any arguments are empty the URL is invalid, remove them and redirect the browser.
+        // This prevents double URL's and is good for consistancy and SEO.
+        $clear_arg = array();
+        foreach ($arguments as $arg)
+            if (strlen($arg) > 0)
+                $clear_arg[] = $arg;
+        if (count($arguments) != count($clear_arg)) {
+            $clear_arg = count($clear_arg) > 0? "/" . implode("/", $clear_arg): "";
+            api_navigation::redirect("/$controller/$action" . $clear_arg);
+            exit;
+        }
+        // Standard controller, rewrite the url if it should.
+        AppController::rewriteRequestUrl($controller, $action, $arguments);
+        // Running controllers with reserved names is not allowed.
         $reserved = array('dev', 'elements', 'helpers', 'layouts');
         if (!in_array($controller, $reserved)) {
-            if ($controller == '')
-                $controller = 'index';
-            if ($action == '')
-                $action = 'index';
-            unset($arguments[0]);
-            unset($arguments[1]);
-            unset($arguments[2]);
             // If there is a controller with this name, run it.
-            if (self::run($controller, $action, array_values($arguments), false))
+            if (self::run($controller, $action, $arguments, false))
                 return;
+            // Take the manipulated path sequance and turn it back into a path.
+            if ($controller == "index")
+                $path = "/";
+            else if ($action == "index")
+                $path = "/$controller";
+            else if (count($arguments) == 0)
+                $path = "/$controller/$action";
+            else
+                $path = "/$controller/$action/" . implode("/", $arguments);
         }
         // Pass request to standard webroot handling instead.
         self::send_static_file($path, true);
@@ -168,7 +213,7 @@ class api_application {
     * @param Boolean $show_404_on_noaction If it should 404 if controller exists but not action.
     * @returns Boolean False if the controller did not exist, or if the controller + action did not exist and $show_404_on_noaction is true. Otherwise True.
     */
-    public static function run($controller_name, $action_name, $arguments, $show_404_on_noaction = false) {
+    private static function run($controller_name, $action_name, $arguments, $show_404_on_noaction = false) {
         $controller_path = "controllers/$controller_name" . "_controller.php";
         if (!file_exists($controller_path))
             return false;
@@ -211,7 +256,7 @@ class api_application {
     * @param String $path Path of file to send in webroot catalog.
     * @param Boolean $show_404 Set to true to show 404 instead of crashing when path doesn't exist.
     */
-    public static function send_static_file($path, $show_404 = false) {
+    private static function send_static_file($path, $show_404 = false) {
         $webroot_path = "webroot/$path";
         if (file_exists($webroot_path) && !is_dir($webroot_path))
             api_navigation::send_file($webroot_path, api_filesystem::resolve_mime($path));
@@ -239,12 +284,13 @@ class api_application {
     }
 
     /**
+    * @desc INTERNAL FUNCTION DO NOT CALL
     * @desc Shows a view (template).
     * @param String $view_path The path of the view to show.
     * @param Controller $controller The controller instance that runs this view.
     * @param Boolean $just_try Set to true to not crash when view can't be found.
     */
-    public static function show($view_path, $controller = null, $just_try = false) {
+    private static function show($view_path, $controller = null, $just_try = false) {
         // Create a dummy controller if no controller was specified.
         if ($controller === null)
             $controller = new Controller();
@@ -283,18 +329,53 @@ class api_application {
         }
     }
 
-    /**
-    * @desc Renders a view (template) and then returns the output instead of showing it (flusing it to the browser).
-    * @param String $view_path The path of the view to show.
-    * @param Controller $controller The controller instance that runs this view.
-    * @param Boolean $just_try Set to true to not crash when view can't be found.
+    /*
+    * @desc Attempts to run the specified controller action with specified arguments in an internal subrequest.
+    * @param String $controller_name Name of controller to run.
+    * @param String $action_name Name of action to run.
+    * @param Array $arguments Arguments of controller.
     */
-    public static function render($view_path, $controller = null, $just_try = false) {
+    public static function invoke($controller_name, $action_name, $arguments) {
+        // Save the application state.
+        $_application_state = self::$_application_state;
+        $_application_controller = self::$_application_controller;
+        // Start buffer.
         ob_start();
-        api_application::show($view_path, $controller, $just_try);
+        // Invoke.
+        api_application::run($controller_name, $action_name, $arguments, false);
+        // Get buffered output.
         $output = ob_get_contents();
         ob_end_clean();
+        // Restore application state.
+        self::$_application_state = $_application_state;
+        self::$_application_controller = $_application_controller;
         return $output;
+    }
+
+    /**
+    * @desc Renders a view (template) in an internal subrequest. After that, returns the output instead of showing it (flusing it to the browser).
+    * @param String $view_path The path of the view to show.
+    * @param Controller $controller The controller instance that runs this view.
+    * @param Boolean $return Set to false to ouput buffer instead of returning it.
+    */
+    public static function render($view_path, $controller = null, $return = true) {
+        // Save the application state.
+        $_application_state = self::$_application_state;
+        $_application_controller = self::$_application_controller;
+        // Buffer if returning.
+        if ($return)
+            ob_start();
+        // Render.
+        api_application::show($view_path, $controller, false);
+        // Restore application state.
+        self::$_application_state = $_application_state;
+        self::$_application_controller = $_application_controller;
+        if ($return) {
+            // Return output.
+            $output = ob_get_contents();
+            ob_end_clean();
+            return $output;
+        }
     }
 
     /**
@@ -525,17 +606,32 @@ class api_application {
                     self::open_block('foreach', $special);
                     $ret = "<?php $index_code foreach ($from as $key_code \$_$item) { $index_iter ?>";
                     break;
+                case 'thumb':
+                    // Thumbnailing wrapper.
+                    if (!isset($arg_list['src']))
+                        throw new Exception(self::err_prefix() . "Parameter 'src' missing in {thumb}!");
+                    if (!isset($arg_list['width']))
+                        $width = intval($arg_list['width']);
+                    else
+                        $width = "null";
+                    if (!isset($arg_list['height']))
+                        $height = intval($arg_list['height']);
+                    else
+                        $height = "null";
+                    $ret = "<?php echo api_images::get_picture_url($src, $width, $height); ?>";
+                    break;
                 case 'element':
                     // Custom smarty function: displays an element.
                     if (!isset($arg_list['path']))
                         throw new Exception(self::err_prefix() . "Parameter 'path' missing in {element}!");
                     $path = $arg_list['path'];
                     unset($arg_list['path']);
-                    $pop = "";
-                    foreach ($arg_list as $key => $val)
-                        $pop .= "\$__controller->$key = $val;";
-                    $ret = "<?php \$__element_controller = new Controller(); $pop \$__element_controller->layout = \$__controller->layout;" .
-                           "api_application::show('elements/' . $path, \$__element_controller, false); ?>";
+                    $pop = ""; $push = "";
+                    foreach ($arg_list as $key => $val) {
+                        $pop .= "\$__stack_$key = isset(\$__controller->$key)? \$__controller->$key: null; \$__controller->$key = $val;";
+                        $push .= "\$__controller->$key = \$__stack_$key;";
+                    }
+                    $ret = "<?php $pop api_application::render('elements/' . $path, \$__controller, false); $push ?>";
                     break;
                 case 'url':
                     // Custom smarty function: creates a local url from path.

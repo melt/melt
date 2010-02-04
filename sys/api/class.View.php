@@ -30,6 +30,14 @@ class View {
         $this->_controller->$name = $value;
     }
 
+    function __isset($name) {
+        return isset($this->_controller->$name);
+    }
+
+    function __unset($name) {
+        unset($this->_controller->$name);
+    }
+
     /* Extends a view as they are defined by cake. */
 
     /**
@@ -72,18 +80,34 @@ class View {
     }
 
     /**
-    * @desc Renders an element or view partial.
+    * @desc Renders an element.
     * @param string $elementPath Path to the element to render.
-    * @param array $params Data to pass to the element.
-    * @param boolean $loadHelpers NOT USED IN nanoMVC
+    * @param array $params Additional data to pass to the element controller namespace.
     */
-    function element($elementPath, $params = array(), $loadHelpers = false) {
-        $dummy_controller = new Controller();
-        foreach ($params as $key => $val)
-            $dummy_controller->$key = $val;
-        // Elements inherit the layout.
-        $dummy_controller->layout = api_application::$_application_controller->layout;
-        api_application::show("elements/$elementPath", $dummy_controller);
+    function element($elementPath, $params = array()) {
+        $controller = api_application::$_application_controller;
+        $stack = array();
+        // Save to stack and set params.
+        foreach ($params as $key => $val) {
+            $stack[$key] = isset($controller->$key)? $controller->$key: null;
+            $controller->$key = $val;
+        }
+        api_application::render("elements/$elementPath", $controller, false);
+        // Restore from stack.
+        foreach ($stack as $key => $val)
+            $controller->$key = $val;
+    }
+
+    /**
+    * @desc Generates a unique non-random DOM ID for an object, based on the object name.
+    *       DOES NOT USE url. The hash it returns will differ per view.
+    * @param String $object Object name.
+    */
+    private $view_hash = null;
+    function uuid($object) {
+        if ($this->view_hash == null)
+            $this->view_hash = "h" . api_string::random_hex_str(10);
+        return $object . $this->view_hash;
     }
 }
 

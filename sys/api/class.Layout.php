@@ -37,7 +37,7 @@ class Layout {
         foreach ($this->sections as $name => $content)
             $layout_controller->$name = $content;
         $layout_controller->layout = new VoidLayout();
-        api_application::show("layouts/" . $this->path, $layout_controller);
+        api_application::render("layouts/" . $this->path, $layout_controller, false);
         // Unset my buffers.
         unset($this->content);
         unset($this->sections);

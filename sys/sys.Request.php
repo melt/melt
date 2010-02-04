@@ -46,7 +46,7 @@ function _handle_request() {
         _export_translation($lang);
     } else {
         // Pass request to application.
-        api_application::execute(REQURL);
+        api_application::_application_execute();
     }
     exit;
 }

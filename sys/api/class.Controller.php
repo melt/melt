@@ -14,17 +14,22 @@ class Controller {
     /**
     * @desc This function is executed before every action in the controller. It's a handy place to check for an active session or inspect user permissions.
     */
-    function beforeFilter() {}
+    public function beforeFilter() {}
 
     /**
     * @desc Called after controller action logic, but before the view is rendered.
     */
-    function beforeRender() {}
+    public function beforeRender() {}
 
     /**
     * @desc Called after every controller action, and after rendering is complete. This is the last controller method to run.
     */
-    function afterFilter() {}
+    public function afterFilter() {}
+
+    /**
+    * @desc Override this function to rewrite urls.
+    */
+    public static function rewriteRequestUrl(&$controller, &$action, &$arguments) {}
 
 }
 
