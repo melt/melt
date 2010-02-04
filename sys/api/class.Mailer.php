@@ -13,12 +13,12 @@ class Mailer {
     public $bcc;
 
     public function __construct() {
-        $this->from = new apiAddress();
-        $this->reply_to = new apiAddress();
+        $this->from = new Address();
+        $this->reply_to = new Address();
 
-        $this->to = new apiAddressList();
-        $this->cc = new apiAddressList();
-        $this->bcc = new apiAddressList();
+        $this->to = new AddressList();
+        $this->cc = new AddressList();
+        $this->bcc = new AddressList();
     }
 
     private function addressEmail() {
@@ -101,7 +101,7 @@ class Mailer {
 
         // Also append other standard headers.
         $headers .= 'MIME-Version: 1.0' . PHP_EOL;
-        $headers .= 'X-Mailer: Vector/' . vsp_version . '; PHP/' . phpversion() . PHP_EOL;
+        $headers .= 'X-Mailer: nanoMVC/' . nmvc_version . '; PHP/' . phpversion() . PHP_EOL;
         $headers .= 'Date: ' . date("r") . PHP_EOL;
 
         // Verify that INI settings are correct.
