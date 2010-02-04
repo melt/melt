@@ -17,7 +17,7 @@ class api_html {
     * @desc Escapes given string so it can be safely printed in HTML.
     */
     public static function escape($string) {
-        return htmlentities($string, ENT_COMPAT, 'UTF-8');
+        return htmlspecialchars($string, ENT_COMPAT, 'UTF-8');
     }
 
     /**
