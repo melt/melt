@@ -251,13 +251,12 @@ class api_database {
     /**
     * @desc Syncronizes a table in the database with
     * @desc the generic table model used by nanoMVC.
-    * @param String $raw_table_name The name of the table to syncronize layout on.
+    * @param String $raw_table_name The raw table name, the identifier without prefixing.
     * @param Model $example_model An example of the model instance of the table to sync.
     */
-    public static function sync_table_layout($raw_table_name, $example_model) {
+    public static function sync_table_layout_with_model($raw_table_name, $example_model) {
         if (api_database::$initialized == false)
             api_database::init();
-        $raw_table_name = strtolower($raw_table_name);
         // Make an array where [name] => sql_type
         $columns = array();
         // Check names and fetches types.
@@ -265,7 +264,14 @@ class api_database {
             self::verify_keyword($name);
             $columns[strtolower($name)] = $column->getSQLType();
         }
-        // Gets all tables.
+        self::sync_table_layout_with_columns($raw_table_name, $columns);
+    }
+
+    /**
+    *@desc Returns all tables in the database.
+    */
+    public static function get_all_tables() {
+        // Gets all tables in the database.
         static $all_tables = null;
         if ($all_tables === null) {
             $all_tables = array();
@@ -273,11 +279,20 @@ class api_database {
             while (false !== ($table = self::next_array($all_tables_query)))
                 $all_tables[] = strtolower($table[0]);
         }
-        $database = Config::$sql_database;
-        $table_name = _tblprefix . $raw_table_name;
+        return $all_tables;
+    }
+
+    /**
+    * @desc Syncronizes a table in the database with the given column structure.
+    * @param String $table_name The literal name of the table in the database.
+    * @param Array $columns Array of columns mapped to their SQL types, eg "total => int(11), ...".
+    */
+    public static function sync_table_layout_with_columns($raw_table_name, $columns) {
+        $table_name = _tblprefix . strtolower($raw_table_name);
+        $all_tables = self::get_all_tables();
         if (in_array($table_name, $all_tables)) {
             // Altering existing table.
-            $current_columns = self::query("DESCRIBE $table_name");
+            $current_columns = self::query("DESCRIBE `$table_name`");
             while (false !== ($column = self::next_array($current_columns))) {
                 $current_name = strtolower($column[0]);
                 $current_type = strtolower($column[1]);
@@ -300,11 +315,12 @@ class api_database {
                 unset($columns[$current_name]);
             }
             // Insert the rest of the columns.
-            $adds = '';
+            $adds = array();
             foreach ($columns as $name => $type)
-                $adds .= " ADD $name $type";
+                $adds[] = "$name $type";
+            $adds = implode(", ", $adds);
             if (strlen($adds) > 0)
-                self::query("ALTER TABLE `$table_name`$adds");
+                self::query("ALTER TABLE `$table_name` ADD ($adds)");
             // Finally make sure ID column is correct.
         } else {
             // Creating new table.
@@ -314,7 +330,6 @@ class api_database {
             self::query("CREATE TABLE `$table_name` ( $adds )");
         }
     }
-
 
     private static $keywords_mssql =        array("ADD","ALL","ALTER","AND","ANY","AS","ASC","AUTHORIZATION","BACKUP","BEGIN","BETWEEN","BREAK","BROWSE","BULK","BY","CASCADE","CASE","CHECK","CHECKPOINT","CLOSE","CLUSTERED","COALESCE","COLLATE","COLUMN","COMMIT","COMPUTE","CONSTRAINT","CONTAINS","CONTAINSTABLE","CONTINUE","CONVERT","CREATE","CROSS","CURRENT","CURRENT_DATE","CURRENT_TIME","CURRENT_TIMESTAMP","CURRENT_USER","CURSOR","DATABASE","DBCC","DEALLOCATE","DECLARE","DEFAULT","DELETE","DENY","DESC","DISK","DISTINCT","DISTRIBUTED","DOUBLE","DROP","DUMMY","DUMP","ELSE","END","ERRLVL","ESCAPE","EXCEPT","EXEC","EXECUTE","EXISTS","EXIT","FETCH","FILE","FILLFACTOR","FOR","FOREIGN","FREETEXT","FREETEXTTABLE","FROM","FULL","FUNCTION","GOTO","GRANT","GROUP","HAVING","HOLDLOCK","IDENTITY","IDENTITY_INSERT","IDENTITYCOL","IF","IN","INDEX","INNER","INSERT","INTERSECT","INTO","IS","JOIN","KEY","KILL","LEFT","LIKE","LINENO","LOAD","NATIONAL","NOCHECK","NONCLUSTERED","NOT","NULL","NULLIF","OF","OFF","OFFSETS","ON","OPEN","OPENDATASOURCE","OPENQUERY","OPENROWSET","OPENXML","OPTION","OR","ORDER","OUTER","OVER","PERCENT","PLAN","PRECISION","PRIMARY","PRINT","PROC","PROCEDURE","PUBLIC","RAISERROR","READ","READTEXT","RECONFIGURE","REFERENCES","REPLICATION","RESTORE","RESTRICT","RETURN","REVOKE","RIGHT","ROLLBACK","ROWCOUNT","ROWGUIDCOL","RULE","SAVE","SCHEMA","SELECT","SESSION_USER","SET","SETUSER","SHUTDOWN","SOME","STATISTICS","SYSTEM_USER","TABLE","TEXTSIZE","THEN","TO","TOP","TRAN","TRANSACTION","TRIGGER","TRUNCATE","TSEQUAL","UNION","UNIQUE","UPDATE","UPDATETEXT","USE","USER","VALUES","VARYING","VIEW","WAITFOR","WHEN","WHERE","WHILE","WITH","WRITETEXT");
     private static $keywords_odbc =         array("ABSOLUTE","ACTION","ADA","ADD","ALL","ALLOCATE",    "ALTER","AND","ANY","ARE","AS","ASC","ASSERTION","AT","AUTHORIZATION","AVG","BEGIN","BETWEEN","BIT","BIT_LENGTH","BOTH","BY","CASCADE","CASCADED","CASE","CAST","CATALOG","CHAR","CHAR_LENGTH","CHARACTER","CHARACTER_LENGTH","CHECK","CLOSE","COALESCE","COLLATE","COLLATION","COLUMN","COMMIT","CONNECT","CONNECTION","CONSTRAINT","CONSTRAINTS","CONTINUE","CONVERT","CORRESPONDING","COUNT","CREATE","CROSS","CURRENT","CURRENT_DATE","CURRENT_TIME","CURRENT_TIMESTAMP","CURRENT_USER","CURSOR","DATE","DAY","DEALLOCATE","DEC","DECIMAL","DECLARE","DEFAULT","DEFERRABLE","DEFERRED","DELETE","DESC","DESCRIBE","DESCRIPTOR","DIAGNOSTICS","DISCONNECT","DISTINCT","DOMAIN","DOUBLE","DROP","ELSE","END","END-EXEC","ESCAPE","EXCEPT","EXCEPTION","EXEC","EXECUTE","EXISTS","EXTERNAL","EXTRACT","FALSE","FETCH","FIRST","FLOAT","FOR","FOREIGN","FORTRAN","FOUND","FROM","FULL","GET","GLOBAL","GO","GOTO","GRANT","GROUP","HAVING","HOUR","IDENTITY","IMMEDIATE","IN","INCLUDE","INDEX","INDICATOR","INITIALLY","INNER","INPUT","INSENSITIVE","INSERT","INT","INTEGER","INTERSECT","INTERVAL","INTO","IS","ISOLATION","JOIN","KEY","LANGUAGE","LAST","LEADING","LEFT","LEVEL","LIKE","LOCAL","LOWER","MATCH","MAX","MIN","MINUTE","MODULE","MONTH","NAMES","NATIONAL","NATURAL","NCHAR","NEXT","NO","NONE","NOT","NULL","NULLIF","NUMERIC","OCTET_LENGTH","OF","ON","ONLY","OPEN","OPTION","OR","ORDER","OUTER","OUTPUT","OVERLAPS","PAD","PARTIAL","PASCAL","POSITION","PRECISION","PREPARE","PRESERVE","PRIMARY","PRIOR","PRIVILEGES","PROCEDURE","PUBLIC","READ","REAL","REFERENCES","RELATIVE","RESTRICT","REVOKE","RIGHT",

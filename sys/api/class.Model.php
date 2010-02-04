@@ -1,19 +1,11 @@
 <?php
 
-class Model {
-    /** @desc ID column, all models have ID's. */
-    private $_id;
-
-    /**
-    * @desc Validates the current data. If invalid, returns an array of all fields name => reason mapped,
-    *       otherwise, returns an empty array.
-    * @return Array All invalid fields, name => reason mapped.
-    * @desc Designed to be overriden.
-    */
-    public function validate() {
-        return array();
-    }
-
+/**
+* @desc A model is a data set represented as a row in a transactional storage database.
+*       Every model instance is represented by exactly one row in the database,
+*       and every row in the database is represented by exactly one model instance.
+*/
+abstract class Model extends DataSet {
     /**
     * @desc Make any additional calculations you need to do before this instance is truly stored to the database.
     * @desc Designed to be overriden.
@@ -32,6 +24,16 @@ class Model {
     }
 
     /**
+    * @desc Make any additional calculations you need to do before this instance is removed from
+    *       the database through an interface.
+    *       ONLY CALLED WHEN REMOVED AUTOMATICALLY TROUGH INTERFACE.
+    * @desc Designed to be overriden.
+    */
+    public function beforeInterfaceRemove() {
+        return;
+    }
+
+    /**
     * @desc Useful for additional calculations you need to do
     *       after any changes where made to any model instances in the database.
     * @desc Designed to be overriden.
@@ -39,147 +41,16 @@ class Model {
     public static function afterChange() {
         return;
     }
-    private static function afterChangeCallback($model_name) {
+
+    private static function callAfterChangeCallback($model_name) {
         if (api_database::affected_rows() > 0)
             call_user_func(array($model_name, "afterChange"));
     }
 
     /**
-    * @desc Verify that the specified classname exists and extends the parent.
-    */
-    private static function existsAndExtends($class_name, $parent) {
-        if (!class_exists($class_name)) {
-            _nanomvc_autoload($class_name);
-            if (!class_exists($class_name))
-                throw new Exception("The class '$class_name' is unknown or does not exist!");
-        }
-        if (!is_subclass_of($class_name, $parent))
-            throw new Exception("The class '$class_name' was expected to extend the '$parent' class but didn't!");
-    }
-
-    /**
-    * @desc Returns the pointer model name from the column name or NULL if column is not of pointer type.
-    */
-    private static function getPointerModelName($colname) {
-        $colname_parts = array_reverse(explode("_", $colname));
-        $single_ptr = $colname_parts[0] == "id";
-        $multi_ptr = !$single_ptr && $colname_parts[1] == "id" && strval(intval($colname_parts[0])) === $colname_parts[0];
-        if ($single_ptr || $multi_ptr) {
-            // Evaluate the pointer model name.
-            unset($colname_parts[0]);
-            if ($multi_ptr)
-                unset($colname_parts[1]);
-            return implode("_", array_reverse($colname_parts));
-        } else
-            return null;
-    }
-
-    /**
-    * @desc Translates the field specifiers to type handler instances.
-    */
-    private function __construct($id) {
-        $name = get_class($this);
-        static $parsed_model_cache = array();
-        if (!isset($parsed_model_cache[$name])) {
-            $parsed_model = array();
-            $vars = get_class_vars($name);
-            $columns = array();
-            foreach ($vars as $colname => $coltype) {
-                // Ignore non column members.
-                if ($colname[0] == '_')
-                    continue;
-                // Parse attributes.
-                $attributes = explode(",", $coltype);
-                $clsname = $attributes[0];
-                if ($clsname == "")
-                    throw new Exception("Invalid type: Column '$colname' has nothing specified in type field.");
-                $clsname .= "Type";
-                $ptr_model_name = self::getPointerModelName($colname);
-                if ($ptr_model_name !== null) {
-                    // Expects the type handler of this class to extend the special reference type.
-                    self::existsAndExtends($ptr_model_name, "Model");
-                    self::existsAndExtends($clsname, "Reference");
-                    $type_handler = new $clsname($colname, null, $ptr_model_name);
-                } else {
-                    // Standard type handles must extend the type class.
-                    self::existsAndExtends($clsname, "Type");
-                    if (is_subclass_of($clsname, "Reference"))
-                        throw new Exception("Invalid type: Column '$colname' has a Reference Type, without beeing a reference.");
-                    $type_handler = new $clsname($colname, null);
-                }
-                if (count($attributes) > 1) {
-                    for ($i = 1; $i < count($attributes); $i++) {
-                        $attribute = $attributes[$i];
-                        $eqp = strpos($attribute, "=");
-                        if ($eqp === false)
-                            throw new Exception("Syntax Error: The attribute token '$eqp' lacks equal sign (=).");
-                        $key = substr($attribute, 0, $eqp);
-                        $val = substr($attribute, $eqp + 1);
-                        if (!isset($type_handler->$key))
-                            throw new Exception("Error in $name.$colname attribute list: The type '$clsname' does not have an attribute named '$key'.");
-                        $type_handler->$key = $val;
-                    }
-                }
-                // Cache this untouched type instance and clone it to other new instances.
-                $parsed_model[$colname] = $type_handler;
-            }
-            $parsed_model_cache[$name] = $parsed_model;
-        } else
-            $parsed_model = $parsed_model_cache[$name];
-        foreach ($parsed_model as $colname => $type_instance)
-            $this->$colname = clone $type_instance;
-        $this->_id = intval($id);
-    }
-
-    /**
-    * @desc Returns a list of the column names of the specified model.
-    * @desc Note: Does not return the implicit ID column.
-    * @return Array An array of the column names in the specified model.
-    */
-    public static function getColumnNames($name) {
-        static $columns_name_cache = array();
-        if (isset($columns_name_cache[$name]))
-            return $columns_name_cache[$name];
-        $columns = array();
-        if (!class_exists($name) || !is_subclass_of($name, 'Model'))
-            throw new Exception("'$name' is not a valid class and/or not a valid Model!");
-        foreach (get_class_vars($name) as $colname => $def)
-            if ($colname[0] != '_')
-                $columns[] = $colname;
-        return $columns_name_cache[$name] = $columns;
-    }
-
-    private $_columns_cache = null;
-    /**
-    * @desc Returns a list of the columns in this model for dynamic iteration.
-    * @return Array An array of the columns in this model.
-    */
-    public function getColumns() {
-        if ($this->_columns_cache !== null)
-            return $this->_columns_cache;
-        $vars = get_object_vars($this);
-        $columns = array();
-        foreach ($vars as $colname => $value) {
-            if ($colname[0] != '_') {
-                $columns[$colname] = $value;
-                if (!is_object($value))
-                    throw new Exception("The column '$colname' is corrupt. Expected object, found: " . var_export($value, true) . ".");
-            }
-        }
-        return $this->_columns_cache = $columns;
-    }
-
-    /**
-    * @desc Returns the ID of this model instance or FALSE if not stored yet.
-    */
-    public function getID() {
-        return ($this->_id < 1)? false: $this->_id;
-    }
-
-    /**
     * @desc Removes this model instance from the database.
     */
-    public function remove() {
+    public final function remove() {
         $id = $this->_id;
         $this->_id = -1;
         return $this->removeByID($id);
@@ -214,7 +85,7 @@ class Model {
     * @desc Stores any changes to this model instance to the database.
     * @desc If this is a new instance, it's inserted, otherwise, it's updated.
     */
-    public function store() {
+    public final function store() {
         $update_ex = null;
         if ($this->_id > 0) {
             // Updating existing row.
@@ -226,8 +97,8 @@ class Model {
             api_database::query($this->getInsertSQL());
             $this->_id = api_database::insert_id();
         }
-        // Invoke after change callback. (if rows changed)
-        self::afterChangeCallback(get_class($this));
+        // Call after change callback. (if rows changed)
+        self::callAfterChangeCallback(get_class($this));
     }
 
     /**
@@ -236,7 +107,7 @@ class Model {
     public static function syncLayout() {
         $name = get_called_class();
         $model = new $name(-1);
-        api_database::sync_table_layout($name, $model);
+        api_database::sync_table_layout_with_model($name, $model);
     }
 
     /**
@@ -315,6 +186,9 @@ class Model {
     public final function selectChildren($child_model, $where = "", $offset = 0, $limit = 0, $order = "") {
         $ptr_fields = $this->getChildPointers($child_model);
         $id = $this->getID();
+        // New models have no ID.
+        if ($id <= 0)
+            return array();
         $where = trim($where);
         if (strlen($where) > 0)
             $where = " AND $where";
@@ -418,7 +292,7 @@ class Model {
     public static final function removeByID($id) {
         $name = get_called_class();
         $ret = api_database::query("DELETE FROM `"._tblprefix."$name` WHERE id = ".$id);
-        self::afterChangeCallback($name);
+        self::callAfterChangeCallback($name);
         return $ret;
     }
     /**
@@ -445,7 +319,7 @@ class Model {
         if ($where != "")
             $where = " WHERE ".$where;
         $ret = api_database::query("DELETE FROM `"._tblprefix."$name`".$where);
-        self::afterChangeCallback($name);
+        self::callAfterChangeCallback($name);
         return $ret;
     }
 
@@ -506,184 +380,63 @@ class Model {
         return $items;
     }
 
-    private static $_last_enlist_page_current;
-    private static $_last_enlist_page_ub;
+    private static $_last_enlist_page_current = 0;
+    private static $_last_enlist_page_ub = 0;
 
     /**
     * @desc Returns an simple but useful navigation array for the last enlistment.
     *       The navigation array consists of pagenumbers and triple dots that indicate number jumps.
     *       Tip: Use is_integer() to separate page numbers from tripple dot "jump" indicators.
+    * @param integer $span Total pages to span to the left and to the right of the current page.
+    * @return Array An array of pagenumbers and possible, tripple dots if span is to small to cover all pages.
     */
-    public static final function enlist_navigation() {
-        // TODO: Write navigatior.
+    public static final function enlist_navigation($span = 6) {
+        $page_current = intval(self::$_last_enlist_page_current);
+        $page_ub = intval(self::$_last_enlist_page_ub);
+        $nav = array(0);
+        $start = $page_current - $span;
+        if ($start <= 0)
+            $start = 1;
+        if ($start > 1)
+            $nav[] = "...";
+        for ($at = $start; $at <= ($page_current + $span) && $at <= $page_ub; $at++)
+            $nav[] = $at;
+        if ($at < $page_ub - 1) {
+            $nav[] = "...";
+            $nav[] = $page_ub;
+        }
+        return $nav;
     }
 
-    /**
-    * @desc Returns an interface of HTML components that lets the user operate on this model instance.
-    * @param Array $fields            Array of all fields (fieldnames) that will be included in the operation,
-    *                                 if null, all fields will be included.
-    *
-    * @param Array $labels            Array of field names mapped to the labels they will have in the output interface.
-    *
-    * @param Array $defaults          Array of field names mapped to the default value they will be set to trough this interface.
-    *                                 Theese values are client side immutable.
-    *
-    * @param String $redirect         Local url to redirect to if the interface query was successful.
-    *                                 Set to null to not redirect.
-    *
-    * @param Boolean $delete_redirect Set to an url to redirect after deletion to allow the user to delete this model.
-    *                                 Trigger deleting by submitting with the name "do_delete".
-    *
-    * @return Array Array of all HTML components that makes up this interface instance.
-    */
-    public final function getInterface($fields = null, $labels = null, $defaults = null, $redirect = null, $delete_redirect = null) {
-        $name = get_class($this);
-        // Set the model interface validation/encryption key if this has not been set.
-        if (!isset($_SESSION['mif_val_key']))
-            $_SESSION['mif_val_key'] = api_string::gen_key();
-        if (!isset($_SESSION['mif_enc_key']))
-            $_SESSION['mif_enc_key'] = api_string::gen_key();
-        $mif_val_key = $_SESSION['mif_val_key'];
-        $mif_enc_key = $_SESSION['mif_enc_key'];
-        // Refill fields on invalid-callback.
-        $invalid_callback = $name == self::$_invalid_mif_name;
-        if ($invalid_callback)
-            foreach (self::$_invalid_mif_data as $col_name => $data)
-                $this->$col_name = $data;
-        // Get columns.
-        $columns = $this->getColumns();
-        $fields_found = array();
-        // Create user interfaces.
-        $fields = (is_array($fields)? $fields: array());
-        foreach ($fields as $col_name) {
-            if (!array_key_exists($col_name, $columns))
-                continue;
-            // Pass this field to the user trough an interface.
-            $fields_found[] = $col_name;
-            $label = isset($labels[$col_name])? $labels[$col_name]: $col_name;
-            $value = isset($defaults[$col_name])? $defaults[$col_name]: $this->$col_name;
-            $interface = $columns[$col_name]->getInterface($label, $value, $col_name);
-            if (!is_string($interface))
-                continue;
-            $out_fields[$col_name] = "<div class=\"mif_component\">$interface</div>";
+    protected final function getInterfaceDataSetAndAction($mif_name, $mif_id, $mif_redirect, $mif_delete_redirect) {
+        // Insert or update?
+        if ($mif_id > 0) {
+            $model = forward_static_call(array($mif_name, 'selectByID'), $mif_id);
+            $success_msg = __("Record was successfully updated.");
+        } else {
+            $model = forward_static_call(array($mif_name, 'insertNew'));
+            $success_msg = __("Record was successfully added.");
         }
-        // Make sure all requested fields existed.
-        $fields_missing = array_diff($fields, $fields_found);
-        if (count($fields_missing) > 0)
-            throw new Exception("The following fields does not exist: " . implode(", ", $fields_missing));
-        // Append static model interface data in special static data field, and secure it.
-        $mif_header = array(
-            $mif_val_key,
-            $name,
-            $this->_id,
-            $fields,
-            $defaults,
-            $redirect,
-            $delete_redirect
-        );
-        $mif_header = api_string::simple_crypt(serialize($mif_header), $mif_enc_key);
-        $out_fields['_mif'] = "<input type=\"hidden\" name=\"_mif_header\" value=\"$mif_header\" />";
-        if ($invalid_callback) {
-            // Append invalidation info.
-            foreach ($out_fields as $col_name => &$if) {
-                if (isset(self::$_invalid_mif_fields[$col_name])) {
-                    $invalid_info = self::$_invalid_mif_fields[$col_name];
-                    $if .= " <div class=\"mif_invalid\">$invalid_info</div>";
-                }
-            }
-        }
-        return $out_fields;
-    }
-
-    // Passing theese parameters upwards from processInterfaceAction()
-    // to getInterface() in case form input was invalid and user must be notified about input mistakes.
-    private static $_invalid_mif_fields;
-    private static $_invalid_mif_name;
-    private static $_invalid_mif_data;
-
-    /**
-    * @desc Process action queried by interface.
-    */
-    public static final function processInterfaceAction() {
-        // Make sure scaffold key is set.
-        if (isset($_SESSION['mif_val_key']) && isset($_SESSION['mif_enc_key'])) {
-            $mif_val_key = $_SESSION['mif_val_key'];
-            $mif_enc_key = $_SESSION['mif_enc_key'];
-            // Return and decrypt the mif header.
-            $mif_header = api_string::simple_decrypt($_POST['_mif_header'], $mif_enc_key);
-            if (is_string($mif_header)) {
-                $mif_header = unserialize($mif_header);
-                if ($mif_header === false || !is_array($mif_header))
-                    throw new Exception("The MIF header was corrupt! Follows: >>>" . var_export($mif_header, true) . "<<<");
-                list($mif_val_key_hdr, $mif_name, $mif_id, $mif_fields, $mif_defaults, $mif_redirect, $mif_delete_redirect) = $mif_header;
-                if ($mif_val_key_hdr !== $mif_val_key)
-                    throw new Exception("The MIF validation key was corrupt! ($mif_val_key_hdr !== $mif_val_key)");
-                // Insert or update?
-                if ($mif_id > 0) {
-                    $model = forward_static_call(array($mif_name, 'selectByID'), $mif_id);
-                    $success_msg = __("Record was successfully updated.");
-                } else {
-                    $model = forward_static_call(array($mif_name, 'insertNew'));
-                    $success_msg = __("Record was successfully added.");
-                }
-                // Delete?
-                if (isset($_POST['do_delete'])) {
-                    if ($model === false)
-                        return;
-                    if (!is_string($mif_delete_redirect) || strlen($mif_delete_redirect) == 0)
-                        Flash::doFlash(__("You don't have permissions to delete this record."), FLASH_BAD);
-                    else if ($mif_id <= 0)
-                        Flash::doFlash(__("Conflicting operation: Delete and Insert. Ignored query."), FLASH_BAD);
-                    else {
-                        $model->remove();
-                        Flash::doFlashRedirect($mif_delete_redirect, __("Record removed as requested."), FLASH_GOOD);
-                    }
-                    return;
-                }
-                if ($model === false) {
-                    Flash::doFlash(__("The record no longer exists!"), FLASH_BAD);
-                    return;
-                }
-                // Loop trough and read all specified data.
-                foreach ($model->getColumns() as $name => $column)
-                    if (in_array($name, $mif_fields))
-                        $column->readInterface();
-                    else if (isset($mif_defaults[$name]))
-                        $column->set($mif_defaults[$name]);
-                // Validate all data.
-                $invalid_fields = $model->validate();
-                if (count($invalid_fields) > 0) {
-                    $invalid_data = array();
-                    foreach ($mif_fields as $name)
-                        $invalid_data[$name] = $model->$name;
-                    self::$_invalid_mif_data = $invalid_data;
-                    self::$_invalid_mif_name = $mif_name;
-                    self::$_invalid_mif_fields = $invalid_fields;
-                    Flash::doFlash(__("The requested operation failed. One or more fields where invalid."), FLASH_BAD);
-                    return;
-                }
-                // Store changes.
-                $model->store();
-                // Redirect if it should do so.
-                $redirect = (is_string($mif_redirect) && strlen($mif_redirect) > 0)? $mif_redirect: api_navigation::make_local_url(REQURL);
-                Flash::doFlashRedirect($redirect, $success_msg, FLASH_GOOD);
+        // Delete?
+        if (isset($_POST['do_delete'])) {
+            if ($model === false)
                 return;
+            if (!is_string($mif_delete_redirect) || strlen($mif_delete_redirect) == 0)
+                Flash::doFlash(__("You don't have permissions to delete this record."), FLASH_BAD);
+            else if ($mif_id <= 0)
+                Flash::doFlash(__("Conflicting operation: Delete and Insert. Ignored query."), FLASH_BAD);
+            else {
+                $model->beforeInterfaceRemove();
+                $model->remove();
+                Flash::doFlashRedirect($mif_delete_redirect, __("Record removed as requested."), FLASH_GOOD);
             }
+            return null;
         }
-        Controller::flash(__("The requested action failed, possibly due to timed out session."), FLASH_BAD);
-    }
-
-
-    /**
-    * @desc Writes this model interface to an array by calling write on each type.
-    */
-    public final function write() {
-        $out = array();
-        $columns = $this->getColumns();
-        foreach ($columns as $name => $type)
-            $out[$name] = (string) $type;
-        $out['id'] = $this->getID();
-        return $out;
+        if ($model === false) {
+            Flash::doFlash(__("The record no longer exists!"), FLASH_BAD);
+            return null;
+        }
+        return array($model, $success_msg);
     }
 }
 
