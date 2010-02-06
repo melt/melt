@@ -26,7 +26,7 @@ class AddressList {
         if (count($this->list) == 0)
             return null;
         else
-            return "$header: " . implode(', ', ($plain? $this->plainlist: $this->list)) . "\r\n";
+            return "$header: " . implode(', ', ($plain? $this->plainlist: $this->list)) . PHP_EOL;
     }
 
     public function getPlainList() {
