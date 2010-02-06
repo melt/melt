@@ -18,8 +18,9 @@ class api_misc {
         // Reset to default content type.
         if (!headers_sent())
             header('Content-Type: text/html');
-        // Reset buffer state.
-        @ob_clean();
+        $ob_length = @ob_get_length();
+        if (intval($ob_length) > 0)
+            @ob_clean();
         @ob_implicit_flush(true);
     }
 
