@@ -12,7 +12,7 @@ class api_misc {
         // Remove previous buffers.
         $level = @ob_get_status(true);
         if (is_array($level)) {
-            $level = $level['level'];
+            $level = @intval($level['level']);
             for (;$level > 1; $level--) @ob_end_clean();
         }
         // Reset to default content type.
