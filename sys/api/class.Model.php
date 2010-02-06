@@ -57,7 +57,7 @@ abstract class Model extends DataSet {
     }
 
     private function getInsertSQL() {
-        $name = get_class($this);
+        $name = strtolower(get_class($this));
         static $key_list_cache = array();
         if (!isset($key_list_cache[$name])) {
             $key_list = implode(',', Model::getColumnNames($name));
@@ -72,7 +72,7 @@ abstract class Model extends DataSet {
     }
 
     private function getUpdateSQL() {
-        $name = get_class($this);
+        $name = strtolower(get_class($this));
         $value_list = array();
         foreach ($this->getColumns() as $colname => $column)
             $value_list[] = "`$colname`=" . $column->getSQLValue();
@@ -105,7 +105,7 @@ abstract class Model extends DataSet {
     * @desc Attempts to syncronize the layout of this model against the database table layout.
     */
     public static function syncLayout() {
-        $name = get_called_class();
+        $name = strtolower(get_called_class());
         $model = new $name(-1);
         api_database::sync_table_layout_with_model($name, $model);
     }
@@ -115,7 +115,7 @@ abstract class Model extends DataSet {
     * @returns Model A new model instance.
     */
     public static final function insertNew() {
-        $name = get_called_class();
+        $name = strtolower(get_called_class());
         $model = new $name(-1);
         return $model;
     }
@@ -126,7 +126,7 @@ abstract class Model extends DataSet {
     */
     public static final function selectByID($id) {
         $id = intval($id);
-        $name = get_called_class();
+        $name = strtolower(get_called_class());
         $model = self::touchModelInstance($name, $id);
         if ($model === false) {
             $id = intval($id);
@@ -257,7 +257,7 @@ abstract class Model extends DataSet {
     * @desc Array An array of the selected model instances.
     */
     public static final function selectWhere($where = "", $offset = 0, $limit = 0, $order = "") {
-        $name = get_called_class();
+        $name = strtolower(get_called_class());
         $offset = intval($offset);
         $limit = intval($limit);
         if ($where != "")
@@ -281,7 +281,7 @@ abstract class Model extends DataSet {
     * @desc Array An array of the selected model instances.
     */
     public static final function selectFreely($sqldata) {
-        $name = get_called_class();
+        $name = strtolower(get_called_class());
         $sql_result = api_database::query("SELECT * FROM `"._tblprefix."$name` ".$sqldata);
         return self::makeArrayOf($name, $sql_result);
     }
@@ -290,7 +290,7 @@ abstract class Model extends DataSet {
     * @desc This function removes the model instance with the given ID.
     */
     public static final function removeByID($id) {
-        $name = get_called_class();
+        $name = strtolower(get_called_class());
         $ret = api_database::query("DELETE FROM `"._tblprefix."$name` WHERE id = ".$id);
         self::callAfterChangeCallback($name);
         return $ret;
@@ -302,7 +302,7 @@ abstract class Model extends DataSet {
     * @param String $sqldata SQL command(s) that will be appended after the DELETE query for free selection.
     */
     public static final function removeFreely($sqldata) {
-        $name = get_called_class();
+        $name = strtolower(get_called_class());
         $ret =  api_database::query("DELETE FROM `"._tblprefix."$name`".$sqldata);
         self::afterChangeCallback($name);
         return $ret;
@@ -315,7 +315,7 @@ abstract class Model extends DataSet {
     * @param String $where (WHERE xyz) If specified, any number of where conditionals to match rows to delete.
     */
     public static final function removeWhere($where = "") {
-        $name = get_called_class();
+        $name = strtolower(get_called_class());
         if ($where != "")
             $where = " WHERE ".$where;
         $ret = api_database::query("DELETE FROM `"._tblprefix."$name`".$where);
@@ -331,7 +331,7 @@ abstract class Model extends DataSet {
     * @return Integer Number of matched rows.
     */
     public static final function count($where = "") {
-        $name = get_called_class();
+        $name = strtolower(get_called_class());
         if ($where != "")
             $where = " WHERE ".$where;
         $result = api_database::query("SELECT COUNT(*) FROM `"._tblprefix."$name`".$where);
@@ -352,7 +352,7 @@ abstract class Model extends DataSet {
     * @return Array All items listed on the current page.
     */
     public static final function enlist($where = "", $items_per_page = 30, $page_specifyer = 'page', $order_column_specifyer = null, $order_specifyer = null, $limit_ordering_to = null) {
-        $name = get_called_class();
+        $name = strtolower(get_called_class());
         $total_count = forward_static_call(array($name, 'count'), $where);
         $page_ub = ceil($total_count / $items_per_page) - 1;
         if ($page_ub < 0)
