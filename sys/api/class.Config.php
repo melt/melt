@@ -12,11 +12,10 @@ class Config {
     public static $root_host = 'localhost';
     public static $root_path = '/';
 
-    // The cryptographic salt used by nanoMVC. Change from default for additional security.
-    public static $crypt_salt = "\x36\xf1\xaa\x02\x38\xfb\x7c\x47\x55\x01\xbf\x32\x71\x92\xf3\x19";
-
     // When true, will shut down the site telling visitors that it's under maintence.
     public static $maintence = false;
+    // When true, will display errors to non developer authorized users (insecure).
+    public static $in_development = false;
     // Optional. Ammount of time the site will be down to notify visitors.
     public static $downshedule = '';
 
