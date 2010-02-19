@@ -232,6 +232,8 @@ class api_application {
                 api_navigation::show_404();
             else
                 return false;
+        if (!is_subclass_of($clsname, "Controller"))
+            throw new Exception("The controller named '$clsname' does not extend the class Controller as required!");
         // Create an instance of the controller and invoke action.
         $controller = new $clsname();
         $controller->beforeFilter();
@@ -272,7 +274,7 @@ class api_application {
     private static function findView($view_path) {
         $view_path = "views/$view_path.";
         $paths = array('', '../sys/');
-        $exts = array('ctp', 'tpl', 'php');
+        $exts = array('ctp', 'php');
         foreach ($paths as $path) {
             foreach ($exts as $ext) {
                 $view_file_path = $path . $view_path . $ext;
@@ -306,21 +308,12 @@ class api_application {
             if ($just_try)
                 return;
             else
-                throw new Exception("The view '$view_path(tpl/php/ctp)' could not be found!");
+                throw new Exception("The view '$view_path(php/ctp)' could not be found!");
         }
         // Pass flasher references to the controller.
         $controller->flash = Flash::getFlashRef();
         // Supporting multiple template formats.
         switch (substr($view_file_path, -3)) {
-        case 'tpl':
-            // Run smarty template.
-            $tpl = self::compile($view_file_path);
-            require_once $tpl['filename'];
-            // Call wrapper function.
-            if ($controller == null)
-                $controller = new Object();
-            call_user_func($tpl['function'], $controller);
-            break;
         case 'ctp':
         case 'php':
             // Running a cake template.
@@ -377,292 +370,6 @@ class api_application {
             return $output;
         }
     }
-
-    /**
-    * @desc Makes sure given view is compiled.
-    */
-    private static function compile($view_path) {
-        // Clean the view path:
-        $view_path = strtolower(trim($view_path));
-        $view_path = str_replace("\\", "/", $view_path);
-        $view_path = preg_replace("#/{2,}#", "/", $view_path);
-        // Calculate identifiers.
-        $wrap_func = "tw_" . substr(md5($view_path), 0, 8);
-        $wrap_dir = "cache/" . dirname($view_path);
-        if (!file_exists($wrap_dir))
-            mkdir($wrap_dir, 0777, true);
-        $wrap_file = $wrap_dir . "/" . basename($view_path);
-        $last_m = file_exists($wrap_file)? filemtime($wrap_file): false;
-        if ($last_m === false || $last_m < filemtime($view_path)) {
-            // Recompile required.
-            $tpl_data = file_get_contents($view_path);
-
-            self::$block = array();
-            self::$special = array();
-            self::$compiling_line = 1;
-            self::$compiling_file = $view_path;
-
-            // Match smarty expressions and compile.
-            // Description of this match:
-            // Matches (a) $variable (some echo)
-            //         (b) IF whitespace, is... PHP function, <>=&| operators, smarty variables: $foo.bar, numbers.
-            //         (c) SMARTY function with an var=val assignment array after.
-
-            //                                      |<echo matching>|                    <Matching if's and else if's.>                                          | <Matching generic SMARTY syntax.>                            |    linebreaks for counting
-            $tpl_data = preg_replace_callback('#{\s*(\$(\w+(\.\w+)*!?)|(elseif|if)\s+((\s*|\w+\(|,|\)|"([^\\\\"]|\\\\.)*"|[<>=&\|!]+|\d+\.?\d*|\w+|\$\w+(\.\w+)*)*)|(/?\w+)((\s*\w+=(\$\w+(\.\w+)*|[\w\.]+|"([^\\\\"]|\\\\.)*"))*))\s*}|(' . "\n" . ')#si', array('api_application', 'expr_callback'), $tpl_data);
-            if (count(self::$block) > 0)
-                throw new Exception(self::err_prefix() . "Error: End of file reached without closing {" . self::$block[0]['type'] . "} block!");
-
-            /* This is a workaround to PHP eating EOL's after closing tags, which
-               destroys line numbering consistency.
-               http://bugs.php.net/bug.php?id=21891 */
-            $tpl_data = preg_replace("#\\?>\\n#si", "?>\n\n", $tpl_data);
-
-            // Wrap template in a function with debug globals.
-            $dbg = 'global $__mod_dbg, $__mod_dbg_line, $__mod_dbg_file; $_old_mod_dbg_file = (isset($__mod_dbg_file)? $__mod_dbg_file: null); $_old_mod_dbg = (isset($__mod_dbg)? $__mod_dbg: null); $_old_mod_dbg_line = (isset($__mod_dbg_line)? $__mod_dbg_line: null);' .
-                   "\$__mod_dbg = '$view_path'; \$__mod_dbg_line = 0; \$__mod_dbg_file = '$wrap_file';";
-            $dbg_end = '$__mod_dbg = $_old_mod_dbg; $__mod_dbg_line = $_old_mod_dbg_line; $__mod_dbg_file = $_old_mod_dbg_file;';
-            file_put_contents($wrap_file, "<?php function $wrap_func(\$__controller) { $dbg ?> $tpl_data <?php $dbg_end } ?>");
-        }
-        // Cached and not modified?
-        return array('filename' => $wrap_file, 'function' => $wrap_func);
-    }
-
-    // Smarty compiler state.
-    private static $compiling_file;
-    private static $compiling_line;
-    private static $block;
-    private static $special;
-
-    private static function err_prefix() {
-        return "smarty compiler error [" . self::$compiling_file . " line #" . self::$compiling_line . "]: ";
-    }
-
-    /**
-    *@desc Takes an expresson, finds all smarty variables and translates them.
-    */
-    private static function translate_smarty_vars($expr) {
-        return preg_replace_callback('#"([^\\\\"]|\\\\.)*"|\$(\w+(\.\w+)*)#si', array('api_application', 'translate_smarty_var'), $expr);
-    }
-    private static function translate_smarty_var($match) {
-        // Do not match smarty var syntax inside strings.
-        if (!isset($match[2]) || $match[2] == '')
-            return;
-        // Translating a smarty var.
-        $refs = $match[2];
-        if ($refs[0] == '$')
-            $refs = substr($refs, 1);
-        $ref_list = explode('.', $refs);
-        $first = $ref_list[0];
-        unset($ref_list[0]);
-        $special = isset(self::$special[$first]);
-        $first = $read = ($special)? "\$_$first": "\$__controller->$first";
-        if (count($ref_list) > 0) {
-            // Reference walk to fetch value.
-            foreach ($ref_list as &$ref)
-                $ref = var_export(strval($ref), true);
-            $refs = implode(',', $ref_list);
-            $read = "_r($read, array($refs))";
-        }
-        return $special? "($read)": "(isset($first) ? $read: null)";
-    }
-
-    private static function match_injected_var($match) {
-        if (isset($match[1])) {
-            $php = self::translate_smarty_var(array(2 => $match[1]));
-            return '" . (' . $php . ') . "';
-        } else
-            return '\$';
-    }
-
-    private static function parse_arg_list($args) {
-        $arg_list = array();
-        preg_match_all('#(\w+)=(\$\w+(\.\w+)*|[\w\.]+|"([^\\\\"]|\\\\.)*")#si', $args, $matches);
-        for ($i = 0; $i < count($matches[1]); $i++) {
-            $key = $matches[1][$i];
-            $value = $matches[2][$i];
-            if (is_numeric($value)) {
-                $value = floatval($value);
-            } else if ($value[0] == '$') {
-                $value = self::translate_smarty_var(array(2 => $value));
-            } else if ($value[0] == '"') {
-                // Find and activate smarty variables inside, also rewite all non variable dollar signs.
-                $value = preg_replace_callback('#`(\$\w+(\.\w+)*)`|\$#si', array('api_application', 'match_injected_var'), $value);
-            } else {
-                $value = var_export($value, true);
-            }
-            if (strlen($value) > 0)
-                $arg_list[$key] = $value;
-        }
-        return $arg_list;
-    }
-
-    private static function open_block($type, $special_vars) {
-        foreach ($special_vars as $special) {
-            if (isset(self::$special[$special]))
-                throw new Exception(self::err_prefix() . "Cannot reserve a variable with name '$special' in start of '$type' block. This variable name has already been reserved by a previous block!");
-            self::$special[$special] = true;
-        }
-        array_push(self::$block, array('type' => $type, 'special' => $special_vars));
-    }
-
-    private static function close_block($type) {
-        $block = array_pop(self::$block);
-        if ($block['type'] != $type) {
-            $end = count(self::$block) > 0? " in a " . $block['type'] . " block!": '. No block opened.';
-            throw new Exception(self::err_prefix() . "Error in template: Cannot close a '$type' block$end");
-        }
-        foreach ($block['special'] as $special)
-            unset(self::$special[$special]);
-    }
-
-    private static function verify_block($type, $mid_block) {
-        $block = array_pop(self::$block);
-        if ($block['type'] != $type) {
-            $end = count(self::$block) > 0? " in a " . $block['type'] . " block!": '. No block opened.';
-            throw new Exception(self::err_prefix() . "Error in template: Cannot open a '$mid_block' block$end");
-        }
-        array_push(self::$block, $block);
-    }
-
-    private static function expr_callback($match) {
-        if ($match[15] == "\n") {
-            // Just a linebreak.
-            self::$compiling_line += 1;
-            return "\n";
-        } else if ($match[2] != '') {
-            // Compiling an echo.
-            $var = $match[1];
-            if ($do_escape = (substr($var, -1) == "!"))
-                $var = substr($var, 0, -1);
-            $var = self::translate_smarty_var(array(2 => $var));
-            // The ! ending operator escapes before writing.
-            if ($do_escape)
-                $var = "api_html::escape($var)";
-            $ret = "<?php echo $var; ?>";
-        } else if ($match[4] != '') {
-            // An [ELSE] IF expression, this is the PHP comparision code.
-            $php_compare = self::translate_smarty_vars($match[5]);
-            $command = $match[4];
-            if ($command == 'if') {
-                self::open_block('if', array());
-                $ret = "<?php if ($php_compare) { ?>";
-            } else {
-                self::verify_block('if', 'elseif');
-                $ret = "<?php } else if ($php_compare) { ?>";
-            }
-        } else {
-            // A generic smarty expression.
-            $command = $match[9];
-            if ($command[0] == '/') {
-                // Closing block.
-                $command = substr($command, 1);
-                self::close_block($command);
-                switch ($command) {
-                    case 'section':
-                        $ret = "<?php \$__controller->layout->exitSection(); ?>";
-                        break;
-                    default:
-                        $ret = "<?php } ?>";
-                        break;
-                }
-            } else {
-                $arguments = $match[10];
-                $arg_list = self::parse_arg_list($arguments);
-                switch ($command) {
-                case 'if':
-                    throw new Exception(self::err_prefix() . "The IF uses an unrecognized syntax.");
-                    break;
-                case 'else':
-                    self::verify_block('if', 'else');
-                    if (count($arg_list) > 0)
-                        throw new Exception(self::err_prefix() . "Else does not take any arguments!");
-                    $ret = "<?php } else { ?>";
-                    break;
-                case 'foreach':
-                    if (!isset($arg_list['from']))
-                        throw new Exception(self::err_prefix() . "Parameter 'from' missing in {foreach}!");
-                    if (!isset($arg_list['item']))
-                        throw new Exception(self::err_prefix() . "Parameter 'item' missing in {foreach}!");
-                    $from = $arg_list['from'];
-                    $item = $arg_list['item'];
-                    $item = eval("return $item;");
-                    $special = array($item);
-                    if (isset($arg_list['key'])) {
-                        $key = $arg_list['key'];
-                        $key = eval("return $key;");
-                        $special[] = $key;
-                        $key_code = " \$_$key => ";
-                    } else
-                        $key = $key_code = null;
-                    if (isset($arg_list['index'])) {
-                        $index = $arg_list['key'];
-                        $index = eval("return $index;");
-                        $special[] = $index;
-                        $index_code = " \$_$index = -1; ";
-                        $index_iter = " \$_$index++; ";
-                    } else
-                        $index = $index_code = $index_iter = null;
-                    self::open_block('foreach', $special);
-                    $ret = "<?php $index_code foreach ($from as $key_code \$_$item) { $index_iter ?>";
-                    break;
-                case 'thumb':
-                    // Thumbnailing wrapper.
-                    if (!isset($arg_list['src']))
-                        throw new Exception(self::err_prefix() . "Parameter 'src' missing in {thumb}!");
-                    if (!isset($arg_list['width']))
-                        $width = intval($arg_list['width']);
-                    else
-                        $width = "null";
-                    if (!isset($arg_list['height']))
-                        $height = intval($arg_list['height']);
-                    else
-                        $height = "null";
-                    $ret = "<?php echo api_images::get_picture_url($src, $width, $height); ?>";
-                    break;
-                case 'element':
-                    // Custom smarty function: displays an element.
-                    if (!isset($arg_list['path']))
-                        throw new Exception(self::err_prefix() . "Parameter 'path' missing in {element}!");
-                    $path = $arg_list['path'];
-                    unset($arg_list['path']);
-                    $pop = ""; $push = "";
-                    foreach ($arg_list as $key => $val) {
-                        $pop .= "\$__stack_$key = isset(\$__controller->$key)? \$__controller->$key: null; \$__controller->$key = $val;";
-                        $push .= "\$__controller->$key = \$__stack_$key;";
-                    }
-                    $ret = "<?php $pop api_application::render('elements/' . $path, \$__controller, false); $push ?>";
-                    break;
-                case 'url':
-                    // Custom smarty function: creates a local url from path.
-                    if (!isset($arg_list['path']))
-                        $path = "REQURL";
-                    else
-                        $path = $arg_list['path'];
-                    unset($arg_list['path']);
-                    // Pass the rest of the values as query parameters.
-                    $query = "";
-                    foreach ($arg_list as $key => $val)
-                        $query .= "'$key' => $val,";
-                    $ret = "<?php echo api_html::escape(api_navigation::make_local_url($path, array($query))); ?>";
-                    break;
-                case 'section':
-                    if (!isset($arg_list['name']))
-                        throw new Exception(self::err_prefix() . "Parameter 'name' missing in {section}!");
-                    $name = $arg_list['name'];
-                    self::open_block('section', array());
-                    $ret = "<?php \$__controller->layout->enterSection($name); ?>";
-                    break;
-                default:
-                    throw new Exception(self::err_prefix() . "The smarty command '$command' is unrecognized/unsupported.");
-                }
-            }
-        }
-        // Count linebreaks before returning.
-        self::$compiling_line += substr_count($match[0], "\n");
-        return $ret;
-    }
-
 }
 
 ?>
