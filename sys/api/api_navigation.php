@@ -64,7 +64,6 @@ class api_navigation {
         header("Status: 304 Not Modified");
         header("Cache-Control:");
         header("Expires:");
-        ob_flush();
         exit;
     }
 
@@ -142,6 +141,10 @@ class api_navigation {
     * @param String $url URL to redirect to (eg. http://example/page)
     */
     public static function redirect($url) {
+        // Makes sure session data is writen (to disk). This fixes
+        // a bug where session data not gets written in time for it to be read
+        // by a concurent proccess/thread that handles the new redirected request.
+        session_write_close();
         if (headers_sent())
             throw new Exception("Redirection to '".$url."' failed! Headers has already been sent.");
         api_misc::ob_reset();
