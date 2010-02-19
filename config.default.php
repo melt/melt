@@ -10,9 +10,9 @@ Config::$rooturl = 'http://localhost/';
 
 /**** MAIL CONFIGURATION ****/
 
-// Optional. The desired name used by Vector to mail FROM when sending e-mail.
+// Optional. The desired name used by nanoMVC to mail FROM when sending e-mail.
 Config::$email_name = '';
-// The desired mail address used by Vector to mail FROM when sending e-mail.
+// The desired mail address used by nanoMVC to mail FROM when sending e-mail.
 Config::$email_address = 'Vector@localhost';
 // The SMTP host Vector will use when sending mail.
 Config::$email_smtp = 'localhost';
@@ -30,6 +30,8 @@ Config::$sql_prefix = 'nmvc';
 
 /**** DEVELOPER CONFIGURATION ****/
 
+// When true, will display errors to non developer authorized users (insecure).
+Config::$in_development = true;
 // When true, will shut down the site telling visitors that it's under maintence.
 Config::$maintence = false;
 // Desired developer cookie key to access the site in development/maintence mode.
