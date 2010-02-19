@@ -57,28 +57,29 @@ abstract class Model extends DataSet {
     }
 
     private function getInsertSQL() {
-        $name = strtolower(get_class($this));
+        $name = get_class($this);
+        $table_name = api_string::cased_to_underline($name);
         static $key_list_cache = array();
-        if (!isset($key_list_cache[$name])) {
+        if (!isset($key_list_cache[$table_name])) {
             $key_list = implode(',', Model::getColumnNames($name));
-            $key_list_cache[$name] = $key_list;
+            $key_list_cache[$table_name] = $key_list;
         } else
-            $key_list = $key_list_cache[$name];
+            $key_list = $key_list_cache[$table_name];
         $value_list = array();
         foreach ($this->getColumns() as $colname => $column)
             $value_list[] = $column->getSQLValue();
         $value_list = implode(',', $value_list);
-        return "INSERT INTO `"._tblprefix."$name` ($key_list) VALUES ($value_list)";
+        return "INSERT INTO `"._tblprefix."$table_name` ($key_list) VALUES ($value_list)";
     }
 
     private function getUpdateSQL() {
-        $name = strtolower(get_class($this));
+        $table_name = api_string::cased_to_underline(get_class($this));
         $value_list = array();
         foreach ($this->getColumns() as $colname => $column)
             $value_list[] = "`$colname`=" . $column->getSQLValue();
         $value_list = implode(',', $value_list);
         $id = intval($this->_id);
-        return "UPDATE `"._tblprefix."$name` SET $value_list WHERE id=$id";
+        return "UPDATE `"._tblprefix."$table_name` SET $value_list WHERE id=$id";
     }
 
     /**
@@ -105,9 +106,10 @@ abstract class Model extends DataSet {
     * @desc Attempts to syncronize the layout of this model against the database table layout.
     */
     public static function syncLayout() {
-        $name = strtolower(get_called_class());
+        $name = get_called_class();
+        $table_name = api_string::cased_to_underline($name);
         $model = new $name(-1);
-        api_database::sync_table_layout_with_model($name, $model);
+        api_database::sync_table_layout_with_model($table_name, $model);
     }
 
     /**
@@ -115,7 +117,7 @@ abstract class Model extends DataSet {
     * @returns Model A new model instance.
     */
     public static final function insertNew() {
-        $name = strtolower(get_called_class());
+        $name = get_called_class();
         $model = new $name(-1);
         return $model;
     }
@@ -126,12 +128,13 @@ abstract class Model extends DataSet {
     */
     public static final function selectByID($id) {
         $id = intval($id);
-        $name = strtolower(get_called_class());
-        $model = self::touchModelInstance($name, $id);
+        $name = get_called_class();
+        $table_name = api_string::cased_to_underline($name);
+        $model = self::touchModelInstance($table_name, $id);
         if ($model === false) {
             $id = intval($id);
             $model = new $name($id);
-            $res = api_database::query("SELECT * FROM `"._tblprefix."$name` WHERE id = ".$id);
+            $res = api_database::query("SELECT * FROM `"._tblprefix."$table_name` WHERE id = ".$id);
             if (api_database::get_num_rows($res) != 1)
                 return false;
             $sql_row = api_database::next_assoc($res);
@@ -219,16 +222,17 @@ abstract class Model extends DataSet {
     * @desc Returns the name of the child pointer fields and validates the child.
     */
     private function getChildPointers($child_model) {
-        $name = strtolower(get_class($this));
+        $name = get_class($this);
+        $table_name = api_string::cased_to_underline($name);
         $column_names = self::getColumnNames($child_model);
         $ptr_fields = array();
         foreach ($column_names as $colname) {
             $ptr_model_name = self::getPointerModelName($colname);
-            if (strtolower($ptr_model_name) == $name)
+            if (strtolower($ptr_model_name) == $table_name)
                 $ptr_fields[] = $colname;
         }
         if (count($ptr_fields) == 0)
-            throw new Exception("Invalid child model! Does not contain pointer(s) to this model. (Expected field(s) '" . $name . "_id[_...]' missing)");
+            throw new Exception("Invalid child model: '$child_model'. Does not contain pointer(s) to the model '$name'. (Expected field(s) '" . $table_name . "_id[_...]' missing)");
         return $ptr_fields;
     }
 
@@ -257,7 +261,8 @@ abstract class Model extends DataSet {
     * @desc Array An array of the selected model instances.
     */
     public static final function selectWhere($where = "", $offset = 0, $limit = 0, $order = "") {
-        $name = strtolower(get_called_class());
+        $name = get_called_class();
+        $table_name = api_string::cased_to_underline($name);
         $offset = intval($offset);
         $limit = intval($limit);
         if ($where != "")
@@ -269,7 +274,7 @@ abstract class Model extends DataSet {
         else $limit = "";
         if ($order != "")
             $order = " ORDER BY ".$order;
-        $sql_result = api_database::query("SELECT * FROM `"._tblprefix."$name`".$where.$order.$limit);
+        $sql_result = api_database::query("SELECT * FROM `"._tblprefix."$table_name`".$where.$order.$limit);
         return self::makeArrayOf($name, $sql_result);
     }
 
@@ -281,8 +286,9 @@ abstract class Model extends DataSet {
     * @desc Array An array of the selected model instances.
     */
     public static final function selectFreely($sqldata) {
-        $name = strtolower(get_called_class());
-        $sql_result = api_database::query("SELECT * FROM `"._tblprefix."$name` ".$sqldata);
+        $name = get_called_class();
+        $table_name = api_string::cased_to_underline($name);
+        $sql_result = api_database::query("SELECT * FROM `"._tblprefix."$table_name` ".$sqldata);
         return self::makeArrayOf($name, $sql_result);
     }
 
@@ -290,8 +296,9 @@ abstract class Model extends DataSet {
     * @desc This function removes the model instance with the given ID.
     */
     public static final function removeByID($id) {
-        $name = strtolower(get_called_class());
-        $ret = api_database::query("DELETE FROM `"._tblprefix."$name` WHERE id = ".$id);
+        $name = get_called_class();
+        $table_name = api_string::cased_to_underline($name);
+        $ret = api_database::query("DELETE FROM `"._tblprefix."$table_name` WHERE id = ".$id);
         self::callAfterChangeCallback($name);
         return $ret;
     }
@@ -302,8 +309,9 @@ abstract class Model extends DataSet {
     * @param String $sqldata SQL command(s) that will be appended after the DELETE query for free selection.
     */
     public static final function removeFreely($sqldata) {
-        $name = strtolower(get_called_class());
-        $ret =  api_database::query("DELETE FROM `"._tblprefix."$name`".$sqldata);
+        $name = get_called_class();
+        $table_name = api_string::cased_to_underline($name);
+        $ret =  api_database::query("DELETE FROM `"._tblprefix."$table_name`".$sqldata);
         self::afterChangeCallback($name);
         return $ret;
     }
@@ -315,10 +323,11 @@ abstract class Model extends DataSet {
     * @param String $where (WHERE xyz) If specified, any number of where conditionals to match rows to delete.
     */
     public static final function removeWhere($where = "") {
-        $name = strtolower(get_called_class());
+        $name = get_called_class();
+        $table_name = api_string::cased_to_underline($name);
         if ($where != "")
             $where = " WHERE ".$where;
-        $ret = api_database::query("DELETE FROM `"._tblprefix."$name`".$where);
+        $ret = api_database::query("DELETE FROM `"._tblprefix."$table_name`".$where);
         self::callAfterChangeCallback($name);
         return $ret;
     }
@@ -331,10 +340,10 @@ abstract class Model extends DataSet {
     * @return Integer Number of matched rows.
     */
     public static final function count($where = "") {
-        $name = strtolower(get_called_class());
+        $table_name = api_string::cased_to_underline(get_called_class());
         if ($where != "")
             $where = " WHERE ".$where;
-        $result = api_database::query("SELECT COUNT(*) FROM `"._tblprefix."$name`".$where);
+        $result = api_database::query("SELECT COUNT(*) FROM `"._tblprefix."$table_name`".$where);
         $rows = api_database::next_array($result);
         return intval($rows[0]);
     }
@@ -352,7 +361,7 @@ abstract class Model extends DataSet {
     * @return Array All items listed on the current page.
     */
     public static final function enlist($where = "", $items_per_page = 30, $page_specifyer = 'page', $order_column_specifyer = null, $order_specifyer = null, $limit_ordering_to = null) {
-        $name = strtolower(get_called_class());
+        $name = get_called_class();
         $total_count = forward_static_call(array($name, 'count'), $where);
         $page_ub = ceil($total_count / $items_per_page) - 1;
         if ($page_ub < 0)
@@ -365,7 +374,7 @@ abstract class Model extends DataSet {
         $order = null;
         if ($order_column_specifyer != null) {
             $order_column = strval($_GET[$order_column_specifyer]);
-            $columns = self::getColumns($name);
+            $columns = $this->getColumns();
             // A correct ordering column?
             if (($limit_ordering_to === null || in_array($order_column, $order_column_specifyer))
             && in_array($order_column, $columns)) {
