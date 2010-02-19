@@ -139,7 +139,8 @@ class api_database {
             api_database::init();
         if (api_database::$display) {
             echo $query . "\r\n";
-            ob_flush();
+            if (@ob_get_length() > 0)
+                @ob_flush();
         }
         switch (_vcms_dbdriver) {
             case api_database::DRIVER_MYSQL:
@@ -251,10 +252,10 @@ class api_database {
     /**
     * @desc Syncronizes a table in the database with
     * @desc the generic table model used by nanoMVC.
-    * @param String $raw_table_name The raw table name, the identifier without prefixing.
+    * @param String $table_name The raw table name, the identifier without prefixing.
     * @param Model $example_model An example of the model instance of the table to sync.
     */
-    public static function sync_table_layout_with_model($raw_table_name, $example_model) {
+    public static function sync_table_layout_with_model($table_name, $example_model) {
         if (api_database::$initialized == false)
             api_database::init();
         // Make an array where [name] => sql_type
@@ -264,7 +265,7 @@ class api_database {
             self::verify_keyword($name);
             $columns[strtolower($name)] = $column->getSQLType();
         }
-        self::sync_table_layout_with_columns($raw_table_name, $columns);
+        self::sync_table_layout_with_columns($table_name, $columns);
     }
 
     /**
@@ -287,8 +288,8 @@ class api_database {
     * @param String $table_name The literal name of the table in the database.
     * @param Array $columns Array of columns mapped to their SQL types, eg "total => int(11), ...".
     */
-    public static function sync_table_layout_with_columns($raw_table_name, $columns) {
-        $table_name = _tblprefix . strtolower($raw_table_name);
+    public static function sync_table_layout_with_columns($table_name, $columns) {
+        $table_name = _tblprefix . $table_name;
         $all_tables = self::get_all_tables();
         if (in_array($table_name, $all_tables)) {
             // Altering existing table.
@@ -366,6 +367,7 @@ class api_database {
             case api_database::DRIVER_MYSQL:
                 $db_handle = mysql_connect(CONFIG::$sql_host, CONFIG::$sql_user, CONFIG::$sql_password)
                     or panic("The mySQL connection could not be established. " . mysql_error());
+                mysql_set_charset('utf8');
                 break;
             case api_database::DRIVER_MSSQL:
                 $db_handle = mssql_connect(CONFIG::$sql_host, CONFIG::$sql_user, CONFIG::$sql_password)
