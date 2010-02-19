@@ -20,6 +20,11 @@ abstract class DataSet {
     abstract public function store();
 
     /**
+    * @desc Override this function to initialize members of this model.
+    */
+    public function initialize() { }
+
+    /**
     * @desc Verify that the specified classname exists and extends the parent.
     */
     private static function existsAndExtends($class_name, $parent) {
@@ -87,10 +92,10 @@ abstract class DataSet {
                         $attribute = $attributes[$i];
                         $eqp = strpos($attribute, "=");
                         if ($eqp === false)
-                            throw new Exception("Syntax Error: The attribute token '$eqp' lacks equal sign (=).");
+                            throw new Exception("Syntax Error: Column '$colname's attribute token '$attribute' lacks equal sign (=).");
                         $key = substr($attribute, 0, $eqp);
                         $val = substr($attribute, $eqp + 1);
-                        if (!isset($type_handler->$key))
+                        if (!property_exists(get_class($type_handler), $key))
                             throw new Exception("Error in $name.$colname attribute list: The type '$clsname' does not have an attribute named '$key'.");
                         $type_handler->$key = $val;
                     }
@@ -104,6 +109,7 @@ abstract class DataSet {
         foreach ($parsed_model as $colname => $type_instance)
             $this->$colname = clone $type_instance;
         $this->_id = intval($id);
+        $this->initialize();
     }
 
     /**
