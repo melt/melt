@@ -22,6 +22,7 @@ include "api/class.Layout.php";
 include "api/class.LinearSQLTree.php";
 include "api/class.Mailer.php";
 include "api/class.Model.php";
+include "api/class.NullObject.php";
 include "api/class.Object.php";
 include "api/class.Type.php";
 include "api/class.Reference.php";

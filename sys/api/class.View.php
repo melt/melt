@@ -1,7 +1,7 @@
 <?php
 
 /**
-* @desc This class is only used when rendering cake views.
+* @desc This class is used when rendering views.
 *       It allows transparent access to the view controller variables,
 *       and non transparent standard cake access trough getVar and set.
 */
@@ -23,7 +23,7 @@ class View {
 
     /* Syncronize the views variables with the controllers. */
     function __get($name) {
-        return isset($this->_controller->$name)? $this->_controller->$name: null;
+        return isset($this->_controller->$name)? $this->_controller->$name: NullObject::getInstance();
     }
 
     function __set($name, $value) {
