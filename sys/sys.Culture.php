@@ -130,7 +130,7 @@ function _load_language() {
                     return;
         }
         // 3. Set to english.
-        if (_try_set_language('eng', $languages))
+        if (_try_set_language('en', $languages))
             return;
     }
     // 4. Set to one of the supported.
