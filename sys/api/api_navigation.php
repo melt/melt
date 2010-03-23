@@ -260,12 +260,11 @@ class api_navigation {
         if (headers_sent())
             throw new Exception("Headers has already been sent! Unable to transmit file '$filepath'.");
         api_misc::ob_reset();
+        if (!is_file($filepath))
+            api_navigation::show_404();
 
         // Cache control headers.
         $mf = filemtime($filepath);
-        header('Last-Modified: ' . date('r', $mf));
-        $etag = 'vutet' . strval($mf);
-        header('ETag: ' . $etag);
 
         // 304 Not Modified Verification.
         if (isset($_SERVER['HTTP_IF_MODIFIED_SINCE'])) {
@@ -274,6 +273,8 @@ class api_navigation {
             if ($ims !== false && $ims >= $mf)
                 api_navigation::show_not_modified();
         }
+        $filesize = filesize($filepath);
+        $etag = dechex($mf) . dechex($filesize);
         if (isset($_SERVER['HTTP_IF_NONE_MATCH'])) {
             $inm = $_SERVER['HTTP_IF_NONE_MATCH'];
             $inm = explode(',', $inm);
@@ -281,8 +282,10 @@ class api_navigation {
                 if ($etag == $mtag)
                     api_navigation::show_not_modified();
         }
-
-        // Send data.
+        
+        // Set cache headers
+        header('Last-Modified: ' . date('r', $mf));
+        header('ETag: ' . $etag);
         header('Content-Type: ' . $mime);
         if ($filename != NULL)
             header('Content-Disposition: attachment; filename='.$filename);
@@ -290,7 +293,8 @@ class api_navigation {
         header('Expires: 0');
         header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
         header('Pragma: public');
-        header('Content-Length: ' . filesize($filepath));
+        header('Content-Length: ' . $filesize);
+        // Send data.
         $r = readfile($filepath);
         if ($r === FALSE)
             throw new Exception("Could not access cached file '$path'.");
