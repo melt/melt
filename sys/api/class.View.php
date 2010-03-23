@@ -14,16 +14,15 @@ class View {
     }
 
     /**
-    *@desc Do not invoke manually.
+    *@desc Internal function. Do not call.
     */
-    public static function _runCakeView($path, $parent_controller) {
+    public static function _run($path, $parent_controller) {
         $cakeView = new View($path, $parent_controller);
     }
 
-
     /* Syncronize the views variables with the controllers. */
     function __get($name) {
-        return isset($this->_controller->$name)? $this->_controller->$name: NullObject::getInstance();
+        return property_exists($this->_controller, $name)? $this->_controller->$name: NullObject::getInstance();
     }
 
     function __set($name, $value) {
