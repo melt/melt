@@ -16,7 +16,7 @@ abstract class SingletonModel extends DataSet {
         }
         if (count($keys) == 0)
             return $instance;
-        $where = "k = \"" . implode("\" AND k = \"", $keys) . "\"";
+        $where = "k = \"" . implode("\" OR k = \"", $keys) . "\"";
         $table = _tblprefix . "singleton_memory";
         $result = api_database::query("SELECT k,v FROM $table WHERE $where");
         while (FALSE !== ($row = api_database::next_array($result))) {
@@ -31,18 +31,14 @@ abstract class SingletonModel extends DataSet {
         $name = get_class($this);
         $vars = get_class_vars($name);
         $table = _tblprefix . "singleton_memory";
-        $queries = "";
         foreach ($vars as $key => $default) {
             if ($key[0] == "_")
                 continue;
             $value = $this->$key->get();
             $key = api_database::strfy(strtolower($name . "." . $key));
             $value = api_database::strfy(serialize($value));
-            $queries .= "INSERT INTO $table (k,v) VALUES ($key,$value) ON DUPLICATE KEY UPDATE v=$value;";
+            api_database::query("INSERT INTO $table (k,v) VALUES ($key,$value) ON DUPLICATE KEY UPDATE v=$value");
         }
-        if (strlen($queries) == 0)
-            return;
-        api_database::query($queries);
     }
 
     public static final function syncWithDatabase() {
