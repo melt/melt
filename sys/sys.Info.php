@@ -34,7 +34,6 @@
     </style>
 </head>
 <body>
-
     <div class="content">
         <span class="topic">
             <?php echo $topic; ?>
