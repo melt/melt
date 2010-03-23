@@ -20,6 +20,53 @@ abstract class DataSet {
     abstract public function store();
 
     /**
+     * @desc Override this function to implement variable level access control.
+     *       If any protected variable is beeing accessed, a 403 response
+     *       is sent. To change the way unauthorized accessing is handled,
+     *       see getProtectionCallback().
+     *       The function is only called once per model, the result is then cached.
+     * @see DataSet::getProtectionCallback()
+     * @return Array An array containing the variable names that may not be accessed.
+     */
+    protected function getProtectedVars() {
+        return null;
+    }
+    /**
+     * @desc Override this function to implement variable level access control
+     *       with a custom callback. The callback handles how the request will be terminated.
+     *       If the callback is null, the request will terminate with a 403
+     *       response if any protected variable is beeing accessed.
+     *       The callback is not expected to return. Returning results in an exception.
+     * @see DataSet::getProtectedVars()
+     * @return callback A valid function callback.
+     */
+    protected function getProtectionCallback() {
+        return null;
+    }
+    
+    /**
+     * @desc Overidable function. Called on model instances when one of their pointers
+     * is turning invalid because the instance that pointer points to is about
+     * to be unlinked from the database.
+     * The default implementation is to clear that pointer (set it to 0)
+     * but this can be overridden to any particular garbage collection behavior.
+     * @desc Note: Always clearing broken pointers to zero is useful because
+     * you can find out if a pointer points nowhere with a simple == 0.
+     * @desc This function is NOT called on instances that are currently beeing unlinked
+     * in the stack. This is because GC is considered unneccessary on already
+     * deleted instances. Also, it enables you to unlink any instances freely
+     * in this function, in any model graph, without getting infinite loops.
+     */
+    public function gcPointer($field_name) {
+        $this->$field_name->set(0);
+    }
+    
+    /**
+     * @desc Override this function to implement application level model access control.
+     */
+    public function accessing() { }
+
+    /**
     * @desc Override this function to initialize members of this model.
     */
     public function initialize() { }
@@ -49,55 +96,76 @@ abstract class DataSet {
             unset($colname_parts[0]);
             if ($multi_ptr)
                 unset($colname_parts[1]);
-            return implode("_", array_reverse($colname_parts));
+            $model_name = "";
+            foreach (array_reverse($colname_parts) as $part)
+                $model_name .= ucfirst($part);
+            return $model_name;
         } else
             return null;
     }
+
+    private static function preParseEscape($str) {
+        return str_replace(array("\\\\", "\\,", "\\="), array("\x00", "\x01", "\x02"), $str);
+    }
+    
+    private static function postParseUnescape($str) {
+        return str_replace(array("\x00", "\x01", "\x02"), array("\\", ",", "="), $str);
+    }
+
 
     /**
     * @desc Translates the field specifiers to type handler instances.
     */
     protected final function __construct($id) {
+        $this->accessing();
         $name = get_class($this);
         static $parsed_model_cache = array();
         if (!isset($parsed_model_cache[$name])) {
             $parsed_model = array();
             $vars = get_class_vars($name);
+            $protected_vars = $this->getProtectedVars();
+            $protection_callback = $this->getProtectionCallback();
             $columns = array();
             foreach ($vars as $colname => $coltype) {
                 // Ignore non column members.
                 if ($colname[0] == '_')
                     continue;
-                // Parse attributes.
-                $attributes = explode(",", $coltype);
-                $clsname = $attributes[0];
+                // Parse the attributes.
+                $attributes = explode(",", self::preParseEscape($coltype));
+                $clsname = self::postParseUnescape($attributes[0]);
                 if ($clsname == "")
                     throw new Exception("Invalid type: Column '$colname' has nothing specified in type field.");
-                $clsname .= "Type";
-                $ptr_model_name = self::getPointerModelName($colname);
-                if ($ptr_model_name !== null) {
-                    // Expects the type handler of this class to extend the special reference type.
-                    self::existsAndExtends($ptr_model_name, "Model");
-                    self::existsAndExtends($clsname, "Reference");
-                    $type_handler = new $clsname($colname, null, $ptr_model_name);
+                if (is_array($protected_vars) && in_array($clsname, $protected_vars)) {
+                    // Protected variable, use replacement.
+                    $type_handler = new ProtectedVariable($protection_callback);
                 } else {
-                    // Standard type handles must extend the type class.
-                    self::existsAndExtends($clsname, "Type");
-                    if (is_subclass_of($clsname, "Reference"))
-                        throw new Exception("Invalid type: Column '$colname' has a Reference Type, without beeing a reference.");
-                    $type_handler = new $clsname($colname, null);
-                }
-                if (count($attributes) > 1) {
-                    for ($i = 1; $i < count($attributes); $i++) {
-                        $attribute = $attributes[$i];
-                        $eqp = strpos($attribute, "=");
-                        if ($eqp === false)
-                            throw new Exception("Syntax Error: Column '$colname's attribute token '$attribute' lacks equal sign (=).");
-                        $key = substr($attribute, 0, $eqp);
-                        $val = substr($attribute, $eqp + 1);
-                        if (!property_exists(get_class($type_handler), $key))
-                            throw new Exception("Error in $name.$colname attribute list: The type '$clsname' does not have an attribute named '$key'.");
-                        $type_handler->$key = $val;
+                    // Non protected variable, continue parsing.
+                    $clsname .= "Type";
+                    $ptr_model_name = self::getPointerModelName($colname);
+                    if ($ptr_model_name !== null) {
+                        // Expects the type handler of this class to extend the special reference type.
+                        self::existsAndExtends($ptr_model_name, "Model");
+                        self::existsAndExtends($clsname, "Reference");
+                        $type_handler = new $clsname($colname, null, $ptr_model_name);
+                    } else {
+                        // Standard type handles must extend the type class.
+                        self::existsAndExtends($clsname, "Type");
+                        if (is_subclass_of($clsname, "Reference"))
+                            throw new Exception("Invalid type: Column '$colname' has a Reference Type, without beeing a reference.");
+                        $type_handler = new $clsname($colname, null);
+                    }
+                    if (count($attributes) > 1) {
+                        for ($i = 1; $i < count($attributes); $i++) {
+                            $attribute = $attributes[$i];
+                            $eqp = strpos($attribute, "=");
+                            if ($eqp === false)
+                                throw new Exception("Syntax Error: Column '$colname's attribute token '$attribute' lacks equal sign (=).");
+                            $key = self::postParseUnescape(substr($attribute, 0, $eqp));
+                            $val = self::postParseUnescape(substr($attribute, $eqp + 1));
+                            if (!property_exists(get_class($type_handler), $key))
+                                throw new Exception("Error in $name.$colname attribute list: The type '$clsname' does not have an attribute named '$key'.");
+                            $type_handler->$key = $val;
+                        }
                     }
                 }
                 // Cache this untouched type instance and clone it to other new instances.
@@ -181,10 +249,15 @@ abstract class DataSet {
         $mif_val_key = $_SESSION['mif_val_key'];
         $mif_enc_key = $_SESSION['mif_enc_key'];
         // Refill fields on invalid-callback.
-        $invalid_callback = $name == self::$_invalid_mif_name;
-        if ($invalid_callback)
-            foreach (self::$_invalid_mif_data as $col_name => $data)
-                $this->$col_name = $data;
+        if ($_SESSION['_mif_invalid']['name'] == $name) {
+            $invalid_mif_fields = $_SESSION['_mif_invalid']['fields'];
+            $invalid_mif_data = $_SESSION['_mif_invalid']['data'];
+            foreach ($invalid_mif_data as $col_name => $data)
+                $this->$col_name->set($data);
+            $invalid_callback = true;
+            unset($_SESSION['_mif_invalid']);
+        } else
+            $invalid_callback = false;
         // Get columns.
         $columns = $this->getColumns();
         $fields_found = array();
@@ -221,8 +294,8 @@ abstract class DataSet {
         if ($invalid_callback) {
             // Append invalidation info.
             foreach ($out_fields as $col_name => &$if) {
-                if (isset(self::$_invalid_mif_fields[$col_name])) {
-                    $invalid_info = self::$_invalid_mif_fields[$col_name];
+                if (isset($invalid_mif_fields[$col_name])) {
+                    $invalid_info = $invalid_mif_fields[$col_name];
                     $if .= " <div class=\"mif_invalid\">$invalid_info</div>";
                 }
             }
@@ -230,16 +303,15 @@ abstract class DataSet {
         return $out_fields;
     }
 
-    // Passing theese parameters upwards from processInterfaceAction()
-    // to getInterface() in case form input was invalid and user must be notified about input mistakes.
-    private static $_invalid_mif_fields;
-    private static $_invalid_mif_name;
-    private static $_invalid_mif_data;
-
     /**
-    * @desc Process action queried by interface.
-    */
+     * Process action queried by interface if souch an action has been POSTed.
+     * If this is indeed a POST, nanoMVC MUST redirect back to itself as
+     * the HTTP specification prevents POSTs from beeing cached.
+     * @see http://www.w3.org/Protocols/rfc2616/rfc2616-sec9.html#sec9.5
+     */
     public static final function processInterfaceAction() {
+        if (!isset($_POST['_mif_header']))
+            return;
         // Make sure scaffold key is set.
         if (isset($_SESSION['mif_val_key']) && isset($_SESSION['mif_enc_key'])) {
             $mif_val_key = $_SESSION['mif_val_key'];
@@ -268,27 +340,30 @@ abstract class DataSet {
                 if (count($invalid_fields) > 0) {
                     $invalid_data = array();
                     foreach ($mif_fields as $name)
-                        $invalid_data[$name] = $data_set->$name;
-                    self::$_invalid_mif_data = $invalid_data;
-                    self::$_invalid_mif_name = $mif_name;
-                    self::$_invalid_mif_fields = $invalid_fields;
-                    Flash::doFlash(__("The requested operation failed. One or more fields where invalid."), FLASH_BAD);
-                    return;
+                        $invalid_data[$name] = $data_set->$name->get();
+                    // Store invalidation data in session for next request.
+                    $_SESSION['_mif_invalid'] = array(
+                        "data" => $invalid_data,
+                        "name" => $mif_name,
+                        "fields" => $invalid_fields,
+                    );
+                    Flash::doFlashRedirect(url(REQURL), __("The requested operation failed. One or more fields where invalid."));
+                } else {
+                    // Success, store changes.
+                    $data_set->store();
+                    // Redirect if it should do so.
+                    if (is_string($mif_redirect) && strlen($mif_redirect) > 0)
+                        $redirect = str_replace("{id}", $data_set->getID(), $mif_redirect);
+                    else
+                        $redirect = api_navigation::make_local_url(REQURL);
+                    Flash::doFlashRedirect($redirect, $success_msg, FLASH_GOOD);
+                    exit;
                 }
-                // Store changes.
-                $data_set->store();
-                // Redirect if it should do so.
-                if (is_string($mif_redirect) && strlen($mif_redirect) > 0)
-                    $redirect = str_replace("{id}", $data_set->getID(), $mif_redirect);
-                else
-                    $redirect = api_navigation::make_local_url(REQURL);
-                Flash::doFlashRedirect($redirect, $success_msg, FLASH_GOOD);
-                exit;
             }
         }
-        Flash::doFlash(__("The requested action failed, possibly due to timed out session."), FLASH_BAD);
+        Flash::doFlashRedirect(url(REQURL), __("The requested action failed, possibly due to timed out session."), FLASH_BAD);
     }
-
+    
     // This function have to use the storage implementation, and since DataSet leaves that undefined,
     // childs are required to override this function.
     protected abstract function getInterfaceDataSetAndAction($mif_name, $mif_id, $mif_redirect, $mif_delete_redirect);

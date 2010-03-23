@@ -6,56 +6,122 @@
 *       and every row in the database is represented by exactly one model instance.
 */
 abstract class Model extends DataSet {
-    /**
-    * @desc Make any additional calculations you need to do before this instance is truly stored to the database.
-    * @desc Designed to be overriden.
-    */
-    public function beforeInsert() {
-        return;
-    }
+    /** @var array Cache of all fetched instances.  */
+    private static $_instance_cache = array();
 
     /**
-    * @desc Make any additional calculations you need to do before this instance is updated in the database.
-    *       NOT CALLED ON INITIAL STORAGE, ONLY CALLED WHEN UPDATING.
-    * @desc Designed to be overriden.
-    */
-    public function beforeUpdate() {
-        return;
-    }
-
-    /**
-    * @desc Make any additional calculations you need to do before this instance is removed from
-    *       the database through an interface.
-    *       ONLY CALLED WHEN REMOVED AUTOMATICALLY TROUGH INTERFACE.
-    * @desc Designed to be overriden.
-    */
-    public function beforeInterfaceRemove() {
-        return;
-    }
-
-    /**
-    * @desc Useful for additional calculations you need to do
-    *       after any changes where made to any model instances in the database.
-    * @desc Designed to be overriden.
-    */
-    public static function afterChange() {
-        return;
-    }
-
-    private static function callAfterChangeCallback($model_name) {
-        if (api_database::affected_rows() > 0)
-            call_user_func(array($model_name, "afterChange"));
-    }
-
-    /**
-    * @desc Removes this model instance from the database.
-    */
-    public final function remove() {
-        $id = $this->_id;
+     * Allows quick creation of model copies.
+     */
+    public function __clone() {
+        // Copies must be stored to be linked.
         $this->_id = -1;
-        return $this->removeByID($id);
     }
 
+    /**
+     * @desc Overidable event. Called on model instances before they are stored.
+     * @param boolean $is_linked True if the model instance is currently linked in the database. False if it's about to be INSERTED.
+     */
+    public function beforeStore($is_linked) { }
+
+    /**
+     * @desc Overidable event. Called on model instances after they are stored.
+     * @param boolean $is_linked True if the model instance was linked in the database before the store. False if it was INSERTED just now.
+     */
+    public function afterStore($was_linked) { }
+
+    /**
+     * @desc Overidable event. Called on model instances that is about to be unlinked in the database.
+     */
+    public function beforeUnlink() { }
+
+    /**
+     * @desc Overidable event. Called on model instances after they have been unlinked in the database.
+     */
+    public function afterUnlink() { }
+
+    /**
+    * @desc Creates a new unlinked model instance.
+    * @return Model A new unlinked model instance.
+    */
+    public static function insert() {
+        $name = get_called_class();
+        $model = new $name(-1);
+        return $model;
+    }
+
+    /**
+    * @desc Stores any changes to this model instance to the database.
+    * @desc If this is a new instance, it's inserted, otherwise, it's updated.
+    */
+    public function store() {
+        $update_ex = null;
+        if ($this->_id > 0) {
+            // Updating existing row.
+            $this->beforeStore(true);
+            api_database::query($this->getUpdateSQL());
+            $this->afterStore(true);
+        } else {
+            // Inserting.
+            $this->beforeStore(false);
+            api_database::query($this->getInsertSQL());
+            $this->_id = api_database::insert_id();
+            $this->afterStore(false);
+        }
+    }
+
+    /**
+    * @desc Unlinks this model instance from the database.
+    */
+    public function unlink() {
+        // Can't unlink non linked instances.
+        if ($this->_id < 1)
+            return;
+        static $called = false;
+        if (!$called) {
+            // Prevent a user abort from terminating the script during GC.
+            ignore_user_abort(true);
+            $called = true;
+        }
+        // Before unlink event.
+        $this->beforeUnlink();
+        // Gather information.
+        $name = get_class($this);
+        $table_name = api_string::cased_to_underline($name);
+        $id = intval($this->_id);
+        // Find all pointers that will get broken by this unlink and garbage collect.
+        $broken_pointers = array();
+        foreach (self::getPointerColumns($table_name) as $pointer) {
+            list($child_model, $child_column) = $pointer;
+            $instances = call_user_func(array($child_model, "selectWhere"), "$child_column = $id");
+            // Garbage collect.
+            foreach ($instances as $instance) {
+                // Don't call GC on unlinked instances. gcPointer() may unlink recursivly.
+                if ($instance->_id > 0)
+                    $instance->gcPointer($child_column);
+            }
+        }
+        // Do the actual unlink in database backend.
+        $ret = api_database::query("DELETE FROM `" . _tblprefix . "$table_name` WHERE id = " . $id);
+        unset(self::$_instance_cache[$name][$id]);
+        $this->_id = -1;
+        // After unlink event.
+        $this->afterUnlink();
+    }
+
+    /**
+     * @desc Returns an array of pointers (table,column) that points to given table.
+     */
+    private function getPointerColumns($table_name) {
+        static $cache = array();
+        if (isset($cache[$table_name]))
+            return $cache[$table_name];
+        $pointers = array();
+        $result = api_database::query("SELECT child_table,child_column FROM `" . _tblprefix . "pointer_map` WHERE parent_table = \"$table_name\"");
+        while (false !== ($row = api_database::next_array($result)))
+            $pointers[] = array(api_string::underline_to_cased($row[0]), $row[1]);
+        return $cache[$table_name] = $pointers;
+    }
+    
     private function getInsertSQL() {
         $name = get_class($this);
         $table_name = api_string::cased_to_underline($name);
@@ -83,26 +149,6 @@ abstract class Model extends DataSet {
     }
 
     /**
-    * @desc Stores any changes to this model instance to the database.
-    * @desc If this is a new instance, it's inserted, otherwise, it's updated.
-    */
-    public final function store() {
-        $update_ex = null;
-        if ($this->_id > 0) {
-            // Updating existing row.
-            $this->beforeUpdate();
-            api_database::query($this->getUpdateSQL());
-        } else {
-            // Inserting.
-            $this->beforeInsert();
-            api_database::query($this->getInsertSQL());
-            $this->_id = api_database::insert_id();
-        }
-        // Call after change callback. (if rows changed)
-        self::callAfterChangeCallback(get_class($this));
-    }
-
-    /**
     * @desc Attempts to syncronize the layout of this model against the database table layout.
     */
     public static function syncLayout() {
@@ -113,20 +159,10 @@ abstract class Model extends DataSet {
     }
 
     /**
-    * @desc Creates a new model instance.
-    * @returns Model A new model instance.
-    */
-    public static final function insertNew() {
-        $name = get_called_class();
-        $model = new $name(-1);
-        return $model;
-    }
-
-    /**
     * @desc This function sets this model instance to the stored ID specified.
     * @return Model The model with the ID specified or FALSE.
     */
-    public static final function selectByID($id) {
+    public static function selectByID($id) {
         $id = intval($id);
         $name = get_called_class();
         $table_name = api_string::cased_to_underline($name);
@@ -146,14 +182,15 @@ abstract class Model extends DataSet {
     /**
     * @desc Creates an array of model instances from a given sql result.
     */
-    private static final function makeArrayOf($name, $sql_result) {
+    private static function makeArrayOf($name, $sql_result) {
         $length = api_database::get_num_rows($sql_result);
         if ($length == 0)
             return array();
         $array = array();
         for ($at = 0; $at < $length; $at++) {
             $sql_row = api_database::next_assoc($sql_result);
-            $array[] = self::touchModelInstance($name, intval($sql_row['id']), $sql_row);
+            $id = intval($sql_row['id']);
+            $array[$id] = self::touchModelInstance($name, $id, $sql_row);
         }
         return $array;
     }
@@ -162,16 +199,15 @@ abstract class Model extends DataSet {
     * @desc Passing all sql result model instancing through this function to enable caching.
     * @param Mixed $sql_row Either a sql row result or null if function should return false instead of instancing model.
     */
-    private static final function touchModelInstance($name, $id, $sql_row = null) {
-        static $cache = array();
-        if (isset($cache[$name][$id]))
-            return $cache[$name][$id];
+    private static function touchModelInstance($name, $id, $sql_row = null) {
+        if (isset(self::$_instance_cache[$name][$id]))
+            return self::$_instance_cache[$name][$id];
         if ($sql_row === null)
             return false;
         $model = new $name($id);
         foreach ($model->getColumns() as $colname => $column)
             $column->set($sql_row[strtolower($colname)]);
-        return $cache[$name][$id] = $model;
+        return self::$_instance_cache[$name][$id] = $model;
     }
 
     /**
@@ -245,9 +281,12 @@ abstract class Model extends DataSet {
     * @param String $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
     * @desc Model The model instance that matches or FALSE if there are no match.
     */
-    public static final function selectFirst($where, $order = "") {
+    public static function selectFirst($where, $order = "") {
         $match = self::selectWhere($where, 0, 1, $order);
-        return (count($match) == 0)? FALSE: $match[0];
+        if (count($match) == 0)
+            return false;
+        reset($match);
+        return current($match);
     }
 
     /**
@@ -260,7 +299,7 @@ abstract class Model extends DataSet {
     * @param String $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
     * @desc Array An array of the selected model instances.
     */
-    public static final function selectWhere($where = "", $offset = 0, $limit = 0, $order = "") {
+    public static function selectWhere($where = "", $offset = 0, $limit = 0, $order = "") {
         $name = get_called_class();
         $table_name = api_string::cased_to_underline($name);
         $offset = intval($offset);
@@ -285,7 +324,7 @@ abstract class Model extends DataSet {
     * @param String $sqldata SQL command(s) that will be appended after the SELECT query for free selection.
     * @desc Array An array of the selected model instances.
     */
-    public static final function selectFreely($sqldata) {
+    public static function selectFreely($sqldata) {
         $name = get_called_class();
         $table_name = api_string::cased_to_underline($name);
         $sql_result = api_database::query("SELECT * FROM `"._tblprefix."$table_name` ".$sqldata);
@@ -293,43 +332,53 @@ abstract class Model extends DataSet {
     }
 
     /**
-    * @desc This function removes the model instance with the given ID.
+    * @desc This function unlinks the model instance with the given ID.
     */
-    public static final function removeByID($id) {
-        $name = get_called_class();
-        $table_name = api_string::cased_to_underline($name);
-        $ret = api_database::query("DELETE FROM `"._tblprefix."$table_name` WHERE id = ".$id);
-        self::callAfterChangeCallback($name);
-        return $ret;
+    public static function unlinkByID($id) {
+        $instance = forward_static_call(array("Model", "selectByID"), $id);
+        if ($instance !== false)
+            $instance->unlink();
     }
     /**
-    * @desc This function removes the selection of fields that matches the given SQL commands.
+    * @desc This function unlinks the selection of instances that matches the given SQL commands.
     * @desc For security reasons, use api_database::strfy() to escape and quote
     * @desc any strings you want to build your SQL query from.
     * @param String $sqldata SQL command(s) that will be appended after the DELETE query for free selection.
     */
-    public static final function removeFreely($sqldata) {
-        $name = get_called_class();
-        $table_name = api_string::cased_to_underline($name);
-        $ret =  api_database::query("DELETE FROM `"._tblprefix."$table_name`".$sqldata);
-        self::afterChangeCallback($name);
-        return $ret;
+    public static function unlinkFreely($sqldata) {
+        $instances = forward_static_call(array("Model", "selectFreely"), $sqldata);
+        foreach ($instances as $instance)
+            $instance->unlink();
     }
 
     /**
     * @desc This function removes the selection of fields that matches the given SQL arguments.
     * @desc For security reasons, use api_database::strfy() to escape and quote
     * @desc any strings you want to build your sql query from.
-    * @param String $where (WHERE xyz) If specified, any number of where conditionals to match rows to delete.
+    * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
+    * @param Integer $offset (OFFSET xyz) The offset from the begining to select results from.
+    * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
     */
-    public static final function removeWhere($where = "") {
-        $name = get_called_class();
-        $table_name = api_string::cased_to_underline($name);
-        if ($where != "")
-            $where = " WHERE ".$where;
-        $ret = api_database::query("DELETE FROM `"._tblprefix."$table_name`".$where);
-        self::callAfterChangeCallback($name);
-        return $ret;
+    public static function unlinkWhere($where = "", $offset = 0, $limit = 0) {
+        $instances = forward_static_call(array("Model", "selectWhere"), $where, $offset, $limit);
+        foreach ($instances as $instance)
+            $instance->unlink();
+    }
+
+    /**
+    * @desc Removes all children of the specified child model. (Instances that point to this instance.)
+    *       Will throw an exception if the specified child model does not point to this model.
+    * @desc For security reasons, use api_database::strfy() to escape and quote
+    *       any strings you want to build your sql query from.
+    * @param String $chold_model Name of the child model that points to this model.
+    * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
+    * @param Integer $offset (OFFSET xyz) The offset from the begining to unlink results from.
+    * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
+    */
+    public final function unlinkChildren($child_model, $where = "", $offset = 0, $limit = 0) {
+        $instances = $this->selectChildren($child_model, $where, $offset, $limit);
+        foreach ($instances as $instance)
+            $instance->unlink();
     }
 
     /**
@@ -339,7 +388,7 @@ abstract class Model extends DataSet {
     * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
     * @return Integer Number of matched rows.
     */
-    public static final function count($where = "") {
+    public static function count($where = "") {
         $table_name = api_string::cased_to_underline(get_called_class());
         if ($where != "")
             $where = " WHERE ".$where;
@@ -349,7 +398,7 @@ abstract class Model extends DataSet {
     }
 
     /**
-    * @desc This function enlists a number of items. Useful when listing in views.
+    * @desc This function enlists a number of items in an orderable fashion that is controlled via specifyers (GET variable names).
     * @desc For security reasons, use api_database::strfy() to escape and quote
     * @desc any strings you want to build your sql query from.
     * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
@@ -360,18 +409,8 @@ abstract class Model extends DataSet {
     * @param Array $limit_ordering_to If you want to limit the possible column names that can be ordered, specify them here.
     * @return Array All items listed on the current page.
     */
-    public static final function enlist($where = "", $items_per_page = 30, $page_specifyer = 'page', $order_column_specifyer = null, $order_specifyer = null, $limit_ordering_to = null) {
-        $name = get_called_class();
-        $total_count = forward_static_call(array($name, 'count'), $where);
-        $page_ub = ceil($total_count / $items_per_page) - 1;
-        if ($page_ub < 0)
-            $page_ub = 0;
-        $page = intval(@$_GET[$page_specifyer]);
-        if ($page > $page_ub)
-            $page = $page_ub;
-        else if ($page < 0)
-            $page = 0;
-        $order = null;
+    public static function enlist_orderable($where = "", $items_per_page = 30, $page_specifyer = 'page', $order_column_specifyer = null, $order_specifyer = null, $limit_ordering_to = null) {
+        $ordering = "";
         if ($order_column_specifyer != null) {
             $order_column = strval($_GET[$order_column_specifyer]);
             $columns = $this->getColumns();
@@ -380,10 +419,33 @@ abstract class Model extends DataSet {
             && in_array($order_column, $columns)) {
                 $order = strval($_GET[$order_specifyer]);
                 $decending = (strtolower($order) == "desc");
-                $order = $order_column . ($decending? " DESC": " ASC");
+                $ordering = $order_column . ($order_column == "DESC"? " DESC": " ASC");
             }
         }
-        $items = forward_static_call(array($name, 'selectWhere'), $where, $page * $items_per_page, $items_per_page, $order);
+        return forward_static_call(array("Model", "enlist_preordered"), $ordering, $decending? "DESC": "ASC", $items_per_page, $page_specifyer);
+    }
+
+    /**
+     * This function enlist (paginates) a number of items. Useful when listing in views.
+     * @desc For security reasons, use api_database::strfy() to escape and quote
+     * @desc any strings you want to build your sql query from.
+     * @param string $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
+     * @param Integer $items_per_page The number of items per page.
+     * @param String $page_specifyer The name of the GET variable that specifies the page we´re currently on.
+     * @param string $ordering The column ordering. Eg. col1 asc, col2 desc.
+     * @return Array All items listed on the current page.
+     */
+    public static function enlist($where = "", $items_per_page = 30, $page_specifyer = 'page', $ordering = "") {
+        $total_count = forward_static_call(array("Model", 'count'), $where);
+        $page_ub = ceil($total_count / $items_per_page) - 1;
+        if ($page_ub < 0)
+            $page_ub = 0;
+        $page = intval(@$_GET[$page_specifyer]);
+        if ($page > $page_ub)
+            $page = $page_ub;
+        else if ($page < 0)
+            $page = 0;
+        $items = forward_static_call(array("Model", 'selectWhere'), $where, $page * $items_per_page, $items_per_page, $ordering);
         self::$_last_enlist_page_ub = $page_ub;
         self::$_last_enlist_page_current = $page;
         return $items;
@@ -399,7 +461,7 @@ abstract class Model extends DataSet {
     * @param integer $span Total pages to span to the left and to the right of the current page.
     * @return Array An array of pagenumbers and possible, tripple dots if span is to small to cover all pages.
     */
-    public static final function enlist_navigation($span = 6) {
+    public static function enlist_navigation($span = 6) {
         $page_current = intval(self::$_last_enlist_page_current);
         $page_ub = intval(self::$_last_enlist_page_ub);
         $nav = array(0);
@@ -420,10 +482,10 @@ abstract class Model extends DataSet {
     protected final function getInterfaceDataSetAndAction($mif_name, $mif_id, $mif_redirect, $mif_delete_redirect) {
         // Insert or update?
         if ($mif_id > 0) {
-            $model = forward_static_call(array($mif_name, 'selectByID'), $mif_id);
+            $model = call_user_func(array($mif_name, 'selectByID'), $mif_id);
             $success_msg = __("Record was successfully updated.");
         } else {
-            $model = forward_static_call(array($mif_name, 'insertNew'));
+            $model = call_user_func(array($mif_name, 'insert'));
             $success_msg = __("Record was successfully added.");
         }
         // Delete?
@@ -435,8 +497,7 @@ abstract class Model extends DataSet {
             else if ($mif_id <= 0)
                 Flash::doFlash(__("Conflicting operation: Delete and Insert. Ignored query."), FLASH_BAD);
             else {
-                $model->beforeInterfaceRemove();
-                $model->remove();
+                $model->unlink();
                 Flash::doFlashRedirect($mif_delete_redirect, __("Record removed as requested."), FLASH_GOOD);
             }
             return null;
