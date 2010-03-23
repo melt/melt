@@ -94,7 +94,6 @@ class api_database {
         if ($max_length >= 0)
             $string = substr($string, 0, $max_length);
         return '"' . addslashes($string) . '"';
-
     }
 
     /**
@@ -400,6 +399,13 @@ class api_database {
         // USE the configured database.
         api_database::query("USE " . CONFIG::$sql_database);
     }
+}
+
+/**
+* @desc Shortcut for api_database::strfy().
+*/
+function strfy($string) {
+    api_database::strfy($string);
 }
 
 ?>
