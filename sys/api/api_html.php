@@ -28,4 +28,12 @@ class api_html {
     }
 }
 
+
+/**
+* @desc Shortcut for api_html::escape().
+*/
+function escape($string) {
+    api_html::escape($string);
+}
+
 ?>
