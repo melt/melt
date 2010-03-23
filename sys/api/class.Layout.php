@@ -4,14 +4,10 @@
 * @desc Buffers output to a layout.
 */
 class Layout {
-    // Sections, additional sections to buffer to.
-    private $sections = array('content' => '');
-    // Pointer to the current buffer.
-    private $at = null;
-    private $at_stack = array();
-    // If writing chunks in reverse order.
-    private $reverse = false;
-    private $reverse_stack = array();
+    // Section buffers.
+    private $section_buffers = array();
+    // The current stack of buffers.
+    private $buffer_stack = array();
 
     private $path;
 
@@ -21,34 +17,22 @@ class Layout {
     */
     public function Layout($path) {
         $this->path = $path;
-        $this->at = 'content';
-        api_misc::ob_reset();
-        ob_start();
+        $this->enterSection("content");
     }
 
     /**
     * @desc Displays the layout with it's buffered sections.
     */
     public function _finalize() {
-        $this->flushSection();
-        ob_end_clean();
+        if (count($this->buffer_stack) > 1)
+            throw new Exception("Finalizing layout without exiting all sections!");
+        $this->exitSection();
         // Render layout just like a view.
         $layout_controller = new Controller();
-        foreach ($this->sections as $name => $content)
-            $layout_controller->$name = $content;
+        foreach ($this->section_buffers as $name => $section)
+            $layout_controller->$name = $section->output();
         $layout_controller->layout = new VoidLayout();
         api_application::render("layouts/" . $this->path, $layout_controller, false);
-        // Unset my buffers.
-        unset($this->content);
-        unset($this->sections);
-    }
-
-    private function flushSection() {
-        if ($this->reverse)
-            $this->sections[$this->at] = ob_get_contents() . $this->sections[$this->at];
-        else
-            $this->sections[$this->at] .= ob_get_contents();
-        ob_clean();
     }
 
     /**
@@ -56,32 +40,32 @@ class Layout {
     * @param string $name Identifier of the section. If the section name ends in _foot, it will be written in reverse chunks.
     */
     public function enterSection($name) {
-        $this->flushSection();
-        array_push($this->at_stack, $this->at);
-        array_push($this->reverse_stack, $this->reverse);
-
-        if (!array_key_exists($name, $this->sections))
-            $this->sections[$name] = "";
         $foot_section = substr($name, -5) == '_foot';
-
-        $this->at = $name;
-        $this->reverse = $foot_section;
+        if (!array_key_exists($name, $this->section_buffers))
+            $this->section_buffers[$name] = $section = new SectionBuffer($foot_section);
+        else
+            $section = $this->section_buffers[$name];
+        $section->enter();
+        array_push($this->buffer_stack, $section);
     }
 
     /**
     * @desc Exits the section in the layout.
     */
     public function exitSection() {
-        $this->flushSection();
-        $this->at = array_pop($this->at_stack);
-        $this->reverse = array_pop($this->reverse_stack);
+        $section = array_pop($this->buffer_stack);
+        $section->leave();
     }
 
     /**
-    * @desc Sets the content of a section.
-    */
-    public function setSection($name, $value) {
-        $this->sections[$name] = $value;
+     * Inserts data directly into a section.
+     * @param string $name Name of section to insert data into.
+     * @param string $data Data to insert.
+     */
+    public function insertSection($name, $data) {
+        $this->enterSection($name);
+        echo $data;
+        $this->exitSection();
     }
 }
 
