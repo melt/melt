@@ -53,7 +53,19 @@ class api_string {
     */
     public static function email_validate($email) {
         $emailregex = ";^((?>[a-zA-Z\d!#$%&'*+\-/=?^_`{|}~]+\x20*|\"((?=[\x01-\x7f])[^\"\\]|\\[\x01-\x7f])*\"\x20*)*(?<angle><))?((?!\.)(?>\.?[a-zA-Z\d!#$%&'*+\-/=?^_`{|}~]+)+|\"((?=[\x01-\x7f])[^\"\\]|\\[\x01-\x7f])*\")@(((?!-)[a-zA-Z\d\-]+(?<!-)\.)+[a-zA-Z]{2,}|\[(((?(?<!\[)\.)(25[0-5]|2[0-4]\d|[01]?\d?\d)){4}|[a-zA-Z\d\-]*[a-zA-Z\d]:((?=[\x01-\x7f])[^\\\[\]]|\\[\x01-\x7f])+)\])(?(angle)>)$;";
-        return !(preg_match($emailregex, $email) == 0);
+        return preg_match($emailregex, $email) == 1;
+    }
+
+    /**
+     * @desc Returns true if given HTTP/HTTPS URL looks valid.
+     */
+    public static function http_url_validate($url) {
+        $urlregex = '`^https?://'
+        . '[0-9a-z-.]+' // hostname, can be "any" combination of theese charachers
+        . '(:[0-9]{1,5})?' // port number- :80
+        . '((/?)|' // a slash isn't required if there is no file name
+        . '(/[0-9a-z_!~*\'().;?:@&=+$,%#-]+)+/?)$`';
+        return preg_match($urlregex, $url) == 1;
     }
 
     /**
@@ -125,10 +137,20 @@ class api_string {
     }
 
     /**
-    * @desc Takes a text that is cased like this: fooBarLol and converts it to underlined form: foo_bar_lol
+    * @desc Takes a text that is cased like this: fooBar and converts it to underlined form: foo_bar
     */
     public static function cased_to_underline($text) {
         return strtolower(preg_replace('#([a-z])([A-Z])#', '\1_\2', $text));
+    }
+
+    /**
+     * @desc Takes a text that is underlined like this: foo_bar and converts it to cased form: FooBar
+     */
+    public static function underline_to_cased($text) {
+        $tokens = explode("_", $text);
+        foreach ($tokens as &$token)
+            $token = ucfirst($token);
+        return implode($tokens);
     }
 
     /**
