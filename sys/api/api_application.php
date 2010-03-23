@@ -95,24 +95,40 @@ class api_application {
             api_navigation::show_xyz(403);
         // Display all SQL queries made during syncronization.
         api_database::enable_display();
+        // Refresh pointer map.
+        api_database::run("DROP TABLE `" . _tblprefix . "pointer_map`");
+        api_database::query("CREATE TABLE `" . _tblprefix . "pointer_map` (`child_table` varchar(64) NOT NULL, `child_column` varchar(64) NOT NULL, `parent_table` varchar(64) NOT NULL);");
         // Load all models.
         $models = glob("models/*.php");
         foreach ($models as $model) {
             if (is_file($model)) {
                 require_once $model;
-                $cls_name_tokens = explode("_", substr(basename($model), 0, -4));
-                foreach ($cls_name_tokens as &$token)
-                    $token = ucfirst($token);
-                $cls_name = implode($cls_name_tokens);
+                $table_name = substr(basename($model), 0, -4);
+                $cls_name = api_string::underline_to_cased($table_name);
                 $parents = class_parents($cls_name);
                 if (class_exists($cls_name) && in_array('SingletonModel', $parents))
                     continue; // Singletonmodels is not stored as tables.
                 if (!class_exists($cls_name) || !in_array('Model', $parents))
                     throw new Exception("The model class file '$model' unexpectedly didn't declare a Model/SingletonModel extended class with the name '$cls_name'.");
                 // Syncronize this model.
-                forward_static_call(array($cls_name, 'syncLayout'));
+                call_user_func(array($cls_name, 'syncLayout'));
+                // Record pointers for pointer map.
+                $child_table = api_database::strfy($table_name);
+                $columns = DataSet::getColumnNames($cls_name);
+                foreach ($columns as $column) {
+                    $child_column = api_database::strfy($column);
+                    $pieces = array_reverse(explode("_", $column));
+                    if ($pieces[1] == "id")
+                        unset($pieces[1]);
+                    else if ($pieces[0] != "id")
+                        continue;
+                    unset($pieces[0]);
+                    $parent_table = api_database::strfy(implode("_", array_reverse($pieces)));
+                    api_database::query("INSERT INTO `" . _tblprefix . "pointer_map` VALUES ($child_table, $child_column, $parent_table)");
+                }
             }
         }
+        // Initialize singleton model structure.
         SingletonModel::syncWithDatabase();
         exit;
     }
@@ -127,11 +143,8 @@ class api_application {
         // Include default application classes.
         require "app_controller.php";
         require "app_model.php";
-        // First see if any model interface data was posted.
-        if (isset($_POST['_mif_header']))
-            Model::processInterfaceAction();
         // Parse the request into controllers, actions and arguments.
-        $parts = explode('/', strtolower($path));
+        $parts = explode('/', $path);
         $controller = $parts[1];
         $action = @$parts[2];
         $arguments = array_slice($parts, 3);
@@ -139,10 +152,12 @@ class api_application {
         if ($controller == "image" || $controller == "thumbnail") {
             api_images::send_picture();
             exit;
-        } else if ($controller == "dev") {
-            if (!devmode)
+        } else if ($controller == "core") {
+            if ($action == "fork")
+                self::incomming_fork();
+            else if (!devmode)
                 api_navigation::show_xyz(403);
-            else if ($action == 'migrate')
+            else if ($action == "migrate")
                 // Special path that syncronizes layout with database.
                 api_application::sync_layout();
             else
@@ -180,27 +195,26 @@ class api_application {
                 $clear_arg[] = $arg;
         if (count($arguments) != count($clear_arg)) {
             $clear_arg = count($clear_arg) > 0? "/" . implode("/", $clear_arg): "";
-            api_navigation::redirect("/$controller/$action" . $clear_arg);
+            api_navigation::redirect(url("/$controller/$action" . $clear_arg));
             exit;
         }
         // Standard controller, rewrite the url if it should.
         AppController::rewriteRequestUrl($controller, $action, $arguments);
         // Running controllers with reserved names is not allowed.
-        $reserved = array('dev', 'elements', 'helpers', 'layouts');
-        if (!in_array($controller, $reserved)) {
-            // If there is a controller with this name, run it.
-            if (self::run($controller, $action, $arguments, false))
-                return;
-            // Take the manipulated path sequance and turn it back into a path.
-            if ($controller == "index")
-                $path = "/";
-            else if ($action == "index")
-                $path = "/$controller";
-            else if (count($arguments) == 0)
-                $path = "/$controller/$action";
-            else
-                $path = "/$controller/$action/" . implode("/", $arguments);
-        }
+        if (in_array($controller, array('core', 'elements', 'helpers', 'layouts')))
+            api_navigation::show_404();
+        // If there is a controller with this name, run it.
+        if (self::run($controller, $action, $arguments, false))
+            return;
+        // Take the manipulated path sequance and turn it back into a path.
+        if ($controller == "index")
+            $path = "/";
+        else if ($action == "index")
+            $path = "/$controller";
+        else if (count($arguments) == 0)
+            $path = "/$controller/$action";
+        else
+            $path = "/$controller/$action/" . implode("/", $arguments);
         // Pass request to standard webroot handling instead.
         self::send_static_file($path, true);
     }
@@ -237,6 +251,9 @@ class api_application {
         // Create an instance of the controller and invoke action.
         $controller = new $clsname();
         $controller->beforeFilter();
+        // Before calling action, interrupt request if it's a MIF post.
+        Model::processInterfaceAction();
+        // Call the action now.
         $show = call_user_func_array(array($controller, $action_name), $arguments);
         $controller->beforeRender();
         // NULL = Display default view if it exists, FALSE = Display nothing, STRING = Force display of this view or crash, ELSE crash.
@@ -260,7 +277,7 @@ class api_application {
     */
     private static function send_static_file($path, $show_404 = false) {
         $webroot_path = "webroot/$path";
-        if (file_exists($webroot_path) && !is_dir($webroot_path))
+        if (is_file($webroot_path))
             api_navigation::send_file($webroot_path, api_filesystem::resolve_mime($path));
         else if ($show_404)
             api_navigation::show_404();
@@ -316,8 +333,8 @@ class api_application {
         switch (substr($view_file_path, -3)) {
         case 'ctp':
         case 'php':
-            // Running a cake template.
-            View::_runCakeView($view_file_path, $controller);
+            // Running a template.
+            View::_run($view_file_path, $controller);
             break;
         }
     }
@@ -369,6 +386,67 @@ class api_application {
             ob_end_clean();
             return $output;
         }
+    }
+
+
+    /**
+     * Forks a function call, allowing parallell execution.
+     * Note that forking has an extremly high overhead in terms of
+     * both CPU and memory so it should be avoided unless neccessary.
+     * Also note that fork only works in environments with a webserver
+     * configured to handle multiple requests. In other enviroments the fork
+     * will timeout after 5 seconds without throwing an exception.
+     * @param callback $callback Callback function.
+     * @param array $parameters Array of parameters.
+     * @see call_user_func_array()
+     */
+    public static function fork($callback, $parameters = array()) {
+        if (!is_file(".forkkey"))
+            file_put_contents(".forkkey", $forkkey = api_string::random_hex_str(16));
+        else
+            $forkkey = file_get_contents(".forkkey");
+        // Execute fork.
+        $headers = array(
+            "Host" => Config::$root_host,
+            "User-Agent" => "nanoMVC/" . nmvc_version . " (Internal Fork)",
+        );
+        $data = serialize(array(
+            "forkkey" => $forkkey,
+            "callback" => $callback,
+            "parameters" => $parameters,
+        ));
+        $base_path = Config::$root_path;
+        $status = api_http::raw_request("http://localhost" . $base_path . "core/fork", "POST", $headers, $data, 15);
+        $return_code = $status[1];
+        if ($return_code != "200")
+            throw new Exception("fork() failed! Return code: $return_code");
+    }
+    
+    private static function incomming_fork() {
+        /* Only accepts incomming forks if request is trusted.
+           Definition of trusted request: Localhost that can read our fork key.
+           Technically, this would allow a localhost on a shared server
+           that can read but not write each others directories to inject
+           function calls.
+           This is however not a security breach as read permission would allow
+           you to read other sensitive data anyway, like passwords.
+           Read permission therefore indicates a sufficient level of trust.*/
+        if (gethostbyaddr($_SERVER['REMOTE_ADDR']) != "localhost")
+            api_navigation::show_xyz(403);
+        $data = unserialize(file_get_contents("php://input"));
+        if (!is_array($data))
+            api_navigation::show_xyz(403);
+        if (!file_exists(".forkkey") || file_get_contents(".forkkey") != $data['forkkey'])
+            api_navigation::show_xyz(403);
+        // Fork accepted, unhook from the current request to prevent
+        // the parent from waiting for this request to finish, allowing
+        // parallell execution.
+        api_http::unhook_current_request();
+        // Commence execution.
+        $callback = $data['callback'];
+        $parameters = $data['parameters'];
+        call_user_func_array($callback, $parameters);
+        exit;
     }
 }
 
