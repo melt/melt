@@ -7,9 +7,12 @@ function _handle_request() {
         api_navigation::show_xyz($redir_status);
     $host = strval($_SERVER['HTTP_HOST']);
     $rurl = strval($_SERVER['REDIRECT_URL']);
-    // Must be same host.
+    // Remove :80 if specified on host as this port is implicit.
+    if (substr($host, -3) == ":80")
+        $host = substr($host, 0, -3);
+    // Redirect if the host is invalid.
     if (Config::$root_host != $host)
-        api_navigation::show_invalid("The host '" . htmlentities($host) . "' is not hosted by this server.");
+        api_navigation::redirect(api_navigation::make_local_url("/"));
     // Must be same root url.
     $slen = strlen(CONFIG::$root_path);
     if (substr($rurl, 0, $slen) != CONFIG::$root_path)
@@ -21,7 +24,7 @@ function _handle_request() {
     define('REQURLQUERY', REQURL . (isset($_SERVER['REDIRECT_QUERY_STRING'])? '?' . $_SERVER['REDIRECT_QUERY_STRING']: ''));
     // Change working directory to application/site.
     chdir(APP_DIR);
-    if (Config::$maintence && REQURL == '/dev/setkey') {
+    if (Config::$maintence && REQURL == '/core/setkey') {
         // Allow all requests to a special URL that sets the developer cookie for 10 years.
         if (isset($_POST['devkey'])) {
             setcookie("devkey", $_POST['devkey'], intval(time() + 60 * 60 * 24 * 365.242199 * 10), CONFIG::$root_path);
@@ -32,7 +35,7 @@ function _handle_request() {
             api_html::write($head, $body);
         }
     } else if (Config::$maintence && !devmode) {
-        // Stop requests trying to access site in developer mode.
+        // Stop requests trying to access site during maintence without beeing developers.
         header("HTTP/1.x 503 Service Unavailable");
         header("Status: 503 Service Unavailable");
         $est = (!empty(Config::$downshedule))? "<p>" . Config::$downshedule . "</p>":
@@ -40,7 +43,7 @@ function _handle_request() {
         $topic = "503 Service Unavailable";
         $msg = "<p>" . __("Temporary maintence is in effect so the site is currently not availible.") . "</p>" . $est;
         api_navigation::info($topic, $msg);
-    } else if (devmode && REQURL == "/dev/export") {
+    } else if (devmode && REQURL == "/core/export") {
         // Export translation.
         $lang = $_GET['lang'];
         _export_translation($lang);
