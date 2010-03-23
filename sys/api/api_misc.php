@@ -67,6 +67,18 @@ class api_misc {
         }
         return true;
     }
+
+    /**
+     * Use this function when you have a library configured to accept request itself.
+     * It will disable nanoMVC error handling and forward the request there.
+     * Note: Does not disable exception handling. That would be pointless.
+     */
+    public static function forward_request($php_file) {
+        restore_error_handler();
+        chdir(dirname($php_file));
+        require(basename($php_file));
+        exit;
+    }
 }
 
 ?>
