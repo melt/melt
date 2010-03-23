@@ -4,12 +4,11 @@
 * @desc The cache handling API namespace.
 */
 class api_cache {
-
     private static function path($tag, $key) {
         $dir = "cache/" . $tag . "/";
         if (!file_exists($dir))
             mkdir($dir, 0777, true);
-        return $dir . substr(md5($key), 0, 12) . ".tmp";
+        return $dir . substr(md5($key), 0, 12);
     }
 
     private static function dirpath($tag) {
