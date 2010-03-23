@@ -2,16 +2,18 @@
 
 // nanoMVC wrapper class for sending RFC compatible e-mails.
 class Mailer {
+    /** @var Address */
     public $from;
+    /** @var Address */
     public $reply_to;
-
+    /** @var AddressList */
     public $to;
     /**
-    *@desc Note, names will be discarded in cc due to weak mail() implementation in php that does not support this.
-    */
+    * @desc Note, names will be discarded in cc due to weak mail() implementation in php that does not support this.
+    * @var AddressList */
     public $cc;
+    /** @var AddressList */
     public $bcc;
-
     public function __construct() {
         $this->from = new Address();
         $this->reply_to = new Address();
@@ -29,7 +31,7 @@ class Mailer {
             } else {
                 // Use INI configured from as a last resort.
                 $this->from->email = ini_get('sendmail_from');
-                if ($this->from->email == "") throw new Exception("VMAIL was told to send with no configured from address. (Not set directly, in config or in ini.)");
+                if ($this->from->email == "") throw new Exception("Mailer was told to send with no configured from address. (Not set directly, in config or in ini.)");
             }
             $this->from->name = CONFIG::$email_name;
         }
@@ -38,7 +40,6 @@ class Mailer {
         ini_set('sendmail_from', $this->from->email);
 
         if ($this->to->count() == 0) throw new Exception("No repicents given!");
-        $headers .= $this->to->getAsHeader('To');
         $headers .= $this->cc->getAsHeader('Cc', true);
         $headers .= $this->bcc->getAsHeader('Bcc', true);
         if ($this->reply_to->email != null) {
@@ -119,8 +120,19 @@ class Mailer {
         $content = base64_encode($content);
         $headers .= 'Content-transfer-encoding: base64' . PHP_EOL;
 
+        
+        if (strpos(PHP_OS, "WIN") !== false) {
+            // Windows implementation uses >to< argument to speak directly with SMTP servers.
+            $to = $this->to->getPlainList();
+            // To preserve the name formating, we need to insert this header ourselves.
+            if (strpos(PHP_OS, "WIN") !== false)
+                $headers .= $this->to->getAsHeader('To');
+        } else
+            // UNIX implementation constructs it's own "to" headers.
+            $to = $this->to->getList();
+
         // Finaly mail it.
-        if (FALSE === mail($this->to->getPlainList(), $subject, $content, $headers)) throw new Exception("VMAIL: The mail could not be sent, mail() returned error.");
+        if (FALSE === mail($to, $subject, $content, $headers)) throw new Exception("VMAIL: The mail could not be sent, mail() returned error.");
     }
 
 }
