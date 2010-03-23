@@ -3,6 +3,8 @@
 // Configuration for the authorization component.
 if (!defined("SESSION_TIMEOUT_MINUTES"))
     define("SESSION_TIMEOUT_MINUTES", 30);
+if (!defined("SESSION_TIMEOUT_URL"))
+    define("SESSION_TIMEOUT_URL", url("/"));
 
 class AuthorizationComponent {
     private static $authTimeout = 0;
@@ -88,6 +90,8 @@ class AuthorizationComponent {
             $timeout = intval($_SESSION['auth']['timeout']);
             if (time() > $timeout) {
                 unset($_SESSION['auth']);
+                // Forward user to timeout page.
+                Flash::doFlashRedirect(SESSION_TIMEOUT_URL, __("Your session expired due to inactivity. You need to log in again."));
             } else {
                 self::$authTimeout = $_SESSION['auth']['timeout'] = self::getLoginTimeout();
                 self::$authUser = forward_static_call(array($usermodel, "selectByID"), intval($_SESSION['auth']['user']));
