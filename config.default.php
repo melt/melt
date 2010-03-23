@@ -30,12 +30,12 @@ Config::$sql_prefix = 'nmvc';
 
 /**** DEVELOPER CONFIGURATION ****/
 
-// When true, will display errors to non developer authorized users (insecure).
-Config::$in_development = true;
-// When true, will shut down the site telling visitors that it's under maintence.
+// IF SET: Treats users that set this developer key under /core/setkey as site developers.
+// IF BLANK: Treats all users as site developers. Warning: Site developers are also granted other rights, like /core/migrate.
+Config::$dev_key = '';
+// IF TRUE: Displays errors to site developers, non developers gets a helpful "site will be back soon" for all requests.
+// IF FALSE: Never display errors.
 Config::$maintence = false;
-// Desired developer cookie key to access the site in development/maintence mode.
-Config::$dev_key = 'change_this';
 // Optional. Will replace "Please try again in a moment." with any better EST message in the 503 Service Unavailable notification.
 Config::$downshedule = '';
 // Set to true to enable translation.

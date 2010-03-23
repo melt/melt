@@ -14,8 +14,6 @@ class Config {
 
     // When true, will shut down the site telling visitors that it's under maintence.
     public static $maintence = false;
-    // When true, will display errors to non developer authorized users (insecure).
-    public static $in_development = false;
     // Optional. Ammount of time the site will be down to notify visitors.
     public static $downshedule = '';
 
@@ -64,7 +62,9 @@ class Config {
         else
             thpre_panic("Unknown database driver specified. Supported drivers: mysql,mssql");
         // Evaluate developer mode based on configuration and cookies.
-        define('devmode', CONFIG::$maintence && (isset($_COOKIE['devkey']) && ($_COOKIE['devkey'] === CONFIG::$dev_key)));
+        $devkey_is_blank = !is_string(CONFIG::$dev_key) || CONFIG::$dev_key == "";
+        $devkey_matches = isset($_COOKIE['devkey']) && ($_COOKIE['devkey'] === CONFIG::$dev_key);
+        define('devmode', CONFIG::$maintence && ($devkey_is_blank || $devkey_matches));
         CONFIG::$dev_key = null;
         // Evaluate the table prefix.
         define('_tblprefix', ((CONFIG::$sql_prefix == '')? '': CONFIG::$sql_prefix . '_'));

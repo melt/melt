@@ -43,13 +43,15 @@ function exception_handler(Exception $exception) {
         }
         $errtrace .= '#' . (count($trace) - $key) . ' ' . basename($t['file']) . "(" . $t['line'] . ") " . $t['function'] . '(';
         $first = false;
-        foreach ($t['args'] as $arg) {
-            if (is_string($arg)) $arg = '"'.substr($arg, 0, 64).'"';
-            else if (is_object($arg)) $arg = "[Instance of '".get_class($arg)."']";
-            else $arg = strval($arg);
-            if (empty($arg)) $arg = 'null';
-            if (!$first) $first = true; else $arg = ', ' . $arg;
-            $errtrace .= $arg;
+        if (isset($t['args'])) {
+            foreach ($t['args'] as $arg) {
+                if (is_string($arg)) $arg = '"'.substr($arg, 0, 64).'"';
+                else if (is_object($arg)) $arg = "[Instance of '".get_class($arg)."']";
+                else $arg = strval($arg);
+                if (empty($arg)) $arg = 'null';
+                if (!$first) $first = true; else $arg = ', ' . $arg;
+                $errtrace .= $arg;
+            }
         }
         $errtrace .= ")\n";
     }
@@ -67,14 +69,13 @@ function exception_handler(Exception $exception) {
         }
         @fclose($h);
     }
-    if ((!devmode && !Config::$dev_key) && !Config::$in_development) {
-        // When not in development, use custom error callback and
-        // turn off error reporting for everything that can't be handled.
+    if (!devmode) {
+        // Do not unsafly print error information for non developers.
         $topic = "500 - Internal Server Error";
         $msg = "<p>" . __("The server encountered an internal error and failed to process your request." .
                "Please try again later. If this error is temporary, reloading the page might resolve the problem.") . "</p>";
         if ($elog_success === true) {
-            $msg .= '<p>' . __("If you are able to contact the administrator, report this error code:") . ' #'.$errcode.'.</p>';
+            $msg .= '<p>' . __("If you are able to contact the administrator, report this error tag:") . ' #'.$errcode.'.</p>';
         } else {
             $msg .= '<p>' . __('If you are able to contact the administrator, report that the error log could not be written.') . '</p>';
         }
@@ -83,11 +84,11 @@ function exception_handler(Exception $exception) {
         $topic = "nanoMVC - Exception Caught";
         if (headers_sent()) {
             // Only display text message if headers and possible content has been sent already.
-            echo "\r\n\r\n$topic\r\n\r\n$errraised\r\n$errmessage\r\n$errtrace\r\n$errtime";
+            echo "\r\n\r\n$topic\r\n\r\n$errraised\r\n$errmessage\r\n$errtrace\r\nError tag: #$errcode\r\n$errtime";
             exit;
         }
         $msg = '<p>There was an exception raised in ' . CONFIG::$site_name . '.</p>';
-        $errmsgs = explode("\n", "\n" . api_html::escape($errraised) . "\n" . api_html::escape($errmessage) . "\n" . api_html::escape($errtrace));
+        $errmsgs = explode("\n", "\n" . api_html::escape($errraised) . "\n" . api_html::escape($errmessage) . "\n" . api_html::escape($errtrace) . "\nError tag: #$errcode");
         $light = false;
         $msg .= '<div style="font:14px monospace;">';
         foreach ($errmsgs as $errmsg) {
@@ -106,18 +107,20 @@ function error_handler($errno, $errstr, $errfile, $errline) {
     if ($errno == E_USER_ERROR) {
         $e = new Exception("Error of level USER_LEVEL caught: ".$errstr, $errno);
         exception_handler($e);
-        exit;break;
+        exit;
     } else {
         // More strict error handling when under development.
-        if ((Config::$maintence || Config::$in_development) && ($errno == E_WARNING || $errno == E_NOTICE)) {
+        if (devmode && ($errno == E_WARNING || $errno == E_NOTICE)) {
             // Fetching undefined keys in arrays is valid.
             if (strpos($errstr, "Undefined offset") !== FALSE) return true;
             if (strpos($errstr, "Undefined index") !== FALSE) return true;
-            // Ignore any smarty notice.
-            if (strpos($errstr, "smarty") !== FALSE) return true;
+            // Connection timed out is expected and not an exceptional event.
+            if (strpos($errstr, "Connection timed out") !== FALSE) return true;
+            // Failing to delete the output buffer is expected when ob_close is called just to be sure.
+            if (strpos($errstr, "failed to delete buffer") !== FALSE) return true;
             $e = new Exception((($errno == E_WARNING)? "Warning": "Notice")." of level USER_LEVEL caught: ".$errstr, $errno);
             exception_handler($e);
-            exit;break;
+            exit;
         }
     }
     // Silently bypass internal PHP error handler.
@@ -135,8 +138,8 @@ assert_options(ASSERT_CALLBACK, 'assert_failed');
 set_exception_handler('exception_handler');
 set_error_handler('error_handler');
 
-// Development or maintence = show errors.
-if (Config::$maintence || Config::$in_development)
+// Catch all errors in maintence mode.
+if (Config::$maintence)
     error_reporting(E_ALL | E_STRICT);
 else
     error_reporting(E_USER_ERROR);
