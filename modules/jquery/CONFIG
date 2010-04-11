@@ -1,0 +1,16 @@
+namespace nanomvc\jquery\config {
+    /**
+     * Set this to a theme name (eg. "ui-lightness") to automatically include
+     * jquery UI into your application.
+     */
+    const JQUERY_UI_THEME = null;
+
+    /**
+     * Set this to true to automatically include jquery corner
+     * in your application.
+     */
+    const INCLUDE_JQUERY_CORNER = false;
+
+    /** Set this to true to automatically include jquery lightbox in your application. */
+    const INCLUDE_JQUERY_LIGHTBOX = false;
+}

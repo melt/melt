@@ -1,8 +1,8 @@
 <?php
 
-/**
-*@desc Application specific model.
-*/
+namespace nanomvc;
+
+/** Application specific model. */
 class AppModel extends Model {
 
 }

@@ -1,0 +1,60 @@
+<?php
+/**
+ * Contains the configuration for this application.
+ *
+ * nanoMVC configuration options are named constants that resides in the
+ * namespace \nanomvc\$MODULE\config where $MODULE is the module that uses the
+ * configuration option.
+ */
+
+namespace nanomvc\config {
+    /** IF SET: Treats users that set this developer key under /core/setkey as
+     * site developers.
+     * IF BLANK: Treats all users as site developers. Warning: Site developers
+     * are also granted other rights, like /core/migrate. */
+    const DEV_KEY = "";
+    /** IF TRUE: Outputs exceptions to site developers. Makes non developers
+     * unable to reach the site.
+     * IF FALSE: Never display errors. */
+    const MAINTENANCE = true;
+    /** The application host. nanoMVC needs to know where it is located. */
+    const ROOT_URL = "http://localhost/";
+}
+
+namespace nanomvc\translate\config {
+    /** Enables translation. */
+    const ENABLE = true;
+    /** Sets the table to use for translation. */
+    const TRANSLATION_TABLE = "translation";
+    /** Set to true to enable translation capture, before translating.
+     * This gives significant performance overhead so only enable
+     * it before translation phase. */
+    const TRANSLATION_CAPTURE = false;
+}
+
+namespace nanomvc\db\config {
+    /** Database host to connect to. */
+    const HOST = "localhost";
+    /** Connecting to the database with this username. */
+    const USER = "root";
+    /** Connecting to the database with this password. */
+    const PASSWORD = "";
+    /** Database name to use. */
+    const NAME = "nanomvc";
+    /** Database table prefix to use. */
+    const PREFIX = "nanomvc";
+}
+
+namespace nanomvc\mail\config {
+    /** Optional. The desired name used by nanoMVC to
+     * mail FROM when sending e-mail. */
+    const FROM_NAME = "";
+    /** The desired mail address used by nanoMVC to
+     * mail FROM when sending e-mail. */
+    const FROM_ADDRESS = "";
+    /** The SMTP host Vector will use when sending mail. */
+    const SMTP_HOST = "";
+    /** An e-mail address that reaches an administrator for administrative
+     * notifications and other site related messages. */
+    const ADMIN_ADDRESS = "";
+}

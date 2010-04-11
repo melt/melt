@@ -10,7 +10,7 @@ Options +FollowSymLinks
 # Start the rewrite engine.
 RewriteEngine On
 
-# Use Vector to display error documents.
+# Use nanoMVC to display error documents.
 ErrorDocument 400 /bootstrap.php
 ErrorDocument 401 /bootstrap.php
 ErrorDocument 402 /bootstrap.php
@@ -36,6 +36,13 @@ ErrorDocument 503 /bootstrap.php
 ErrorDocument 504 /bootstrap.php
 ErrorDocument 505 /bootstrap.php
 
-# Rewrite everything to nanoMVC.
-RewriteCond %{REQUEST_URI} !^bootstrap.php
-RewriteRule .* bootstrap.php
+# Set this to the directory this application is installed in.
+RewriteBase /nanomvc
+
+# Rewrite static module files to their appropriate locations.
+RewriteRule ^static/cmod/([^/]+)/(.*)$ core/modules/$1/static/$2 [L]
+RewriteRule ^static/mod/([^/]+)/(.*)$ modules/$1/static/$2 [L]
+
+# Rewrite everything non-static to nanoMVC bootstrap.
+RewriteCond %{REQUEST_URI} !/static
+RewriteRule .* bootstrap.php [L]

@@ -1,0 +1,25 @@
+namespace nanomvc\userx\config {
+    /**
+     * An array of groups that users in this application can be member of.
+     * Used for permission management.
+     */
+    function getApplicationUserGroups() {
+        return array(
+            // The group id 1 is reserved and has special meaning.
+            // If a user is member of group 1, he is member of ALL groups.
+            1 => "root",
+            1000 => "user"
+        );
+    }
+    /** Time before logged in sessions time out. */
+    const SESSION_TIMEOUT_MINUTES = 60;
+
+    /** Local URL where timeout sessions should be refered to. */
+    const SESSION_TIMEOUT_URL = '/';
+
+    /** Local URL where logged in users should be sent. */
+    const LOGIN_URL = '/';
+
+    /** Local URL where logged out users should be sent. */
+    const LOGOUT_URL = '/';
+}

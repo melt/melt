@@ -1,32 +1,27 @@
 <?php
 
-/**
-*@desc Application specific controller.
-*/
+namespace nanomvc;
+
+/** Application specific controller. */
 class AppController extends Controller {
-    public $authTimeout;
-    public $authLevel;
-    public $authUsername;
-    public $authUserID;
-    public $authLastUsernameAttempt;
+    public function beforeFilter() {
 
-    // Default layout is HTML in this application.
-    public $layout = "html";
-
-    function beforeFilter() {
-        // Run authorization for user/permission management.
-        AuthorizationComponent::runAuthorization();
-        // Get authorization parameters.
-        list($this->authTimeout,
-             $this->authLevel,
-             $this->authUsername,
-             $this->authUserID,
-             $this->authLastUsernameAttempt) = AuthorizationComponent::readAuthorization();
     }
 
-    function logout() {
-        AuthorizationComponent::doLogout();
-        api_navigation::redirect(api_navigation::make_local_url("/"));
+    public function beforeRender() {
+
+    }
+
+    public function afterRender() {
+
+    }
+
+    public static function rewriteRequestUrl($path_tokens) {
+
+    }
+
+    public static function invoke($path) {
+        
     }
 }
 
