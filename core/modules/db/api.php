@@ -282,6 +282,11 @@ function verify_keyword($word) {
     trigger_error("The identifier name you used '$word' was detected to be reserved by the list '$err'. Using that identifier should be avoided as it can break SQL queries now or in the future. Please choose another name.", \E_USER_ERROR);
 }
 
+/** Unlocks all locked tables/models. */
+function unlock() {
+    run("UNLOCK TABLES");
+}
+
 /** Convenience function for prefixing tables. */
 function table($table_name) {
     return '`' . config\PREFIX . $table_name . '`';

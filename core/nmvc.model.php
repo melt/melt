@@ -206,7 +206,12 @@ abstract class Model {
             trigger_error("Trying to write to non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_NOTICE);
             return;
         }
-        $this->_cols[$name]->set($value);
+        if (is_a($value, 'nanomvc\Type'))
+            // Transfer value automagically.
+            $this->_cols[$name]->set($value->get());
+        else
+            // Just set value.
+            $this->_cols[$name]->set($value);
     }
 
     /** Allows quickly creating model copies. */
@@ -357,8 +362,10 @@ abstract class Model {
         } else
             $key_list = $key_list_cache[$table_name];
         $value_list = array();
-        foreach ($this->getColumns() as $colname => $column)
+        foreach ($this->getColumns() as $colname => $column) {
             $value_list[] = $column->getSQLValue();
+            $column->setSyncPoint();
+        }
         $value_list = implode(',', $value_list);
         return "INSERT INTO " . table($table_name) . " ($key_list) VALUES ($value_list)";
     }
@@ -366,8 +373,10 @@ abstract class Model {
     private function getUpdateSQL() {
         $table_name = string\cased_to_underline(get_class($this));
         $value_list = array();
-        foreach ($this->getColumns() as $colname => $column)
+        foreach ($this->getColumns() as $colname => $column) {
             $value_list[] = "`$colname`=" . $column->getSQLValue();
+            $column->setSyncPoint();
+        }
         $value_list = implode(',', $value_list);
         $id = intval($this->_id);
         return "UPDATE " . table($table_name) . " SET $value_list WHERE id=$id";
@@ -420,8 +429,10 @@ abstract class Model {
         if ($sql_row === null)
             return false;
         $model = new $name($id);
-        foreach ($model->getColumns() as $colname => $column)
+        foreach ($model->getColumns() as $colname => $column) {
             $column->setSQLValue($sql_row[strtolower($colname)]);
+            $column->setSyncPoint();
+        }
         return self::$_instance_cache[$name][$id] = $model;
     }
 
@@ -612,6 +623,20 @@ abstract class Model {
         return intval($rows[0]);
     }
 
+
+    /** Locks read and write on this model.
+     * Useful when doing critical operations.
+     * @see \nanomvc\db\unlock() for unlocking all locks.  */
+    public static function lock($read = true, $write = true) {
+        $table_name = string\cased_to_underline(get_called_class());
+        // "If a table is to be locked with a read and a write lock,
+        // put the write lock request before the read lock request."
+        if ($write)
+            db\run("LOCK TABLES " . table($table_name) . " WRITE");
+        if ($read)
+            db\run("LOCK TABLES " . table($table_name) . " READ");
+    }
+
     public static final function syncronize_all_models() {
         // Refresh pointer map.
         db\run("DROP TABLE " . table("pointer_map"));
@@ -639,7 +664,10 @@ abstract class Model {
                 // Expect model to be declared after require.
                 if (!class_exists($cls_name))
                     trigger_error("Found model file that didn't declare it's expected model: $cls_name", \E_USER_ERROR);
-                $parents = class_parents($cls_name);
+                // Ignore models that are abstract.
+                $model_reflection_class = new \ReflectionClass($cls_name);
+                if ($model_reflection_class->isAbstract())
+                    continue;
                 // Syncronize this model.
                 $model = new $cls_name(-1);
                 db\sync_table_layout_with_model($table_name, $model);
@@ -663,9 +691,31 @@ abstract class Model {
 /** A type defines what a model column stores, and how. */
 abstract class Type {
     /** @var mixed The value of this type instance. */
-    protected $value;
+    protected $value = null;
     /** @var Model The parent of this type instance. */
-    public $parent;
+    public $parent = null;
+    /** @var mixed The original value that was set from SQL. */
+    protected $original_value = null;
+
+    /** Returns the value from the last sync point. */
+    public final function getSyncPoint() {
+        return $this->original_value;
+    }
+
+    /**
+     * Called to indicate that the type was synced so
+     * that it can measure changes made from this point.
+     */
+    public final function setSyncPoint() {
+        $this->original_value = $this->value;
+    }
+
+    /**
+     * Returns TRUE if this type has changed since the last syncronization.
+     */
+    public final function hasChanged() {
+        return $this->original_value != $this->value;
+    }
 
     /** @desc Returns the value of this typed field. */
     public function get() {
