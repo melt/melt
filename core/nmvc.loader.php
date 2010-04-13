@@ -60,14 +60,16 @@ function autoload($name) {
             $subdir = "";
             $file_name = $parts[1];
             $class_name = "nanomvc\\" . $parts[1];
+            $app = true;
         } else if ($i == 1) {
             // Application level module override.
             if ($part_cnt == 2)
-                break;
+                return false;
             $path = APP_DIR;
             $subdir = $parts[1] . "/";
             $file_name = $parts[2];
             $class_name = "nanomvc\\" . $parts[1] . "\\" . $parts[2];
+            $app = false;
         } else if ($i == 2) {
             // Module.
             $modules = get_all_modules();
@@ -83,13 +85,13 @@ function autoload($name) {
         // Using nanoMVC naming rules to find the class.
         if (\nanomvc\string\ends_with($class_name, "Controller")) {
             $path .= "/controllers/" . $subdir . substr($file_name, 0, -11) . "_controller.php";
-            $expecting = "nanomvc\\Controller";
+            $expecting = $app? "nanomvc\\AppController": "nanomvc\\Controller";
         } else if (\nanomvc\string\ends_with($class_name, "Type")) {
             $path .= "/types/" . $subdir . substr($file_name, 0, -5) . "_type.php";
             $expecting = "nanomvc\\Type";
         } else if (\nanomvc\string\ends_with($class_name, "Model")) {
             $path .= "/models/" . $subdir . substr($file_name, 0, -6) . "_model.php";
-            $expecting = "nanomvc\\Model";
+            $expecting = $app? "nanomvc\\AppModel": "nanomvc\\Model";
         } else {
             $path .= "/classes/" . $subdir . $file_name . ".php";
             $expecting = null;
@@ -114,17 +116,4 @@ foreach (get_all_modules() as $module_name => $module_parameters) {
     $api_path = $module_path . "/api.php";
     if (is_file($api_path))
         require $api_path;
-}
-
-// Include all module descriptor classes and call their beforeRequestProcesses.
-foreach (get_all_modules() as $module_name => $module_parameters) {
-    $class_name = $module_parameters[0];
-    $module_path = $module_parameters[1];
-    $path = $module_path . "/module.php";
-    require $path;
-    if (!class_exists($class_name))
-        trigger_error("nanoMVC: '$class_name' was not declared in '$path'!", \E_USER_ERROR);
-    else if (!is_subclass_of($class_name, 'nanomvc\Module'))
-        trigger_error("nanoMVC: '$class_name' must extend 'nanomvc\\Module'! (Declared in '$path')", \E_USER_ERROR);
-    call_user_func(array($class_name, "beforeRequestProcess"));
 }
