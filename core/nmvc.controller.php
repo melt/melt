@@ -32,40 +32,46 @@ class Controller {
      */
     public function afterRender() {}
 
-    /**
+    /*
      * Override this function in application controller to rewrite urls.
      * @param array $path_tokens An array of path tokens to manipulate.
-     */
-    public static function rewriteRequestUrl(&$path_tokens) {}
+     *
+    public static function rewriteRequestUrl(&$path_tokens) {}*/
 
+    
     /**
-     * Attempts to run the specified controller by given path.
-     * nanoMVC mapping determines if controller exists.
-     * @param mixed $path Path to invoke. Either an array of path tokens or
+     * Attempts to find the controller specified by the given path.
+     * @param mixed $path Invoke path. Either an array of path tokens or
      * otherwise an unsplit string path.
-     * @returns boolean False if path not found, otherwise true.
+     * @param boolean $filter_underline_prefixed When set to true
+     * controllers, actions or modules with a starting "_" is ignored.
+     * @returns mixed FALSE if path not found, otherwise array(controller_class_name, action_name)
      */
-    public static function invoke($path) {
+    public static function pathToController($path, $filter_underline_prefixed = false) {
         $controller_name = "nanomvc";
         $path_parts = is_array($path)? $path: explode("/", $path);
         // Try to load application controller first, and if
         // that doesn't exist, try to load module controller.
         for ($i = 0; ; $i++) {
             // Determine controller + action. Empty names maps to "index".
-            $part = strtolower(@$path_parts[$i]);
-            if (strlen($part) == 0)
-                $part = "index";
-            else if ($part == "index") // "index" is reserved.
+            $controller_name = strtolower(@$path_parts[$i]);
+            if (strlen($controller_name) == 0)
+                $controller_name = "index";
+            else if ($controller_name == "index") // "index" is reserved.
                 return false;
-            $part = ucfirst(string\underline_to_cased($part));
+            else if ($filter_underline_prefixed && $controller_name[0] == "_")
+                return false;
+            $controller_name = ucfirst(string\underline_to_cased($controller_name));
             if ($i == 0)
-                $controller_class_name = "nanomvc\\" . $part . "Controller";
+                $controller_class_name = "nanomvc\\" . $controller_name . "Controller";
             else
-                $controller_class_name = "nanomvc\\" . $path_parts[0] . "\\" . $part . "Controller";
+                $controller_class_name = "nanomvc\\" . $path_parts[0] . "\\" . $controller_name . "Controller";
             $action_name = strtolower(@$path_parts[$i + 1]);
             if (strlen($action_name) == 0)
                 $action_name = "index";
             else if ($action_name == "index") // "index" is reserved.
+                return false;
+            else if ($filter_underline_prefixed && $action_name[0] = "_")
                 return false;
             // Check if controller exists (actually loads it if it does).
             if (class_exists($controller_class_name))
@@ -74,6 +80,21 @@ class Controller {
                 // Class not found.
                 return false;
         }
+        return array($controller_class_name, $action_name);
+    }
+
+
+    /**
+     * Attempts to run the specified controller by given path.
+     * nanoMVC mapping determines if controller exists.
+     * @param mixed $path Path to invoke. Either an array of path tokens or
+     * otherwise an unsplit string path.
+     * @param boolean $filter_underline_prefixed When set to true
+     * controllers, actions or modules with a starting "_" is ignored.
+     * @returns boolean FALSE if path not found, otherwise TRUE.
+     */
+    public static function invoke($path, $filter_underline_prefixed = false) {
+        list($controller_class_name, $action_name) = self::pathToController($path, $filter_underline_prefixed);
         // Class found.
         if (!method_exists($controller_class_name, $action_name))
             return false;
@@ -82,7 +103,7 @@ class Controller {
         $controller->beforeFilter();
         // Call the action now.
         $arguments = array_slice($path, $i + 2);
-        $ret_view = call_user_func_array(array($controller, $action_name), $arguments);
+        $ret_view = call_user_func_array(array($controller_class_name, $action_name), $arguments);
         $controller->beforeRender();
         // NULL = Display default view if it exists,
         // FALSE = Display nothing,
@@ -90,10 +111,15 @@ class Controller {
         // ELSE crash.
         if ($ret_view === false)
             return true;
-        else if ($ret_view === null)
-            View::render(implode("/", $path_parts), $controller, false, true, true);
-        else if (is_string($ret_view))
-            View::render($ret_view, $controller, false, true, true);
+        else if ($ret_view === null) {
+            if ($controller_name == "index") {
+                $path_parts[] = "index";
+                $path_parts[] = "index";
+            } else if ($action_name == "index")
+                $path_parts[] = "index";
+            $found_view = View::render(implode("/", $path_parts), $controller, false, true, true);
+        } else if (is_string($ret_view))
+            $found_view = View::render($ret_view, $controller, false, true, true);
         else
             trigger_error("Did not understand what controller action returned (" . var_dump($ret_view) . ").", \E_USER_ERROR);
         // Rendering complete.
