@@ -174,17 +174,14 @@ function simple_decrypt($crypttext, $password) {
 * @desc Takes a text that is cased like this: fooBar and converts it to underlined form: foo_bar
 */
 function cased_to_underline($text) {
-    return strtolower(preg_replace('#([a-z])([A-Z])#', '\1_\2', $text));
+    return \nanomvc\internal\cased_to_underline($text);
 }
 
 /**
  * @desc Takes a text that is underlined like this: foo_bar and converts it to cased form: FooBar
  */
 function underline_to_cased($text) {
-    $tokens = explode("_", $text);
-    foreach ($tokens as &$token)
-        $token = ucfirst($token);
-    return implode($tokens);
+    return \nanomvc\internal\underline_to_cased($text);
 }
 
 /**
