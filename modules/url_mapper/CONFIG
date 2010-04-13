@@ -1,0 +1,44 @@
+/*
+
+SHARED DATA DOCUMENTATION:
+
+*******************************************************************************
+Entry name:
+    "reserved_url_aliases"
+
+Format: {
+    array(
+        [0] => "a_reserved_alias",
+        [1] => "another_reserved_alias",
+        ...
+        [n] => "n:th_reserved_alias"
+    )
+}
+
+Description:
+    Contains an array of url aliases that are reserved by your module.
+    Only neccessary if your module overrides catchRequest() to construct
+    special page URLs.
+    An url alias is a term used by this module to describe the first basename
+    token in the required URL. For example, if you visit /foo/bar, "foo"
+    is the current URL token. This module might catch and forward requests too
+    "foo" or any other url alias it has been configured to forward for.
+
+Example:
+    In this example, we have made an administration module that is using
+    catchRequest() to catch some URLs that begin with /admin/...
+    It could use url_mapper to do this but for some special reason it needs
+    to directly catch theese requests.
+
+    It also wants to remain compatible with url_mapper, and must therefore
+    broadcast reserved_url_aliases data:
+
+    public static function broadcastSharedData($request_entry_name) {
+        switch ($request_entry_name) {
+        case "reserved_url_aliases":
+            return array("admin");
+        }
+    }
+*******************************************************************************
+
+*/
