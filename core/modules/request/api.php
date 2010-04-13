@@ -19,6 +19,8 @@ function reset() {
         header('Content-Type: text/html');
     if (intval(ob_get_length()) > 0)
         ob_clean();
+    // Reset the application layout.
+    \nanomvc\View::reset_app_layout();
 }
 
 /**

@@ -79,14 +79,13 @@ final class View {
     * @param array $params Additional data to pass to the element controller namespace.
     */
     function element($elementPath, $params = array()) {
-        $controller = api_application::$_application_controller;
         $stack = array();
         // Save to stack and set params.
         foreach ($params as $key => $val) {
             $stack[$key] = isset($controller->$key)? $controller->$key: null;
             $controller->$key = $val;
         }
-        self::render("elements/$elementPath", $controller, false);
+        self::render("elements/$elementPath", null, false, true, false);
         // Restore from stack.
         foreach ($stack as $key => $val)
             $controller->$key = $val;
@@ -112,7 +111,7 @@ final class View {
         $path_cache = array();
         if (isset($path_cache[$view_path]))
             return $path_cache[$view_path];
-        if ($view_path[0] != "/")
+        if (strlen($view_path) == 0 || $view_path[0] != "/")
             $view_path = "/" . $view_path;
         $path = APP_DIR . "/views" . $view_path . ".php";
         if (is_file($path))
@@ -135,6 +134,15 @@ final class View {
     }
 
 
+    private static $application_layout = null;
+    /**
+     * Will reset the application layout, loosing any data that was previously
+     * rendered in it.
+     */
+    public static function reset_app_layout() {
+        self::$application_layout = null;
+    }
+
     /**
      * Renders a view (template) in an internal subrequest and returns content.
      * @param string $view_path The path of the view to show.
@@ -145,13 +153,12 @@ final class View {
      * If a layout path is specified in the controller with this set to true,
      * that layout path will be used to render the application layout, and
      * all section data will be consumed.
-     * @param boolean $just_try Set to true to return instead of crashing if view doesn't exist.
+     * @param mixed $just_try Set to false to return instead of crashing if view doesn't exist.
      */
     public static function render($view_path, $controller = null, $return = true, $final = false, $just_try = false) {
         // Initialize application layout.
-        static $application_layout = null;
-        if ($application_layout == null)
-            $application_layout = new Layout();
+        if (self::$application_layout == null)
+            self::$application_layout = new Layout();
         // Create a dummy controller if no controller was specified.
         if ($controller === null)
             $controller = new Controller();
@@ -159,7 +166,7 @@ final class View {
             // Layout not initialized yet.
             $layout_path = $controller->layout;
             if ($final)
-                $controller->layout = $application_layout;
+                $controller->layout = self::$application_layout;
             else if ($controller->layout == '')
                 $controller->layout = new VoidLayout();
             else
@@ -171,7 +178,7 @@ final class View {
             if (!$just_try)
                 trigger_error("nanoMVC: The view '$view_path.php' could not be found!", \E_USER_ERROR);
             else
-                return;
+                return false;
         }
         // Buffer if returning.
         if ($return)
@@ -195,14 +202,15 @@ final class View {
             // If this is a render into the final "application layout",
             // that layout should now be reset.
             if ($final)
-                $application_layout = null;
+                self::$application_layout = null;
         }
         if ($return) {
             // Return output.
             $output = ob_get_contents();
             ob_end_clean();
             return $output;
-        }
+        } else
+            return true;
     }
 }
 
