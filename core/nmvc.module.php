@@ -14,6 +14,7 @@ abstract class Module {
     public static function beforeLoad() {
         return;
     }
+
     /**
      * Overridable event-function.
      * Called just before the request is processed and evaluated
@@ -21,6 +22,28 @@ abstract class Module {
      */
     public static function beforeRequestProcess() {
         return;
+    }
+
+    /**
+     * Allows catching requests that would otherwise have 404'd.
+     * @param array $url_tokens Url tokens.
+     */
+    public static function catchRequest($url_tokens) {
+        return;
+    }
+
+    /**
+     * This allows modules to broadcast data they want to share with other
+     * modules in the hope that it will be used in some implementation.
+     * The response is cached and can be required at any time.
+     * This function MUST be deterministic and MAY NOT have side effects,
+     * even when comparing calls taking place between multiple requests.
+     * @param string $request_entry_name The entry name of the data beeing
+     * requested. Theese names are standardized for maximum interoperability.
+     * @return array Response to the request.
+     */
+    public static function broadcastSharedData($request_entry_name) {
+        return null;
     }
     
     /**

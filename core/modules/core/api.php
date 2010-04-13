@@ -94,3 +94,26 @@ function module_loaded($module_name, $min_version = null) {
     }
     return false;
 }
+
+/**
+ * Requests shared data from other modules by entry name.
+ * <b>ANY ENTRY YOUR MODULE REQUIRES SHOULD HAVE A WELL DOCUMENTED FORMAT
+ * THAT IS SPECIFIED IN YOUR CONFIG FILE.</b>
+ * <i>see the url mapper module for additional reference</i>
+ * @param string $entry_name Entry name of data to request.
+ * @return array Module names mapped to the shared data they broadcast.
+ */
+function require_shared_data($entry_name) {
+    static $entry_cache = array();
+    if (!isset($entry_cache[$entry_name])) {
+        $shared_data = array();
+        foreach (\nanomvc\internal\get_all_modules() as $module_name => $module) {
+            $module_clsname = $module[0];
+            $mod_shared_data = $module_clsname::broadcastSharedData($entry_name);
+            if (is_array($mod_shared_data) && count($mod_shared_data) > 0)
+                $shared_data[$module_name] = $mod_shared_data;
+        }
+        return $entry_cache[$entry_name] = $shared_data;
+    } else
+        return $entry_cache[$entry_name];
+}
