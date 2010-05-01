@@ -3,12 +3,12 @@
 namespace nanomvc\userx;
 
 class UserModel extends \nanomvc\Model {
-    public $username = 'core\Text';
-    public $password = 'core\Password';
-    public $last_login_time = 'core\Timestamp';
-    public $last_login_ip = 'core\IpAddress';
-    public $membership_id = 'core\Select,userx\User';
-    public $data_id = 'core\Select,userx\UserData';
+    public $username = 'core\TextType';
+    public $password = 'core\PasswordType';
+    public $last_login_time = 'core\TimestampType';
+    public $last_login_ip = 'core\IpAddressType';
+    public $membership_id = array('core\SelectModelType', 'userx\UserModel');
+    public $data_id = array('core\SelectModelType', 'userx\UserDataModel');
 
     /**
      * Checks if this user is a member of the given group.

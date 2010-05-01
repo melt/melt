@@ -31,7 +31,7 @@ class GroupSelectorType extends \nanomvc\Type {
         $this->value = $value;
     }
 
-    public function __toString() {
+    public function view() {
         $aug = config\getApplicationUserGroups();
         return isset($aug[$this->value])? $aug[$this->value]: "N/A";
     }
