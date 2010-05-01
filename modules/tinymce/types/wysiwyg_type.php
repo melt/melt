@@ -1,6 +1,4 @@
-<?php
-
-namespace nanomvc\tinymce;
+<?php namespace nanomvc\tinymce;
 
 /**
  * tinyMCE wysiwyg with HTML Purifyer and spelling attached.
@@ -9,9 +7,9 @@ namespace nanomvc\tinymce;
  * @see http://tinymce.moxiecode.com/
  * @see http://htmlpurifier.org/live/configdoc/plain.html
  */
-class WysiwygType extends Type {
+class WysiwygType extends \nanomvc\Type {
     // The Tiny Mce class of initialization/attach configuration to use.
-    public $config_class = "generic";
+    public $config_class = "/tinymce/config_simple";
 
     // Controls HTMLPurifyer: Disables HTMLPurifyer (WARNING: NOT RECOMENDED)
     public $disable_purify = "false";
@@ -33,11 +31,11 @@ class WysiwygType extends Type {
     public $object_hack = "false";
 
     public function getSQLType() {
-        return "bigtext";
+        return "mediumtext";
     }
 
     public function getSQLValue() {
-        return api_database::strfy($this->value);
+        return strfy($this->value);
     }
 
     public function getInterface($name, $label) {
@@ -45,17 +43,17 @@ class WysiwygType extends Type {
         if (!$initialized) {
             // If not using jquery, then load the standard module.
             $version = \nanomvc\core\module_loaded("jquery")? "jquery": "standard";
-            View::render("/tinymce/include_$version", $controller, false, true);
+            \nanomvc\View::render("/tinymce/include_$version", null, false, true);
             $initialized = true;
         }
         $textarea_id = "i" . \nanomvc\string\random_hex_str(8);
         // Call the tiny_mce_init_$STYLE intitalizer element that
         // is modified by the user to match this site.
-        $controller = new Controller();
+        $controller = new \nanomvc\Controller();
         $controller->textarea_id = $textarea_id;
         $controller->config_class = $this->config_class;
-        View::render("/tinymce/tiny_mce_init", $controller, false);
-        return "$label<textarea id=\"$textarea_id\" name=\"" . $name . "\">" . escape($this->value) . "</textarea>";
+        \nanomvc\View::render("/tinymce/tiny_mce_init", $controller, false);
+        return "$label<textarea rows=\"0\" cols=\"0\" id=\"$textarea_id\" name=\"" . $name . "\">" . escape($this->value) . "</textarea>";
     }
 
     private static $objectElements;
@@ -71,21 +69,24 @@ class WysiwygType extends Type {
             return;
         // Purify incomming data. Prevents XSS and crap code that breaks layout.
         // It can however do this with the html_purifyer module loaded.
-        $purifyer = new HTMLPurifier();
-        $config = HTMLPurifier_Config::createDefault();
-        $config->set('Core', 'Encoding', 'UTF-8');
-        $config->set('HTML', 'TidyLevel', 'heavy' );
-        $config->set('HTML', 'Doctype', 'XHTML 1.1' );
-        $config->set('Cache', 'SerializerPath', 'cache/HTMLPurifier' );
+        $purifyer = new \HTMLPurifier();
+        $config = \HTMLPurifier_Config::createDefault();
+        $config->set('Core.Encoding', 'UTF-8');
+        $config->set('HTML.TidyLevel', 'heavy' );
+        $config->set('HTML.Doctype', 'XHTML 1.1' );
+        $cache_path = dirname(__DIR__) . '/cache/HTMLPurifier';
+        if (!file_exists($cache_path))
+            mkdir($cache_path, 0770, true);
+        $config->set('Cache.SerializerPath', $cache_path);
         if ($this->allowed_elements != null)
-            $config->set('HTML', 'ForbiddenElements', $this->allowed_elements);
+            $config->set('HTML.ForbiddenElements', $this->allowed_elements);
         if ($this->forbidden_elements != null)
-            $config->set('HTML', 'ForbiddenElements', $this->forbidden_elements);
+            $config->set('HTML.ForbiddenElements', $this->forbidden_elements);
         if ($this->forbidden_attributes != null)
-            $config->set('HTML', 'ForbiddenAttributes', $this->forbidden_attributes);
-        $config->set('HTML', 'SafeObject', $this->allow_objects == "true");
-        $config->set('HTML', 'SafeEmbed', $this->allow_embed == "true");
-        $config->set('HTML', 'Trusted', $this->trusted_input == "true");
+            $config->set('HTML.ForbiddenAttributes', $this->forbidden_attributes);
+        $config->set('HTML.SafeObject', $this->allow_objects == "true");
+        $config->set('HTML.SafeEmbed', $this->allow_embed == "true");
+        $config->set('HTML.Trusted', $this->trusted_input == "true");
         if ($this->object_hack == "true") {
             self::$objectElements = array();
             $this->value = preg_replace_callback("#<object.*?</object>#si", array("TinyMceWysiwygType", "objectHack"), $this->value);
@@ -96,7 +97,7 @@ class WysiwygType extends Type {
                 $this->value = str_replace($replaceStr, $element, $this->value);
     }
 
-    public function __toString() {
+    public function view() {
         return strval($this->value);
     }
 }
