@@ -1,0 +1,40 @@
+/*
+
+SHARED DATA DOCUMENTATION:
+
+*******************************************************************************
+Entry name:
+    "admin_menu_items"
+
+Format: {
+    array(
+        "some_category_id" => array(
+            // Category name. (only used in category declaration)
+            "category" => "Category Name",
+            // ~24x24 icon for the category. (only used in category declaration)
+            "icon" => "/some/local/icon/url/icon.png",
+            "weight" => 0, // optional weight. heavy categories will
+                           // sink. (only used in category declaration)
+            "paths" => array(
+                ["/some/view/path"] => "Some Label",
+                ["/some/view/path/2"] => "A second Label",
+                ...
+                ["/nth/path"] => "n:th Label"
+            )
+        )
+    )
+}
+
+Description:
+    Contains information used to construct the admin menu.
+    You can either declare categories by specifying the category and icon,
+    or you can merge into existing categories by leaving them out.
+    Merges into non declared categories will be ignored.
+
+Example:
+    TODO: EXAMPLE
+*******************************************************************************
+
+*/
+
+
