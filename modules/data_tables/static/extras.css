@@ -1,0 +1,35 @@
+/**
+ * Some extra styles that isn't bundled by default but used in this
+ * implementation.
+ */
+
+
+table.data_tables td:first-child {
+    width: 10px;
+    text-align: center;
+}
+
+table.data_tables td:nth-child(2) {
+    width: 10px;
+    text-align: center;
+}
+
+table.data_tables a.dt_view_btn {
+    border: 0;
+    display: block;
+    width: 16px;
+    height: 16px;
+    background-image: url(../iconize/crystal/16x16/actions/edit.png);
+}
+
+table.data_tables a.dt_insert_btn {
+    border: 0;
+    display: block;
+    width: 16px;
+    height: 16px;
+    background-image: url(../iconize/crystal/16x16/actions/edit_add.png);
+}
+
+div.dt_batch_op {
+    margin-bottom: 5px;
+}
