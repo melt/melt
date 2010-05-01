@@ -1,9 +1,9 @@
-<?php
-
-namespace nanomvc;
+<?php namespace nanomvc;
 
 /** Application specific controller. */
 class AppController extends Controller {
+    public $layout = "/html/xhtml1.1";
+
     public function beforeFilter() {
 
     }
@@ -13,10 +13,6 @@ class AppController extends Controller {
     }
 
     public function afterRender() {
-
-    }
-
-    public static function rewriteRequestUrl($path_tokens) {
 
     }
 
