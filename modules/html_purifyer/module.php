@@ -3,15 +3,14 @@
 namespace nanomvc\html_purifyer;
 
 class HtmlPurifyerModule extends \nanomvc\Module {
-    public static function beforeLoad() {
+    public static function beforeRequestProcess() {
         // Include HTML Purifyer.
         $path = dirname(__FILE__) . "/htmlpurifier-4.0.0/library/HTMLPurifier.auto.php";
         require $path;
     }
 
     public static function getAuthor() {
-        $year = date("Y");
-        return "Hannes Landeholm, Media People Sverige AB, ©$year";
+        return "Wrapper maintained by Hannes Landeholm, Media People Sverige AB";
     }
 
     public static function getInfo() {
@@ -21,6 +20,6 @@ class HtmlPurifyerModule extends \nanomvc\Module {
     }
 
     public static function getVersion() {
-        return "1.0.0";
+        return "4.0.0";
     }
 }
