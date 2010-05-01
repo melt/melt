@@ -79,15 +79,34 @@ function compare_arrays($array1, $array2) {
 }
 
 /**
+ * Specifies that module is required to proceed with request.
+ * It will check if it exists and satisfies given version.
+ * If it doesn't, the function will terminate the request in either a 404 or
+ * a friendly message for site developers.
+ * @param string $module_name Module name to check for, eg "html".
+ * @param string $min_version NULL for no version checkor or a minimum version eg "1.5.3"
+ */
+function require_module($module_name, $min_version = null) {
+    if (!module_loaded($module_name, $min_version)) {
+        if (APP_IN_DEVELOPER_MODE) {
+            $of = ($min_version != null)? " of '$min_version'": "";
+            request\show_invalid("Module '$module_name'$of not installed but required.");
+        } else
+            \nanomvc\request\show_404();
+    }
+}
+
+
+/**
  * Returns true if the specified module exists and is at least given version.
  * @param string $module_name Module name to check for, eg "html".
  * @param string $min_version NULL for no version checkor or a minimum version eg "1.5.3"
  */
 function module_loaded($module_name, $min_version = null) {
-    $module_name = 'nanomvc\\' . $module_name . '\\' . \nanomvc\string\underline_to_cased($module_name) . "Module";
-    if (class_exists()) {
+    $module_class_name = 'nanomvc\\' . $module_name . '\\' . \nanomvc\string\underline_to_cased($module_name) . "Module";
+    if (class_exists($module_class_name)) {
         if ($min_version !== null) {
-            $module_version = call_user_func(array($module_name, "getVersion"));
+            $module_version = call_user_func(array($module_class_name, "getVersion"));
             return version_compare($module_version, $min_version, ">=");
         }
         return true;
@@ -107,13 +126,68 @@ function require_shared_data($entry_name) {
     static $entry_cache = array();
     if (!isset($entry_cache[$entry_name])) {
         $shared_data = array();
-        foreach (\nanomvc\internal\get_all_modules() as $module_name => $module) {
+        $func_name = "bcd_" . $entry_name;
+        foreach (array(\nanomvc\internal\get_all_modules(), array('Application' => array('nanomvc\AppController'))) as $module_class_names)
+        foreach ($module_class_names as $module_name => $module) {
             $module_clsname = $module[0];
-            $mod_shared_data = $module_clsname::broadcastSharedData($entry_name);
-            if (is_array($mod_shared_data) && count($mod_shared_data) > 0)
-                $shared_data[$module_name] = $mod_shared_data;
+            if (method_exists($module_clsname, $func_name)) {
+                $mod_shared_data = call_user_func(array($module_clsname, $func_name));
+                if (is_array($mod_shared_data) && count($mod_shared_data) > 0)
+                    $shared_data[$module_name] = $mod_shared_data;
+            }
         }
         return $entry_cache[$entry_name] = $shared_data;
     } else
         return $entry_cache[$entry_name];
+}
+
+/**
+ * Returns true if given class or object implements the given interface.
+ * @param mixed $class
+ * @param string $interface
+ */
+function implementing($class, $interface) {
+    $interfaces = class_implements($class);
+    return isset($interfaces[$interface]);
+}
+
+/**
+ * Returns true if given class or object is abstract.
+ */
+function is_abstract($class) {
+    static $cache = array();
+    if (is_object($class))
+        $class = get_class($class);
+    if (isset($cache[$class]))
+        return $cache[$class];
+    $rc = new \ReflectionClass($class);
+    return $cache[$class] = $rc->isAbstract();
+}
+
+namespace nanomvc;
+
+/**
+ * Returns TRUE if class is a base_class.
+ * Replacement for PHP is_subclass_of that refuses to return true
+ * for two classes that are the same and is_a also refuses to take a
+ * class name as it's first argument.
+ * Methaphor for this function:
+ * "Zebra", "Zebra" would return TRUE because a Zebra is a Zebra.
+ * "Zebra", "Animal" would also return TRUE because a Zebra is an Animal.
+ * "Zebra", "Reptile" would however return FALSE. A Zebra is not a Reptile.
+ * @param mixed $class Class name or object to compare.
+ * @param mixed $base_class The class name or object to compare with.
+ * @return boolean
+ * @see is_a(), is_subclass_of()
+ */
+function is($class, $base_class) {
+    if (is_object($class))
+        $class = get_class($class);
+    else if (!is_string($class))
+        return false;
+    if (is_object($base_class))
+        $base_class = get_class($base_class);
+    else if (!is_string($base_class))
+        return false;
+    return $class == $base_class || is_subclass_of($class, $base_class);
 }

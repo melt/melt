@@ -5,8 +5,9 @@ namespace nanomvc;
 /**
  * nanoModel
  */
-abstract class Model {
-    /** @var int Identifier of this data set, only readable. */
+abstract class Model implements \Iterator {
+    /** @var int Identifier of this data set.
+     * Either NULL if unlinked or a random 128 bit hash. */
     protected $_id;
     /** @var array Where columns are internally stored for assignment overload. */
     private $_cols;
@@ -16,9 +17,14 @@ abstract class Model {
     private static $_instance_cache = array();
 
     
-    /** Returns the ID of this model instance or FALSE if not stored yet. */
-    public final function getID() {
-        return ($this->_id < 1)? false: $this->_id;
+    /** Returns the ID of this model instance or NULL if unlinked. */
+    public function getID() {
+        return $this->_id > 0? intval($this->_id): null;
+    }
+
+    /** Returns true if this model instance is linked. */
+    public function isLinked() {
+        return $this->_id > 0;
     }
 
     /**
@@ -58,6 +64,7 @@ abstract class Model {
      */
     public function gcPointer($field_name) {
         $this->$field_name = 0;
+        $this->store();
     }
 
     /**
@@ -65,52 +72,61 @@ abstract class Model {
      */
     public function accessing() { }
 
-    /**
-    * @desc Override this function to initialize members of this model.
-    */
+    /** Override this function to initialize members of this model. */
     public function initialize() { }
 
-    /**
-    * @desc Verify that the specified classname exists and extends the parent.
-    
-    private static function existsAndExtends($location, $class_name, $parent) {
-        if (!class_exists($class_name))
-            trigger_error("'$location' is invalid: '$class_name' could not be found!", \E_USER_ERROR);
-        if (!is_subclass_of($class_name, $parent))
-            trigger_error("'$location' is invalid: '$class_name' was expected to extend the '$parent' class but didn't!", \E_USER_ERROR);
-    }
-
-    /**
-    * @desc Returns the pointer model name from the column name or NULL if column is not of pointer type.
-    *
-    protected static function getPointerModelName($colname) {
-        if (false !== ($pos = strpos($colname, "__"))) {
-            $module_name = substr($colname, 0, $pos);
-            $colname = substr($colname, $pos + 2);
-        } else
-            $module_name = null;
-        $colname_parts = array_reverse(explode("_", $colname));
-        $single_ptr = $colname_parts[0] == "id";
-        $multi_ptr = !$single_ptr && $colname_parts[1] == "id";
-        if ($single_ptr || $multi_ptr) {
-            // Evaluate the pointer model name.
-            unset($colname_parts[0]);
-            if ($multi_ptr)
-                unset($colname_parts[1]);
-            $model_name = "";
-            foreach (array_reverse($colname_parts) as $part)
-                $model_name .= ucfirst($part);
-            return "nanomvc\\" . (($module_name !== null)? $module_name . "\\" . $model_name: $model_name) . "Model";
-        } else
-            return null;
-    }*/
-
-    private static function preParseEscape($str) {
-        return str_replace(array("\\\\", "\\,", "\\="), array("\x00", "\x01", "\x02"), $str);
-    }
-
-    private static function postParseUnescape($str) {
-        return str_replace(array("\x00", "\x01", "\x02"), array("\\", ",", "="), $str);
+    /** Returns a parsed column array for a model. */
+    private static function getParsedColumnArray($model_name) {
+        static $parsed_model_cache = array();
+        if (isset($parsed_model_cache[$model_name]))
+            return $parsed_model_cache[$model_name];
+        $parsed_col_array = array();
+        $vars = get_class_vars($model_name);
+        foreach ($vars as $column_name => $column_attributes) {
+            // Ignore non column members.
+            if ($column_name[0] == '_')
+                continue;
+            if (!is_array($column_attributes))
+                $column_attributes = array($column_attributes);
+            // Parse type class name.
+            $type_class_name = $column_attributes[0];
+            unset($column_attributes[0]);
+            if ($type_class_name == "")
+                trigger_error("Invalid type: '$model_name.\$$column_name' has nothing specified in type field.", \E_USER_ERROR);
+            $type_class_name = 'nanomvc\\' . $type_class_name;
+            $type_handler = null;
+            if (!class_exists($type_class_name)) {
+                trigger_error("Invalid model column: $model_name.\$$column_name - Type '$type_class_name' is undefined.", \E_USER_ERROR);
+            } else if (is_subclass_of($type_class_name, 'nanomvc\Reference')) {
+                if (!string\ends_with($column_name, "_id"))
+                    trigger_error("Invalid model column: $model_name.\$$column_name - nanoMVC name convention requires reference type columns to end with '_id'!", \E_USER_ERROR);
+                // Expects the type handler of this class to extend the special reference type.;
+                $pointer_target_class_name = $type_class_name::STATIC_TARGET_MODEL;
+                if ($pointer_target_class_name === null) {
+                    // Using default parsing to determine target model (2nd argument).
+                    $pointer_target_class_name = 'nanomvc\\' . $column_attributes[1];
+                    unset($column_attributes[1]);
+                    if (!class_exists($pointer_target_class_name) || !is_subclass_of($pointer_target_class_name, 'nanomvc\Model'))
+                        trigger_error("Invalid model column: $model_name.\$$column_name - Reference target '$pointer_target_class_name' is undefined or not a nanomvc\\Model.", \E_USER_ERROR);
+                }
+                $type_handler = new $type_class_name($pointer_target_class_name);
+            } else if (is_subclass_of($type_class_name, 'nanomvc\Type')) {
+                if (string\ends_with($column_name, "_id"))
+                    trigger_error("Invalid model column: $model_name.\$$column_name - nanoMVC name convention doesn't allow non-reference type columns to end with '_id'!", \E_USER_ERROR);
+                // Standard type handles must extend the type class.
+                $type_handler = new $type_class_name();
+            } else
+                trigger_error("Invalid model column: $model_name.\$$column_name - The specified type '$type_class_name' is not a nanomvc\\Type.", \E_USER_ERROR);
+            foreach ($column_attributes as $key => $attribute) {
+                if (!property_exists(get_class($type_handler), $key))
+                    trigger_error("Invalid model column: $model_name.\$$column_name - The type '$type_class_name' does not have an attribute named '$key'.", \E_USER_ERROR);
+                $type_handler->$key = $attribute;
+            }
+            // Cache this untouched type instance and clone it to other new instances.
+            $parsed_col_array[$column_name] = $type_handler;
+        }
+        $parsed_model_cache[$model_name] = $parsed_col_array;
+        return $parsed_col_array;
     }
 
     /**
@@ -118,64 +134,8 @@ abstract class Model {
     */
     protected final function __construct($id) {
         $this->accessing();
-        $model_name = get_class($this);
-        static $parsed_model_cache = array();
-        if (!isset($parsed_model_cache[$model_name])) {
-            $parsed_col_array = array();
-            $vars = get_class_vars($model_name);
-            $columns = array();
-            foreach ($vars as $column_name => $column_parameters) {
-                // Ignore non column members.
-                if ($column_name[0] == '_')
-                    continue;
-                // Tokenize attributes.
-                $attributes = explode(",", self::preParseEscape($column_parameters));
-                // Parse type class name.
-                $type_class_name = self::postParseUnescape($attributes[0]);
-                unset($attributes[0]);
-                if ($type_class_name == "")
-                    trigger_error("Invalid type: '$model_name.\$$column_name' has nothing specified in type field.", \E_USER_ERROR);
-                $type_class_name = 'nanomvc\\' . $type_class_name . "Type";
-                if (!class_exists($type_class_name)) {
-                    trigger_error("Invalid model column: $model_name.\$$column_name - Type '$type_class_name' is undefined.", \E_USER_ERROR);
-                } else if (is_subclass_of($type_class_name, 'nanomvc\Reference')) {
-                    if (!string\ends_with($column_name, "_id"))
-                        trigger_error("Invalid model column: $model_name.\$$column_name - nanoMVC name convention requires reference type columns to end with '_id'!", \E_USER_ERROR);
-                    // Expects the type handler of this class to extend the special reference type.;
-                    $pointer_target_class_name = $type_class_name::STATIC_TARGET_MODEL;
-                    if ($pointer_target_class_name === null) {
-                        // Using default parsing to determine target model (2nd argument).
-                        $pointer_target_class_name = 'nanomvc\\' . self::postParseUnescape($attributes[1]) . 'Model';
-                        unset($attributes[1]);
-                        if (!class_exists($pointer_target_class_name) || !is_subclass_of($pointer_target_class_name, 'nanomvc\Model'))
-                            trigger_error("Invalid model column: $model_name.\$$column_name - Reference target '$pointer_target_class_name' is undefined or not a nanomvc\\Model.", \E_USER_ERROR);
-                    }
-                    $type_handler = new $type_class_name($column_name, null, $pointer_target_class_name);
-                } else if (is_subclass_of($type_class_name, 'nanomvc\Type')) {
-                    if (string\ends_with($column_name, "_id"))
-                        trigger_error("Invalid model column: $model_name.\$$column_name - nanoMVC name convention doesn't allow non-reference type columns to end with '_id'!", \E_USER_ERROR);
-                    // Standard type handles must extend the type class.
-                    $type_handler = new $type_class_name($column_name, null);
-                } else
-                    trigger_error("Invalid model column: $model_name.\$$column_name - The specified type '$type_class_name' is not a nanomvc\\Type.", \E_USER_ERROR);
-                foreach ($attributes as $attribute) {
-                    $eqp = strpos($attribute, "=");
-                    if ($eqp === false)
-                        trigger_error("Invalid model column: $model_name.\$$column_name - Attribute token '$attribute' lacks equal sign (=).", \E_USER_ERROR);
-                    $key = self::postParseUnescape(substr($attribute, 0, $eqp));
-                    $val = self::postParseUnescape(substr($attribute, $eqp + 1));
-                    if (!property_exists(get_class($type_handler), $key))
-                        trigger_error("Invalid model column: $model_name.\$$column_name - The type '$type_class_name' does not have an attribute named '$key'.", \E_USER_ERROR);
-                    $type_handler->$key = $val;
-                }
-                // Cache this untouched type instance and clone it to other new instances.
-                $parsed_col_array[$column_name] = $type_handler;
-            }
-            $parsed_model_cache[$model_name] = $parsed_col_array;
-        } else
-            $parsed_col_array = $parsed_model_cache[$model_name];
         // Copies all columns into this model.
-        $this->_cols = $parsed_col_array;
+        $this->_cols = self::getParsedColumnArray(get_class($this));
         foreach ($this->_cols as $column_name => &$type_instance) {
             // Assignment overload.
             unset($this->$column_name);
@@ -185,33 +145,55 @@ abstract class Model {
         }
         $this->_id = intval($id);
         $this->initialize();
+        // Set sync point after initialization.
+        foreach ($this->_cols as &$type_instance)
+            $type_instance->setSyncPoint();
     }
 
-    /** Assignment overloading. */
+    /** Helper function to get the actual type handler of a column. */
+    public function type($name) {
+        if (!isset($this->_cols[$name])) {
+            trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_ERROR);
+            return;
+        }
+        return $this->_cols[$name];
+    }
+
+    /** Helper function to view a column. */
+    public function view($name) {
+        if (!isset($this->_cols[$name])) {
+            trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_ERROR);
+            return;
+        }
+        return (string) $this->_cols[$name];
+    }
+
+    /** Assignment overloading. Returns value. */
     public function __get($name) {
-        $by_type_ref = $name[0] == "§";
-        if ($by_type_ref)
-            $name = substr($name, 1);
         if (!isset($this->_cols[$name])) {
             trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_NOTICE);
             return;
         }
-        // Can read the type handler instance (for direct function calling etc).
-        return $by_type_ref? $this->_cols[$name]: $this->_cols[$name]->get();
+        return $this->_cols[$name]->get();
     }
 
-    /** Assignment overloading. */
+    /** Assignment overloading. Sets value. */
     public function __set($name,  $value) {
         if (!isset($this->_cols[$name])) {
             trigger_error("Trying to write to non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_NOTICE);
             return;
         }
-        if (is_a($value, 'nanomvc\Type'))
+        if (is_a($value, '\nanomvc\Type'))
             // Transfer value automagically.
             $this->_cols[$name]->set($value->get());
         else
             // Just set value.
             $this->_cols[$name]->set($value);
+    }
+
+    /** Overloading isset due to assignment overloading. */
+    public function __isset($name) {
+        return isset($this->_cols[$name]);
     }
 
     /** Allows quickly creating model copies. */
@@ -225,12 +207,34 @@ abstract class Model {
         }
     }
 
+    /** Allows foreach iteration on models. */
+    public function rewind() {
+        reset($this->_cols);
+    }
+
+    public function current() {
+        current($this->_cols);
+    }
+
+    public function key() {
+        key($this->_cols);
+    }
+
+    public function next() {
+        next($this->_cols);
+    }
+
+    public function valid() {
+        current($this->_cols) !== false;
+    }
+
     /**
-    * @desc Returns a list of the column names of the specified model.
+    * @desc Returns a list of the column names.
     * @desc Note: Does not return the implicit ID column.
     * @return Array An array of the column names in the specified model.
     */
-    public static final function getColumnNames($name) {
+    public static final function getColumnNames() {
+        $name = get_called_class();
         static $columns_name_cache = array();
         if (isset($columns_name_cache[$name]))
             return $columns_name_cache[$name];
@@ -239,7 +243,7 @@ abstract class Model {
             trigger_error("'$name' is not a valid Model!", \E_USER_ERROR);
         foreach (get_class_vars($name) as $colname => $def)
             if ($colname[0] != '_')
-                $columns[] = $colname;
+                $columns[$colname] = $colname;
         return $columns_name_cache[$name] = $columns;
     }
 
@@ -248,7 +252,7 @@ abstract class Model {
      * @return Array An array of the columns in this model.
      */
     public final function getColumns() {
-        return $_cols;
+        return $this->_cols;
     }
     
     /**
@@ -257,6 +261,8 @@ abstract class Model {
      */
     public static function insert() {
         $name = get_called_class();
+        if (core\is_abstract($name))
+            trigger_error("'$name' is an abstract class and therefore can't be inserted/created/instantized.", \E_USER_ERROR);
         $model = new $name(-1);
         return $model;
     }
@@ -266,7 +272,6 @@ abstract class Model {
      * If this is a new instance, it's inserted, otherwise, it's updated.
      */
     public function store() {
-        $update_ex = null;
         if ($this->_id > 0) {
             // Updating existing row.
             $this->beforeStore(true);
@@ -279,6 +284,17 @@ abstract class Model {
             $this->_id = db\insert_id();
             $this->afterStore(false);
         }
+    }
+
+    /**
+     * Returns TRUE if changed since last syncronization point.
+     * @return boolean
+     */
+    public function hasChanged() {
+        foreach ($this->_cols as &$type_instance)
+            if ($type_instance->hasChanged())
+                return true;
+        return false;
     }
 
     /** Unlinks this model instance from the database. */
@@ -296,13 +312,12 @@ abstract class Model {
         $this->beforeUnlink();
         // Gather information.
         $name = get_class($this);
-        $table_name = string\cased_to_underline($name);
         $id = intval($this->_id);
         // Find all pointers that will get broken by this unlink and garbage collect.
-        $broken_pointers = array();
-        foreach (self::getPointerColumns($table_name) as $pointer) {
+        $pointer_map = self::getMetaData("pointer_map");
+        foreach ($pointer_map[$name] as $pointer) {
             list($child_model, $child_column) = $pointer;
-            $instances = call_user_func(array($child_model, "selectWhere"), "$child_column = $id");
+            $instances = $child_model::selectWhere("$child_column = $id");
             // Garbage collect.
             foreach ($instances as $instance) {
                 // Don't call GC on unlinked instances. gcPointer() may unlink recursivly.
@@ -311,8 +326,9 @@ abstract class Model {
             }
         }
         // Do the actual unlink in database backend.
-        $ret = db\query("DELETE FROM " . table($table_name) . " WHERE id = " . $id);
-        unset(self::$_instance_cache[$name][$id]);
+        $table_name = self::classNameToTableName($name);
+        db\run("DELETE FROM " . table($table_name) . " WHERE id = " . $id);
+        unset(self::$_instance_cache[$id]);
         $this->_id = -1;
         // After unlink event.
         $this->afterUnlink();
@@ -326,38 +342,36 @@ abstract class Model {
     public function revert() {
         if ($this->_id <= 0)
             return;
-        $name = get_class($this);
         // Flush cache (or else we will get a copy of ourselves).
-        unlink(self::$_instance_cache[$name][$this->_id]);
+        unlink(self::$_instance_cache[$this->_id]);
         // Select again  (read data again).
         $new_instance = $this->selectByID($this->_id);
         // Copy columns cache (data).
         $this->_columns_cache = $new_instance->_columns_cache;
         // Restore cache (so future selects will return this instance).
-        self::$_instance_cache[$name][$this->_id] = $this;
+        self::$_instance_cache[$this->_id] = $this;
     }
 
-
     /**
-     * @desc Returns an array of pointers (table,column) that points to given table.
+     * Returns the target model class name of a pointer in this model.
      */
-    private function getPointerColumns($table_name) {
-        static $cache = array();
-        if (isset($cache[$table_name]))
-            return $cache[$table_name];
-        $pointers = array();
-        $result = db\query("SELECT child_table,child_column FROM " . table("pointer_map") . " WHERE parent_table = \"$table_name\"");
-        while (false !== ($row = db\next_array($result)))
-            $pointers[] = array(string\underline_to_cased($row[0]), $row[1]);
-        return $cache[$table_name] = $pointers;
+    public final static function getTargetModel($pointer_name) {
+        $model_name = get_called_class();
+        $columns_array = self::getParsedColumnArray($model_name);
+        if (!isset($columns_array[$pointer_name]))
+            trigger_error("'$pointer_name' is not a column of '$model_name'.", \E_USER_ERROR);
+        $column = $columns_array[$pointer_name];
+        if (!is_subclass_of($column, 'nanomvc\Reference'))
+            trigger_error("'$model_name.$pointer_name' is not a reference column.", \E_USER_ERROR);
+        return $column->getTargetModel();
     }
 
     private function getInsertSQL() {
         $name = get_class($this);
-        $table_name = string\cased_to_underline($name);
+        $table_name = self::classNameToTableName($name);
         static $key_list_cache = array();
         if (!isset($key_list_cache[$table_name])) {
-            $key_list = implode(',', self::getColumnNames($name));
+            $key_list = implode(',', $name::getColumnNames());
             $key_list_cache[$table_name] = $key_list;
         } else
             $key_list = $key_list_cache[$table_name];
@@ -367,11 +381,12 @@ abstract class Model {
             $column->setSyncPoint();
         }
         $value_list = implode(',', $value_list);
-        return "INSERT INTO " . table($table_name) . " ($key_list) VALUES ($value_list)";
+        db\run("UPDATE " . table('core\seq') . " SET id = LAST_INSERT_ID(id+1)");
+        return "INSERT INTO " . table($table_name) . " (id, $key_list) VALUES (LAST_INSERT_ID(), $value_list)";
     }
 
     private function getUpdateSQL() {
-        $table_name = string\cased_to_underline(get_class($this));
+        $table_name = self::classNameToTableName(get_class($this));
         $value_list = array();
         foreach ($this->getColumns() as $colname => $column) {
             $value_list[] = "`$colname`=" . $column->getSQLValue();
@@ -384,56 +399,62 @@ abstract class Model {
 
     /**
     * @desc This function sets this model instance to the stored ID specified.
-    * @return Model The model with the ID specified or FALSE.
+    * @return Model The model with the ID specified or NULL.
     */
     public static function selectByID($id) {
         $id = intval($id);
-        $name = get_called_class();
-        $table_name = string\cased_to_underline($name);
-        $model = self::touchModelInstance($table_name, $id);
-        if ($model === false) {
-            $id = intval($id);
-            $model = new $name($id);
+        if ($id <= 0)
+            return null;
+        $base_name = get_called_class();
+        static $family_tree = null;
+        if ($family_tree === null)
+            $family_tree = self::getMetaData("family_tree");
+        if (!isset($family_tree[$base_name]))
+            trigger_error("Model '$base_name' is out of sync with database.", \E_USER_ERROR);
+        foreach ($family_tree[$base_name] as $table_name) {
+            $model_name = self::tableNameToClassName($table_name);
+            $model = self::touchModelInstance($model_name, $id);
+            if ($model !== null)
+                return $model;
             $res = db\query("SELECT * FROM " . table($table_name) . " WHERE id = ".$id);
-            if (db\get_num_rows($res) != 1)
-                return false;
-            $sql_row = db\next_assoc($res);
-            $model = self::touchModelInstance($name, $id, $sql_row);
+            if (db\get_num_rows($res) == 1) {
+                $sql_row = db\next_assoc($res);
+                return self::touchModelInstance($model_name, $id, $sql_row);
+            }
         }
-        return $model;
+        return null;
     }
 
     /**
-    * @desc Creates an array of model instances from a given sql result.
-    */
-    private static function makeArrayOf($name, $sql_result) {
+     * Creates an array of model instances from a given sql result.
+     * @param array $out_array Array to append results too.
+     */
+    private static function makeArrayOf($model_class_name, $sql_result, &$out_array) {
         $length = db\get_num_rows($sql_result);
         if ($length == 0)
             return array();
-        $array = array();
         for ($at = 0; $at < $length; $at++) {
             $sql_row = db\next_assoc($sql_result);
-            $id = intval($sql_row['id']);
-            $array[$id] = self::touchModelInstance($name, $id, $sql_row);
+            $id = $sql_row['id'];
+            $out_array[$id] = self::touchModelInstance($model_class_name, $id, $sql_row);
         }
-        return $array;
     }
 
     /**
     * @desc Passing all sql result model instancing through this function to enable caching.
-    * @param Mixed $sql_row Either a sql row result or null if function should return false instead of instancing model.
+    * @param Mixed $sql_row Either a sql row result or null if function should return null instead of instancing model.
     */
-    private static function touchModelInstance($name, $id, $sql_row = null) {
-        if (isset(self::$_instance_cache[$name][$id]))
-            return self::$_instance_cache[$name][$id];
+    private static function touchModelInstance($model_class_name, $id, $sql_row = null) {
+        if (isset(self::$_instance_cache[$id]))
+            return self::$_instance_cache[$id];
         if ($sql_row === null)
-            return false;
-        $model = new $name($id);
+            return null;
+        $model = new $model_class_name($id);
         foreach ($model->getColumns() as $colname => $column) {
             $column->setSQLValue($sql_row[strtolower($colname)]);
             $column->setSyncPoint();
         }
-        return self::$_instance_cache[$name][$id] = $model;
+        return self::$_instance_cache[$id] = $model;
     }
 
     /**
@@ -480,37 +501,33 @@ abstract class Model {
         return call_user_func(array($child_model, "count"), $where);
     }
 
-    /**
-    * @desc Returns the name of the child pointer fields and validates the child.
-    */
-    private function getChildPointers($child_model) {
-        $name = get_class($this);
-        static $model_cache = array();
-        if (!isset($model_cache[$child_model]))
-            $model_cache[$child_model] = new $child_model(0);
-        $child_model = $model_cache[$child_model];
+    /** Returns the name of the child pointer fields. */
+    private function getChildPointers($child_model_name) {
+        $model_name = get_class($this);
         $ptr_fields = array();
-        foreach ($child_model->getColumns() as $colname => $coltype)
-            if ($coltype->parent == $name)
-                $ptr_fields[] = $colname;
+        foreach($child_model_name::getColumnNames() as $col_name) {
+            if (substr($col_name, -3) == "_id" &&
+            is($model_name, $child_model_name::getTargetModel($col_name)))
+                $ptr_fields[] = $col_name;
+        }
         if (count($ptr_fields) == 0)
-            trigger_error("Invalid child model: '" . get_class($child_model) . "'. Does not contain pointer(s) to the model '$name'. (Expected field(s) '" . $table_name . "_id[_...]' missing)", \E_USER_ERROR);
+            trigger_error("Invalid child model: '" . $child_model_name . "'. Does not contain pointer(s) to the model '$model_name'.", \E_USER_ERROR);
         return $ptr_fields;
     }
 
     /**
     * @desc This function selects the first model instance that matches the specified $where clause.
-    * @desc If there are no match, it returns FALSE.
+    * @desc If there are no match, it returns NULL.
     * @desc For security reasons, use db\strfy() to escape and quote
     * @desc any strings you want to build your sql query from.
     * @param String $where (WHERE xyz) If specified, any ammount of conditionals to filter out the row.
     * @param String $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
-    * @desc Model The model instance that matches or FALSE if there are no match.
+    * @desc Model The model instance that matches or NULL if there are no match.
     */
     public static function selectFirst($where, $order = "") {
         $match = self::selectWhere($where, 0, 1, $order);
         if (count($match) == 0)
-            return false;
+            return null;
         reset($match);
         return current($match);
     }
@@ -526,8 +543,6 @@ abstract class Model {
     * @desc Array An array of the selected model instances.
     */
     public static function selectWhere($where = "", $offset = 0, $limit = 0, $order = "") {
-        $name = get_called_class();
-        $table_name = string\cased_to_underline($name);
         $offset = intval($offset);
         $limit = intval($limit);
         if ($where != "")
@@ -539,30 +554,37 @@ abstract class Model {
         else $limit = "";
         if ($order != "")
             $order = " ORDER BY ".$order;
-        $sql_result = db\query("SELECT * FROM " . table($table_name) . $where . $order . $limit);
-        return self::makeArrayOf($name, $sql_result);
+        return self::selectFreely($where . $order . $limit);
     }
 
     /**
-    * @desc This function returns an array of model instances that matches the given SQL commands.
-    * @desc For security reasons, use db\strfy() to escape and quote
-    * @desc any strings you want to build your sql query from.
-    * @param String $sqldata SQL command(s) that will be appended after the SELECT query for free selection.
-    * @desc Array An array of the selected model instances.
+     * This function returns an array of model instances that matches the
+     * given SQL commands.
+     * For security reasons, use db\strfy() to escape and quote
+     * any strings you want to build your sql query from.
+     * @param string $sql_select_param SQL command(s) that will be appended
+     * after the SELECT query for free selection.
+     * @return array An array of the selected model instances.
     */
-    public static function selectFreely($sqldata) {
+    public static function selectFreely($sql_select_param) {
         $name = get_called_class();
-        $table_name = string\cased_to_underline($name);
-        $sql_result = db\query("SELECT * FROM " . table($table_name) . " " . $sqldata);
-        return self::makeArrayOf($name, $sql_result);
+        $family_tree = self::getMetaData("family_tree");
+        $out_array = array();
+        if (!isset($family_tree[$name]))
+            trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
+        foreach ($family_tree[$name] as $table_name) {
+            $sql_result = db\query("SELECT * FROM " . table($table_name) . " " . $sql_select_param);
+            self::makeArrayOf(self::tableNameToClassName($table_name), $sql_result, $out_array);
+        }
+        return $out_array;
     }
 
     /**
     * @desc This function unlinks the model instance with the given ID.
     */
     public static function unlinkByID($id) {
-        $instance = forward_static_call(array("Model", "selectByID"), $id);
-        if ($instance !== false)
+        $instance = forward_static_call(array('nanomvc\Model', "selectByID"), $id);
+        if ($instance !== null)
             $instance->unlink();
     }
     /**
@@ -572,7 +594,7 @@ abstract class Model {
     * @param String $sqldata SQL command(s) that will be appended after the DELETE query for free selection.
     */
     public static function unlinkFreely($sqldata) {
-        $instances = forward_static_call(array("Model", "selectFreely"), $sqldata);
+        $instances = forward_static_call(array('nanomvc\Model', "selectFreely"), $sqldata);
         foreach ($instances as $instance)
             $instance->unlink();
     }
@@ -586,7 +608,7 @@ abstract class Model {
     * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
     */
     public static function unlinkWhere($where = "", $offset = 0, $limit = 0) {
-        $instances = forward_static_call(array("Model", "selectWhere"), $where, $offset, $limit);
+        $instances = forward_static_call(array('nanomvc\Model', "selectWhere"), $where, $offset, $limit);
         foreach ($instances as $instance)
             $instance->unlink();
     }
@@ -615,12 +637,19 @@ abstract class Model {
     * @return Integer Number of matched rows.
     */
     public static function count($where = "") {
-        $table_name = string\cased_to_underline(get_called_class());
         if ($where != "")
             $where = " WHERE " . $where;
-        $result = db\query("SELECT COUNT(*) FROM " . table($table_name) . $where);
-        $rows = db\next_array($result);
-        return intval($rows[0]);
+        $family_tree = self::getMetaData("family_tree");
+        $count = 0;
+        $name = get_called_class();
+        if (!isset($family_tree[$name]))
+            trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
+        foreach ($family_tree[$name] as $table_name) {
+            $result = db\query("SELECT COUNT(*) FROM " . table($table_name) . $where);
+            $rows = db\next_array($result);
+            $count += intval($rows[0]);
+        }
+        return $count;
     }
 
 
@@ -628,25 +657,85 @@ abstract class Model {
      * Useful when doing critical operations.
      * @see \nanomvc\db\unlock() for unlocking all locks.  */
     public static function lock($read = true, $write = true) {
-        $table_name = string\cased_to_underline(get_called_class());
-        // "If a table is to be locked with a read and a write lock,
-        // put the write lock request before the read lock request."
-        if ($write)
-            db\run("LOCK TABLES " . table($table_name) . " WRITE");
-        if ($read)
-            db\run("LOCK TABLES " . table($table_name) . " READ");
+        $family_tree = self::getMetaData("family_tree");
+        $name = get_called_class();
+        if (!isset($family_tree[$name]))
+            trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
+        foreach ($family_tree[$name] as $table_name) {
+            // "If a table is to be locked with a read and a write lock,
+            // put the write lock request before the read lock request."
+            if ($write)
+                db\run("LOCK TABLES " . table($table_name) . " WRITE");
+            if ($read)
+                db\run("LOCK TABLES " . table($table_name) . " READ");
+        }
+    }
+
+    private static function tableNameToClassName($table_name) {
+        static $cache = array();
+        if (!isset($cache[$table_name])) {
+            $base_offs = strrpos($table_name, '\\');
+            $base_offs++;
+            $cls_name = 'nanomvc\\' . substr($table_name, 0, $base_offs) . string\underline_to_cased(substr($table_name, $base_offs)) . "Model";
+            $cache[$table_name] = $cls_name;
+        }
+        return $cache[$table_name];
+    }
+
+    private static function classNameToTableName($class_name) {
+        static $cache = array();
+        if (!isset($cache[$class_name])) {
+            // Remove nanomvc prefix and Model suffix.
+            $table_name = string\cased_to_underline(substr($class_name, 8, -5));
+            $cache[$class_name] = $table_name;
+        }
+        return $cache[$class_name];
+    }
+
+
+    /**
+     * Validates the current data. If invalid, returns an array of all fields
+     * name => reason mapped, otherwise, returns an empty array.
+     * Designed to be overriden.
+     * @return array All invalid fields, name => reason mapped.
+     */
+    public function validate() {
+        return array();
+    }
+
+    private static $_metadata_cache = array();
+
+    protected static function getMetaData($key) {
+        if (isset(self::$_metadata_cache[$key]))
+            return self::$_metadata_cache[$key];
+        $result = db\query("SELECT v FROM " . table('core\metadata') . " WHERE k = " . strfy($key));
+        $result = db\next_array($result);
+        if ($result !== false)
+            $result = unserialize($result[0]);
+        self::$_metadata_cache[$key] = $result;
+        return $result;
+    }
+
+    protected static function setMetaData($key, $value) {
+        self::$_metadata_cache[$key] = $value;
+        db\run("REPLACE INTO " . table('core\metadata') . " (k,v) VALUES (" . strfy($key) . "," . strfy(serialize($value)) . ")");
     }
 
     public static final function syncronize_all_models() {
-        // Refresh pointer map.
-        db\run("DROP TABLE " . table("pointer_map"));
-        db\query("CREATE TABLE " . table("pointer_map") . " (`child_table` varchar(64) NOT NULL, `child_column` varchar(64) NOT NULL, `parent_table` varchar(64) NOT NULL);");
+        // Clear metadata.
+        db\run("DROP TABLE " . table('core\metadata'));
+        db\run("CREATE TABLE " . table('core\metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
+        $creating_sequence = !in_array(db\config\PREFIX . 'core\seq', db\get_all_tables());
         // Locate and sync all models.
         $model_paths = array(
             APP_DIR . "/models/",
             APP_DIR . "/modules/*/models/",
             APP_CORE_DIR . "/modules/*/models/",
         );
+        // Array that keeps track of all incomming pointers to tables.
+        $pointer_map = array();
+        $model_classes = array();
+        $sequence_max = 1;
         foreach ($model_paths as $model_path) {
             $model_filenames = glob($model_path . "*_model.php");
             $has_module = $model_path != $model_paths[0];
@@ -665,28 +754,102 @@ abstract class Model {
                 if (!class_exists($cls_name))
                     trigger_error("Found model file that didn't declare it's expected model: $cls_name", \E_USER_ERROR);
                 // Ignore models that are abstract.
-                $model_reflection_class = new \ReflectionClass($cls_name);
-                if ($model_reflection_class->isAbstract())
+                if (core\is_abstract($cls_name))
                     continue;
+                $model_classes[$cls_name] = $cls_name;
                 // Syncronize this model.
                 $model = new $cls_name(-1);
                 db\sync_table_layout_with_model($table_name, $model);
                 // Record pointers for pointer map.
-                $child_table = strfy($table_name);
-                $columns = self::getColumnNames($cls_name);
-                foreach ($model->getColumns() as $col_name => $col_type) {
-                    $child_column = strfy($col_name);
-                    // Remove nanomvc/ (not part of table name - implicit)
-                    $parent_table_name = substr(get_class($col_type->parent), 8);
-                    // Table names are underlined.
-                    $parent_table_name = string\cased_to_underline($parent_table_name);
-                    $parent_table = strfy($parent_table_name);
-                    db\query("INSERT INTO " . table("pointer_map") . " VALUES ($child_table, $child_column, $parent_table)");
+                $columns = $cls_name::getColumnNames();
+                foreach ($model->getColumns() as $col_name => $col_type) 
+                    $pointer_map[$cls_name][] = array(get_class($col_type->parent), $col_name);
+                // If creating sequence, record max.
+                if ($creating_sequence) {
+                    $max_result = db\next_array(db\query("SELECT MAX(id) FROM " . table($table_name)));
+                    $max_result = intval($max_result[0]);
+                    if ($sequence_max < $max_result)
+                        $sequence_max = $max_result;
                 }
             }
         }
+        self::setMetaData("pointer_map", $pointer_map);
+        // Track all ancestors of all models.
+        $family_tree = array();
+        foreach ($model_classes as $model_class) {
+            // A self relation allows us to loop trough all models that IS
+            // that model, and itself IS that model.
+            $model_class_table_name = self::classNameToTableName($model_class);
+            $family_tree[$model_class][] = $model_class_table_name;
+            foreach (class_parents($model_class) as $model_parent) {
+                if ($model_parent == 'nanomvc\Model')
+                    continue;
+                $family_tree[$model_parent][] = $model_class_table_name;
+            }
+        }
+        self::setMetaData("family_tree", $family_tree);
+        if ($creating_sequence) {
+            // Need to create the sequence.
+            db\run("CREATE TABLE " . table('core\seq') . " (id INT PRIMARY KEY NOT NULL)");
+            db\run("INSERT INTO " . table('core\seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
+        }
     }
 }
+
+/**
+ * A singleton model is a model that only and always has exactly one instance.
+ * Singleton models does not have an unlinked state.
+ * Use get() to get the instance.
+ */
+abstract class SingletonModel extends Model {
+    /**
+     * Returns this SingletonModel instance.
+     * This function ensures that exactly one exists.
+     */
+    public static function get() {
+        static $singleton_model = null;
+        if ($singleton_model === null) {
+            // Fetching singleton model is done in an atomic operations to ensure no duplicates.
+            forward_static_call(array('nanomvc\Model', "lock"));
+            $singleton_model = parent::selectFirst("");
+            if ($singleton_model === null)
+                $singleton_model = forward_static_call(array('nanomvc\Model', "insert"));
+            $singleton_model->store();
+            // Exiting critical section.
+            db\unlock();
+        }
+        return $singleton_model;
+    }
+    
+    private static function noSupport($function) {
+        throw new \Exception("SingletonModels does not support $function().", \E_USER_ERROR);
+    }
+
+
+    public static function selectByID($id) {
+        return self::get();
+    }
+    
+    public static function selectFirst($where, $order = "") {
+        return self::get();
+    }
+
+    public static function insert() {
+        return self::get();
+    }
+
+    // Functions not supported by SingletonModels.
+    public static function selectFreely($sqldata) { self::noSupport(__FUNCTION__);}
+    public static function selectWhere($where = "", $offset = 0, $limit = 0, $order = "") { self::noSupport(__FUNCTION__);}
+    public static function unlinkByID($id) { self::noSupport(__FUNCTION__);}
+    public static function unlinkFreely($sqldata) { self::noSupport(__FUNCTION__);}
+    public static function unlinkWhere($where = "", $offset = 0, $limit = 0) { self::noSupport(__FUNCTION__);}
+    public function unlink() { self::noSupport(__FUNCTION__);}
+    public static function count($where = "") { self::noSupport(__FUNCTION__);}
+    public function __clone() { self::noSupport(__FUNCTION__);}
+}
+
+
 
 /** A type defines what a model column stores, and how. */
 abstract class Type {
@@ -710,9 +873,7 @@ abstract class Type {
         $this->original_value = $this->value;
     }
 
-    /**
-     * Returns TRUE if this type has changed since the last syncronization.
-     */
+    /** Returns TRUE if this type has changed since the last syncronization. */
     public final function hasChanged() {
         return $this->original_value != $this->value;
     }
@@ -741,8 +902,13 @@ abstract class Type {
     /** Should return the SQL type that this input is stored in. */
     abstract public function getSQLType();
 
-    /** Views this type. Should print representable HTML to output buffer. */
-    abstract public function view();
+    /**
+     * HTML representation of type instance.
+     * Just prints the value by default.
+     */
+    public function __toString() {
+        return escape($this->value);
+    }
 
     /**
     * @desc Should return an interface component that handles modification of the data in a form.
@@ -778,46 +944,32 @@ abstract class Reference extends Type {
     }
 
     /** Constructs this reference to the specified model. */
-    public final function Reference($name, $id, $target_model) {
-        parent::Type($name, $id);
+    public final function Reference($target_model) {
         $this->target_model = $target_model;
     }
 
     /** Resolves this reference and returns the model it points to. */
-    private function ref() {
-        static $last_id = null, $last_resolve;
+    public function get() {
         $id = intval($this->value);
-        if ($id === $last_id)
-            return $last_resolve;
-        else
-            return $last_resolve = call_user_func(array($this->target_model, "selectByID"), $id);
+        if ($id <= 0)
+            return null;
+        $target_model = $this->target_model;
+        $model = $target_model::selectByID($id);
+        if (!is_object($model))
+            $model = null;
+        return $model;
     }
 
-    // Using overloading to turn the ref function into a variable for convenience.
-    public function __isset($name) {
-        return $name == "ref";
-    }
-
-    public function __get($name) {
-        if ($name == "ref")
-            return $this->ref();
-        else
-            trigger_error("Attempted to read from a non existing variable '$name' on reference type.", \E_USER_ERROR);
-    }
-
-    public function __set($name, $value) {
-        if ($name == "ref") {
-            if (is_object($value)) {
-                // Make sure this is a type of model we are pointing to.
-                if (!is_a($value, $this->target_model))
-                    trigger_error("Attempted to set a reference to an incorrect object. The reference expects " . $this->target_model . " objects, you gave it a " . get_class($value) . " object.", \E_USER_ERROR);
-                $this->value = intval($value->getID());
-            } else {
-                // Assuming this is an ID.
-                $this->value = intval($value);
-            }
-        } else
-            trigger_error("Attempting to write to a non existing variable '$name' on reference type.", \E_USER_ERROR);
+    public function set($value) {
+        if (is_object($value)) {
+            // Make sure this is a type of model we are pointing to.
+            if (!is_a($value, $this->target_model))
+                trigger_error("Attempted to set a reference to an incorrect object. The reference expects " . $this->target_model . " objects, you gave it a " . get_class($value) . " object.", \E_USER_ERROR);
+            $this->value = intval($value->getID());
+        } else {
+            // Assuming this is an ID.
+            $this->value = intval($value);
+        }
     }
 
     public function getSQLType() {

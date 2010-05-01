@@ -43,11 +43,13 @@ class Controller {
      * Attempts to find the controller specified by the given path.
      * @param mixed $path Invoke path. Either an array of path tokens or
      * otherwise an unsplit string path.
-     * @param boolean $filter_underline_prefixed When set to true
+     * @param boolean $standard_invoke When set to true
      * controllers, actions or modules with a starting "_" is ignored.
-     * @returns mixed FALSE if path not found, otherwise array(controller_class_name, action_name)
+     * @returns mixed FALSE if path not found, otherwise array(controller_class_name, action_name, arguments)
      */
-    public static function pathToController($path, $filter_underline_prefixed = false) {
+    public static function pathToController($path, $standard_invoke = false) {
+        if ($path[0] == "/")
+            $path = substr($path, 1);
         $controller_name = "nanomvc";
         $path_parts = is_array($path)? $path: explode("/", $path);
         // Try to load application controller first, and if
@@ -59,7 +61,7 @@ class Controller {
                 $controller_name = "index";
             else if ($controller_name == "index") // "index" is reserved.
                 return false;
-            else if ($filter_underline_prefixed && $controller_name[0] == "_")
+            else if ($standard_invoke && $controller_name[0] == "_")
                 return false;
             $controller_name = ucfirst(string\underline_to_cased($controller_name));
             if ($i == 0)
@@ -71,7 +73,7 @@ class Controller {
                 $action_name = "index";
             else if ($action_name == "index") // "index" is reserved.
                 return false;
-            else if ($filter_underline_prefixed && $action_name[0] = "_")
+            else if ($standard_invoke && $action_name[0] == "_")
                 return false;
             // Check if controller exists (actually loads it if it does).
             if (class_exists($controller_class_name))
@@ -80,7 +82,7 @@ class Controller {
                 // Class not found.
                 return false;
         }
-        return array($controller_class_name, $action_name);
+        return array($controller_class_name, $controller_name, $action_name, array_slice($path, $i + 2));
     }
 
 
@@ -89,21 +91,50 @@ class Controller {
      * nanoMVC mapping determines if controller exists.
      * @param mixed $path Path to invoke. Either an array of path tokens or
      * otherwise an unsplit string path.
-     * @param boolean $filter_underline_prefixed When set to true
-     * controllers, actions or modules with a starting "_" is ignored.
+     * @param boolean $standard_invoke When set to true behaviour will change:
+     * - controllers, actions or modules with a starting "_" is ignored,
+     * - the default XHTML layout is used for non set layouts.
+     * - passing incorrect number of argument will safely return false.
      * @returns boolean FALSE if path not found, otherwise TRUE.
      */
-    public static function invoke($path, $filter_underline_prefixed = false) {
-        list($controller_class_name, $action_name) = self::pathToController($path, $filter_underline_prefixed);
+    public static function invoke($path, $standard_invoke = false) {
+        if ($path[0] == "/")
+            $path = substr($path, 1);
+        $path_parts = is_array($path)? $path: explode("/", $path);
+        $controller_param = self::pathToController($path_parts, $standard_invoke);
+        if ($controller_param === false)
+            return false;
         // Class found.
+        list($controller_class_name, $controller_name, $action_name, $arguments) = $controller_param;
         if (!method_exists($controller_class_name, $action_name))
             return false;
         // Create an instance of the controller and invoke action.
         $controller = new $controller_class_name();
+        static $first_invoke = true;
+        if ($first_invoke || $standard_invoke) {
+            // Enable programmers to leave out the layout specifyer for
+            // controllers that are invoked the standard way.
+            // This should increese productivity and result in less confusion
+            // when returning blank pages for new controllers, as PHP
+            // programmers are used to the behaviour where PHP initializes
+            // all parameters required to output HTML by default (e.g. doing
+            // header("Content-Type: text/html") by itself.)
+            if (!isset($controller->layout) || $controller->layout == "")
+                $controller->layout = '/html/xhtml1.1';
+            $first_invoke = false;
+        }
         $controller->beforeFilter();
+        if ($standard_invoke) {
+            $method_reflector = new \ReflectionMethod($controller_class_name, $action_name);
+            $total_req_parameters = $method_reflector->getNumberOfRequiredParameters();
+            if (count($arguments) < $total_req_parameters)
+                return false;
+            $max_parameters = $method_reflector->getNumberOfParameters();
+            if (count($arguments) > $max_parameters)
+                return false;
+        }
         // Call the action now.
-        $arguments = array_slice($path, $i + 2);
-        $ret_view = call_user_func_array(array($controller_class_name, $action_name), $arguments);
+        $ret_view = call_user_func_array(array($controller, $action_name), $arguments);
         $controller->beforeRender();
         // NULL = Display default view if it exists,
         // FALSE = Display nothing,
@@ -117,6 +148,8 @@ class Controller {
                 $path_parts[] = "index";
             } else if ($action_name == "index")
                 $path_parts[] = "index";
+            if (count($arguments) > 0)
+                $path_parts = array_slice($path_parts, 0, -count($arguments));
             $found_view = View::render(implode("/", $path_parts), $controller, false, true, true);
         } else if (is_string($ret_view))
             $found_view = View::render($ret_view, $controller, false, true, true);

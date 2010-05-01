@@ -71,13 +71,6 @@ foreach (internal\get_all_modules() as $module_name => $module_parameters) {
             exit;
         }
     }
-    // Include default application classes.
-    require APP_DIR . "/app_controller.php";
-    if (!class_exists('nanomvc\AppController') || !is_subclass_of('nanomvc\AppController', 'Controller'))
-        trigger_error("nanomvc\AppController must be declared in app_controller.php and extend nanomvc\\Controller!");
-    require APP_DIR . "/app_model.php";
-    if (!class_exists('nanomvc\AppModel') || !is_subclass_of('nanomvc\AppModel', 'Model'))
-        trigger_error("nanomvc\AppModel must be declared in app_model.php and extend nanomvc\\Model!");
     // If there is a controller with this name, run it.
     if (!Controller::invoke($url_tokens, true)) {
         // See if any module is interested in catching the request instead.

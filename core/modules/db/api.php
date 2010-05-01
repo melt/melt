@@ -29,7 +29,7 @@ function set_auto_increment($table, $id, $errmsg = null) {
  * AUTO_INCREMENT value, or FALSE if no MySQL connection was established.
  */
 function insert_id() {
-    $r = query("SELECT @@IDENTITY;");
+    $r = query("SELECT LAST_INSERT_ID()");
     $r = next_array($r);
     return $r[0];
 }
@@ -90,7 +90,7 @@ function run($query) {
         define("NANOMVC_DB_LINK", $link);
         mysql_set_charset('utf8');
         // Throw away magic quotes, the standard database injection protection for badly written PHP code.
-        if (set_magic_quotes_runtime(0) === FALSE)
+        if (ini_get("magic_quotes_runtime") && set_magic_quotes_runtime(0) === FALSE)
             trigger_error("Unable to disable magic_quotes_runtime ini option!", \E_USER_ERROR);
         // Using a stripslashes callback for any gpc data.
         if (get_magic_quotes_gpc()) {
@@ -248,7 +248,7 @@ function sync_table_layout_with_columns($table_name, $columns) {
         // Finally make sure ID column is correct.
     } else {
         // Creating new table.
-        $adds = 'id int NOT NULL AUTO_INCREMENT, PRIMARY KEY (id)';
+        $adds = 'id INT UNSIGNED NOT NULL, PRIMARY KEY (id)';
         foreach ($columns as $name => $type)
             $adds .= ", $name $type";
         query("CREATE TABLE " . table($table_name) . " ( $adds )");

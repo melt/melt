@@ -8,15 +8,18 @@ namespace nanomvc;
 final class View {
     /** @var Controller Controller this View uses. */
     private $_controller;
+    /** @var string Module this View uses or NULL. */
+    private $_module_context = null;
 
-    private function __construct(Controller $controller, $path) {
+    private function __construct(Controller $controller, $path, $module_context) {
         $this->_controller = $controller;
+        $this->_module_context = $module_context;
         require $path;
     }
 
     // Syncronize view variables with their respective controller.
     function __get($name) {
-        return property_exists($this->_controller, $name)? $this->_controller->$name: NullObject::getInstance();
+        return property_exists($this->_controller, $name)? $this->_controller->$name: null;
     }
 
     function __set($name, $value) {
@@ -74,21 +77,44 @@ final class View {
     }
 
     /**
-    * @desc Renders an element in the same controller.
-    * @param string $elementPath Path to the element to render.
-    * @param array $params Additional data to pass to the element controller namespace.
-    */
-    function element($elementPath, $params = array()) {
+     * @desc Renders a view in the same controller.
+     * @param string $view_path Path to the view to render.
+     * This path can be relative to the elements folder of the current
+     * module, or a FQN view path depending if it starts with "/" or not.
+     * @param array $params Additional data to temporarily set when
+     * rendering view.
+     */
+    function view($view_path, $params = array()) {
         $stack = array();
+        $controller = $this->_controller;
         // Save to stack and set params.
+        $layout = $controller->layout;
         foreach ($params as $key => $val) {
             $stack[$key] = isset($controller->$key)? $controller->$key: null;
             $controller->$key = $val;
         }
-        self::render("elements/$elementPath", null, false, true, false);
+        if (strlen($view_path) == 0)
+            trigger_error("View path not specified!", \E_USER_ERROR);
+        $fqn_call = $view_path[0] == "/";
+        if ($fqn_call) {
+            $view = self::findView($view_path);
+            if ($view === false)
+                trigger_error("View path '$view_path' not found!", \E_USER_ERROR);
+            // Set new module context.
+            $foregin_module_context = $view[1];
+            $module_context = $this->_module_context;
+            $this->_module_context = $foregin_module_context;
+        } else {
+            $view_path = $this->_module_context . "/elements/$view_path";
+        }
+        self::render($view_path, $this->_controller, false, false, false);
+        // Restore module context.
+        if ($fqn_call)
+            $this->_module_context = $module_context;
         // Restore from stack.
         foreach ($stack as $key => $val)
             $controller->$key = $val;
+
     }
 
     /**
@@ -99,14 +125,15 @@ final class View {
     private $view_hash = null;
     function uuid($object) {
         if ($this->view_hash == null)
-            $this->view_hash = "h" . api_string::random_hex_str(10);
+            $this->view_hash = "h" . string\random_alphanum_str(10);
         return $object . $this->view_hash;
     }
 
     /**
-    * @desc Takes a view path and finds the first valid file path to it,
+     * Takes a view path and finds the first valid file path to it,
      * or FALSE if no souch file exists.
-    */
+     * @return array (path, module_context)
+     */
     private static function findView($view_path) {
         $path_cache = array();
         if (isset($path_cache[$view_path]))
@@ -115,7 +142,7 @@ final class View {
             $view_path = "/" . $view_path;
         $path = APP_DIR . "/views" . $view_path . ".php";
         if (is_file($path))
-            return $path_cache[$view_path] = $path;
+            return $path_cache[$view_path] = array($path, null);
         // Could be a module view path. Then the first component of the path
         // is the module in which the view resides. (That way you can always
         // override views as above.
@@ -126,9 +153,9 @@ final class View {
         $view_path = substr($view_path, $dir_pos);
         $path = "/modules/" . $module_name . "/views" . $view_path . ".php";
         if (is_file($full_path = APP_DIR . $path))
-            return $path_cache[$view_path] = $full_path;
+            return $path_cache[$view_path] = array($full_path, $module_name);
         else if (is_file($full_path = APP_CORE_DIR . $path))
-            return $path_cache[$view_path] = $full_path;
+            return $path_cache[$view_path] = array($full_path, $module_name);
         else
             return $path_cache[$view_path] = false;
     }
@@ -147,7 +174,7 @@ final class View {
      * Renders a view (template) in an internal subrequest and returns content.
      * @param string $view_path The path of the view to show.
      * @param boolean $final_render If this should be rendered in the final
-     * @param Controller $controller The controller instance that runs this view.
+     * @param nanomvc\Controller $controller The controller instance that runs this view.
      * @param boolean $return Set to false to ouput buffer instead of returning it.
      * @param boolean $final Set to true to render this in the final layout.
      * If a layout path is specified in the controller with this set to true,
@@ -155,7 +182,7 @@ final class View {
      * all section data will be consumed.
      * @param mixed $just_try Set to false to return instead of crashing if view doesn't exist.
      */
-    public static function render($view_path, $controller = null, $return = true, $final = false, $just_try = false) {
+    public static function render($view_path, \nanomvc\Controller $controller = null, $return = true, $final = false, $just_try = false) {
         // Initialize application layout.
         if (self::$application_layout == null)
             self::$application_layout = new Layout();
@@ -173,25 +200,26 @@ final class View {
                 $controller->layout = new Layout();
         } else
             $layout_path = '';
-        $view_file_path = self::findView($view_path);
-        if ($view_file_path === false) {
+        $ret_view = self::findView($view_path);
+        if ($ret_view === false) {
             if (!$just_try)
                 trigger_error("nanoMVC: The view '$view_path.php' could not be found!", \E_USER_ERROR);
             else
                 return false;
         }
+        list($view_file_path, $module_context) = $ret_view;
         // Buffer if returning.
         if ($return)
             ob_start();
         // Make sure there's no level imbalance.
         $level = $controller->layout->getLevel();
-        // Enter content.
-        if (!is_a($controller->layout, "nanomvc\\VoidLayout"))
+        // Enter content (if not done so).
+        if (!is_a($controller->layout, "nanomvc\\VoidLayout") && $level == 0)
             $controller->layout->enterSection("content");
         // Render the view.
-        new View($controller, $view_file_path);
+        new View($controller, $view_file_path, $module_context);
         // Exit content.
-        if (!is_a($controller->layout, "nanomvc\\VoidLayout"))
+        if (!is_a($controller->layout, "nanomvc\\VoidLayout") && $level == 0)
             $controller->layout->exitSection();
         // Should now be back at last level.
         if ($controller->layout->getLevel() != $level)
@@ -258,10 +286,8 @@ class Layout {
     */
     public function exitSection() {
         $section = array_pop($this->buffer_stack);
-        
         if (!is_a($section, "nanomvc\\SectionBuffer"))
-              die(debug_print_backtrace());
-//            trigger_error("Cannot exit section. No section to exit from!", \E_USER_ERROR);
+              trigger_error("Cannot exit section. No section to exit from!", \E_USER_ERROR);
         $section->leave();
     }
 
@@ -311,10 +337,10 @@ class VoidLayout extends Layout {
     }
 }
 
-/**
+/*
  * This is a placeholder for null references in Views.
  * It prevents exceptions from beeing thrown when accessing unset variables.
- */
+
 class NullObject {
     // Singleton.
     private function  __construct() { }
@@ -349,7 +375,7 @@ class NullObject {
             $instance = new NullObject();
         return new NullObject();
     }
-}
+} */
 
 
 class SectionBuffer {
@@ -370,10 +396,6 @@ class SectionBuffer {
     }
 
     public function leave() {
-        static $calls = 0;
-        $calls++;
-        if ($calls > 100)
-            trigger_error("wat", \E_USER_ERROR);
         $contents = ob_get_contents();
         if ($this->at > 0)
             $this->chunks[] = $contents;

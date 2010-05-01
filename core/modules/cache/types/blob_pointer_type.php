@@ -1,6 +1,4 @@
-<?php
-
-namespace nanomvc\cache;
+<?php namespace nanomvc\cache;
 
 /**
  * A binary data field that points to the binary data and uses
@@ -61,7 +59,7 @@ abstract class BlobPointerType extends \nanomvc\Reference {
         if (!is_string($data) || strlen($data) == 0) {
             // Prepare storing the binary data in a new blob model.
             $blob_model = BlobModel::insert();
-            $blob_model->data = $data;
+            $blob_model->dta = $data;
             $blob_model->tag = \nanomvc\string\random_alphanum_str(8);
             $blob_model->ext = $extention;
             $this->change_to = $blob_model;
@@ -127,7 +125,7 @@ abstract class BlobPointerType extends \nanomvc\Reference {
        if (!is_file($cache_path)) {
             // Dump blob to disk.
             $blob_model = BlobModel::selectByID($this->value);
-            file_put_contents($file_path, $blob_model->data);
+            file_put_contents($file_path, $blob_model->dta);
             // Also write tag to disk if it should.
             if ($file_tag_path !== null)
                 file_put_contents($file_tag_path, $blob_model->tag);

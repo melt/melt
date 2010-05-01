@@ -95,24 +95,42 @@ function error_handler($errno, $errstr, $errfile, $errline) {
         $e = new \Exception("Error of level USER_LEVEL caught: ".$errstr, $errno);
         exception_handler($e);
         exit;
-    } else {
-        // More strict error handling when under development.
-        if (APP_IN_DEVELOPER_MODE && ($errno == E_WARNING || $errno == E_NOTICE)) {
-            // Fetching undefined keys in arrays is valid.
-            if (strpos($errstr, "Undefined offset") !== FALSE) return true;
-            if (strpos($errstr, "Undefined index") !== FALSE) return true;
-            // Connection timed out is expected and not an exceptional event.
-            if (strpos($errstr, "Connection timed out") !== FALSE) return true;
-            // Failing to delete the output buffer is expected when ob_close is called just to be sure.
-            if (strpos($errstr, "failed to delete buffer") !== FALSE) return true;
-            $e = new \Exception((($errno == E_WARNING)? "Warning": "Notice") . " of level USER_LEVEL caught: " . $errstr, $errno);
-            exception_handler($e);
-            exit;
-        }
     }
-    // Silently bypass internal PHP error handler.
-    // Force execution of script.
-    return true;
+    // We can bypass this error, just notify in developer mode.
+    if (!APP_IN_DEVELOPER_MODE)
+        return true;
+    // Fetching undefined keys in arrays is valid.
+    if (strpos($errstr, "Undefined offset") !== FALSE)
+        return true;
+    if (strpos($errstr, "Undefined index") !== FALSE)
+        return true;
+    // Connection timed out is expected and not an exceptional event.
+    if (strpos($errstr, "Connection timed out") !== FALSE)
+        return true;
+    // Failing to delete the output buffer is expected when ob_close is
+    // called just to be sure.
+    if (strpos($errstr, "failed to delete buffer") !== FALSE)
+        return true;
+    // Yes, nanoMVC uses static abstract functions, which is normally bad,
+    // but useful in this Model implementation.
+    if (strpos($errstr, "Static function ") !== FALSE
+    && strpos($errstr, " should not be abstract") !== FALSE)
+        return true;
+    $error_map = array(
+        E_WARNING => "E_WARNING",
+        E_NOTICE => "E_NOTICE ",
+        E_USER_ERROR => "E_USER_ERROR",
+        E_USER_WARNING => "E_USER_WARNING",
+        E_USER_NOTICE => "E_USER_NOTICE",
+        E_STRICT => "E_STRICT",
+        E_RECOVERABLE_ERROR => "E_RECOVERABLE_ERROR",
+        E_DEPRECATED => "E_DEPRECATED",
+        E_USER_DEPRECATED => "E_USER_DEPRECATED",
+    );
+    $type = isset($error_map[$errno])? $error_map[$errno]: "E_UNKNOWN";
+    $e = new \Exception("$type caught: " . $errstr, $errno);
+    exception_handler($e);
+    exit;
 }
 
 // Never use standard unsafe PHP error handling.

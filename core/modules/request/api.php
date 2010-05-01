@@ -122,7 +122,7 @@ function show_404() {
 */
 function show_invalid($reason = null) {
     // Prefer exceptions in developer mode.
-    if (devmode)
+    if (APP_IN_DEVELOPER_MODE)
         trigger_error("Invalid request raised, reason specified: '$reason'", \E_USER_ERROR);
     reset();
     if (!headers_sent()) {
@@ -224,7 +224,7 @@ function url($path, $get = null) {
         $path = '/' . $path;
     $path = (substr(\nanomvc\config\ROOT_URL, -1) == '/'?
              substr(\nanomvc\config\ROOT_URL, 0, -1):
-             \nanomvc\config\ROOT_URL) . strtolower($path);
+             \nanomvc\config\ROOT_URL) . $path;
     return $get === null? $path: make_url($path, $get);
 }
 
