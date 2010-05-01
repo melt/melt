@@ -1,12 +1,16 @@
 <?php namespace nanomvc\url_mapper;
 
 class UrlMapperModule extends \nanomvc\Module {
+    /** @var UrlMapModel The url mapped model that matched this request. */
+    public static $url_map = null;
+
     public static function catchRequest($url_tokens) {
-        $alias_url_token = $url_tokens[0];
-        $url_map = UrlMap::selectWhere("alias = " . strfy($alias_url_token));
-        if ($url_map === false)
+        $alias_url = implode("/", $url_tokens);
+        $url_map = UrlMapModel::selectFirst("url_alias = " . strfy($alias_url));
+        if ($url_map === null)
             return;
-        Controller::invoke($url_map->invoke, false);
+        self::$url_map = $url_map;
+        \nanomvc\Controller::invoke($url_map->invoke, false);
         exit;
     }
 
