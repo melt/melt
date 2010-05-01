@@ -1,19 +1,17 @@
-<?php
+<?php namespace nanomvc\qmi;
 
-namespace nanomvc\qmi;
-
-class ActionsController {
+class ActionsController extends \nanomvc\Controller {
     /**
      * Callback for qmi actions.
      * @see get_action_link
      */
     function set($data) {
-        $data = \nanomvc\string\simple_decrypt($data, get_qmi_key());
+        $data = \nanomvc\string\simple_decrypt($data);
         if ($data === false)
             \nanomvc\request\show_404();
         list($id, $model_name, $action, $url) = unserialize($data);
-        $instance = call_user_func(array($model_name, "selectID"), $id);
-        if ($instance === false)
+        $instance = call_user_func(array($model_name, "selectByID"), $id);
+        if ($instance === null)
             \nanomvc\request\show_404();
         switch ($action) {
         case "delete":

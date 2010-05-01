@@ -1,17 +1,4 @@
-<?php
-
-namespace nanomvc\qmi;
-
-/**
- * Internal function. Initializes and returns the QMI key used in this session.
- * @return string Session QMI key.
- */
-function get_qmi_key() {
-    // Generate and append a qmi field that can safely bounce the interface data.
-    if (!isset($_SESSION['qmi_key']) || strlen($_SESSION['qmi_key']) < 16)
-        $_SESSION['qmi_key'] = \nanomvc\string\random_alphanum_str(16);
-    return $_SESSION['qmi_key'];
-}
+<?php namespace nanomvc\qmi;
 
 /**
  * Prints the interface.
@@ -30,13 +17,12 @@ function print_interface($html_components) {
  * @param string $url Where to go after the action. NULL simply follows referer.
  */
 function get_action_link($instance, $action = "delete", $url = null) {
-    $qmi_key = get_qmi_key();
-    if (!is_a($instance, "Model"))
+    if (!is_a($instance, '\nanomvc\Model'))
         throw new \Exception("Cannot make a delete link to a non model object!");
     $id = $instance->getID();
     if ($id <= 0)
         return null;
     $model_name = get_class($instance);
-    $qmi_data = string\simple_crypt(serialize(array($id, $model_name, $action, $url)));
+    $qmi_data = \nanomvc\string\simple_crypt(serialize(array($id, $model_name, $action, $url)));
     return url("/qmi/actions/set/$qmi_data");
 }

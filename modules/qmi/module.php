@@ -1,6 +1,4 @@
-<?php
-
-namespace nanomvc\qmi;
+<?php namespace nanomvc\qmi;
 
 class QmiModule extends \nanomvc\Module {
     public static function beforeRequestProcess() {
