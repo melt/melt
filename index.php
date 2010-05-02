@@ -4,12 +4,12 @@ function write($what) { echo "$what<br />"; }
 if (!isset($_POST["gobutton"])) {
     ?><h1>nanoMVC Bootstrap/Install Script</h1><?php
     write("No, this install script does not have a cool style. But do you <i>really</i> care?");
-    write("Checking version...");
+    write("Checking PHP version...");
     if (version_compare(PHP_VERSION, '5.3.0', '<')) {
         write("nanoMVC requires PHP 5.3.0 or newer! You have PHP " . PHP_VERSION);
         exit;
     }
-    write("Checking magic quotes...");
+    write("Checking PHP magic quotes...");
     if (get_magic_quotes_gpc())
         write("WARNING: You have magic quotes enabled! nanoMVC will attempt to counter this setting but you should turn it OFF since magic quotes is depricated, corrupts input data and reduces performance.");
     ?>
@@ -62,6 +62,6 @@ if (!isset($_POST["gobutton"])) {
         write("File .htaccess already exists. Skipped!");
     write("Removing installation scripit (index.php)...");
     unlink("index.php");
-    write("Were you expecting more steps? Sorry to disappoint.");
+    write("Were you expecting more ? Sorry to disappoint.");
     write("Done, please reload!");
 }
