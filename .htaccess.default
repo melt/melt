@@ -37,7 +37,7 @@ ErrorDocument 504 /bootstrap.php
 ErrorDocument 505 /bootstrap.php
 
 # Set this to the directory this application is installed in.
-RewriteBase /nanomvc
+RewriteBase /
 
 # Rewrite static module files to their appropriate locations.
 RewriteRule ^static/cmod/([^/]+)/(.*)$ core/modules/$1/static/$2 [L]

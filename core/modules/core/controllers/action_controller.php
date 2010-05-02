@@ -36,7 +36,7 @@ class ActionController extends \nanomvc\Controller {
         // Display all SQL queries made during syncronization.
         \nanomvc\db\enable_display();
         \nanomvc\Model::syncronize_all_models();
-        die("Database syncronization complete!");
+        die("\n\n\n>>> Database syncronization complete!");
     }
 
     public function export() {

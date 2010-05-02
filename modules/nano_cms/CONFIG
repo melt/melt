@@ -1,4 +1,13 @@
-/*
+CONFIGURATION:
+
+namespace nanomvc\nano_cms\config {
+    /** Set this to true to not include the built-in default pages. */
+    const NO_DEFAULT_PAGES = false;
+
+    /** Set this to the view to render by default into the dynamic page. */
+    const FRAME_VIEW = false;
+}
+
 
 SHARED DATA DOCUMENTATION:
 
@@ -39,13 +48,3 @@ Description:
 Example:
     TODO: EXAMPLE
 *******************************************************************************
-*/
-
-namespace nanomvc\nano_cms\config {
-    /** Set this to true to not include the built-in default pages. */
-    const NO_DEFAULT_PAGES = false;
-
-    /** Set this to the view to render by default into the dynamic page. */
-    const FRAME_VIEW = false;
-}
-

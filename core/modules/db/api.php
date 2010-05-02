@@ -94,14 +94,14 @@ function run($query) {
             trigger_error("Unable to disable magic_quotes_runtime ini option!", \E_USER_ERROR);
         // Using a stripslashes callback for any gpc data.
         if (get_magic_quotes_gpc()) {
-            function stripslashes_deep($value) {
-                $value = is_array($value)? array_map('stripslashes_deep', $value): stripslashes($value);
+            function _stripslashes_deep($value) {
+                $value = is_array($value)? array_map('\nanomvc\db\_stripslashes_deep', $value): stripslashes($value);
                 return $value;
             }
-            $_POST = array_map('stripslashes_deep', $_POST);
-            $_GET = array_map('stripslashes_deep', $_GET);
-            $_COOKIE = array_map('stripslashes_deep', $_COOKIE);
-            $_REQUEST = array_map('stripslashes_deep', $_REQUEST);
+            $_POST = array_map('\nanomvc\db\_stripslashes_deep', $_POST);
+            $_GET = array_map('\nanomvc\db\_stripslashes_deep', $_GET);
+            $_COOKIE = array_map('\nanomvc\db\_stripslashes_deep', $_COOKIE);
+            $_REQUEST = array_map('\nanomvc\db\_stripslashes_deep', $_REQUEST);
         }
         // USE the configured database.
         if (strlen(config\NAME) == 0)
@@ -181,13 +181,13 @@ function sql_column_need_update($specified, $current) {
 * @desc Syncronizes a table in the database with
 * @desc the generic table model used by nanoMVC.
 * @param String $table_name The raw table name, the identifier without prefixing.
-* @param Model $example_model An example of the model instance of the table to sync.
+* @param array $parsed_col_array Parsed column array of model.
 */
-function sync_table_layout_with_model($table_name, $example_model) {
+function sync_table_layout_with_model($table_name, $parsed_col_array) {
     // Make an array where [name] => sql_type
     $columns = array();
     // Check names and fetches types.
-    foreach ($example_model->getColumns() as $name => $column) {
+    foreach ($parsed_col_array as $name => $column) {
         verify_keyword($name);
         $columns[strtolower($name)] = $column->getSQLType();
     }

@@ -758,11 +758,12 @@ abstract class Model implements \Iterator {
                     continue;
                 $model_classes[$cls_name] = $cls_name;
                 // Syncronize this model.
-                $model = new $cls_name(-1);
-                db\sync_table_layout_with_model($table_name, $model);
+                $parsed_col_array = Model::getParsedColumnArray($cls_name);
+                db\sync_table_layout_with_model($table_name, $parsed_col_array);
                 // Record pointers for pointer map.
                 $columns = $cls_name::getColumnNames();
-                foreach ($model->getColumns() as $col_name => $col_type) 
+                // TODO ersätt $model
+                foreach ($parsed_col_array as $col_name => $col_type)
                     $pointer_map[$cls_name][] = array(get_class($col_type->parent), $col_name);
                 // If creating sequence, record max.
                 if ($creating_sequence) {

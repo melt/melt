@@ -14,11 +14,11 @@ function get_all_modules() {
     // Scan modules
     $modules = array();
     foreach (scandir(APP_DIR . "/modules") as $module)
-    if ($module[0] != ".")
-        $modules[$module] = array("nanomvc\\$module\\" . underline_to_cased($module) . "Module", APP_DIR . "/modules/" . $module);
+        if ($module[0] != ".")
+            $modules[$module] = array("nanomvc\\$module\\" . underline_to_cased($module) . "Module", APP_DIR . "/modules/" . $module);
     foreach (scandir(APP_CORE_DIR . "/modules") as $module)
-    if ($module[0] != ".")
-        $modules[$module] = array("nanomvc\\$module\\" . underline_to_cased($module) . "Module", APP_CORE_DIR . "/modules/" . $module);
+        if ($module[0] != ".")
+            $modules[$module] = array("nanomvc\\$module\\" . underline_to_cased($module) . "Module", APP_CORE_DIR . "/modules/" . $module);
     return $modules;
 }
 
@@ -86,8 +86,6 @@ function autoload($name) {
             $file_name = $parts[2];
             $class_name = "nanomvc\\" . $parts[1] . "\\" . $parts[2];
         }
-        if ($class_name == 'nanomvc\\\\TestController')
-            die(var_dump($name, $parts));
         $file_name = \nanomvc\string\cased_to_underline($file_name);
         // Using nanoMVC naming rules to find the class.
         if (\nanomvc\string\ends_with($class_name, "Controller")) {
