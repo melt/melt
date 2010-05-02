@@ -60,7 +60,8 @@ if (!isset($_POST["gobutton"])) {
         file_put_contents(".htaccess", $config_file);
     } else
         write("File .htaccess already exists. Skipped!");
-    write("Removing installation script (index.php)...");
+    write("Removing installation scripit (index.php)...");
     unlink("index.php");
+    write("Were you expecting more steps? Sorry to disappoint.");
     write("Done, please reload!");
 }
