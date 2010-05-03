@@ -10,7 +10,7 @@ class UrlMapperModule extends \nanomvc\Module {
         if ($url_map === null)
             return;
         self::$url_map = $url_map;
-        \nanomvc\Controller::invoke($url_map->invoke, false);
+        \nanomvc\Controller::invoke($url_map->invoke . $url_map->getID(), false);
         exit;
     }
 

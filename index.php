@@ -62,6 +62,6 @@ if (!isset($_POST["gobutton"])) {
         write("File .htaccess already exists. Skipped!");
     write("Removing installation scripit (index.php)...");
     unlink("index.php");
-    write("Were you expecting more ? Sorry to disappoint.");
+    write("Were you expecting more steps? Sorry to disappoint.");
     write("Done, please reload!");
 }

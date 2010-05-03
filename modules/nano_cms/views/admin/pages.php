@@ -34,6 +34,27 @@
 .jstree ins {
     border-style: none;
 }
+#create_new_node {
+    overflow: hidden;
+}
+#create_new_node > select {
+    float: left;
+    height: 25px;
+    width: 65%;
+}
+#create_new_node > input {
+    float: right;
+    margin-left: 10px;
+    height: 25px;
+    width: 20%;
+}
+#root {
+    color: black;
+    display: block;
+    margin: 0px;
+    cursor: pointer;
+    padding: 0px 0px 0px 5px;
+}
 </style>
 <?php $this->layout->exitSection(); ?>
 <?php $this->view("/ctrl/elements/layout", array()); ?>
@@ -57,15 +78,19 @@
 </div>
 <div id="tree_admin">
     <div id="create_new_node">
-        Create New:
-        <select>
+        Create New:<br />
+        <select onchange="javascript: create_url = $(this).attr('value');">
             <?php $rooted_in = isset($this->site_node)? "/" . $this->site_node->getID(): null; ?>
             <?php foreach (get_dynamic_pages() as $class_name => $name): ?>
-            <option onclick="javascript: document.location = '<?php echo url("/nano_cms/admin/pages/new/" . \nanomvc\string\base64_alphanum_encode($class_name) . $rooted_in); ?>'">
-                <?php echo escape($name); ?>
-            </option>
+                <?php $url = url("/nano_cms/admin/pages/new/" . \nanomvc\string\base64_alphanum_encode($class_name) . $rooted_in); ?>
+                <?php if (!isset($first_url)) $first_url = $url; ?>
+                <option value="<?php echo $url; ?>"><?php echo escape($name); ?></option>
             <?php endforeach; ?>
         </select>
+        <script type="text/javascript">
+            var create_url = "<?php echo $first_url; ?>";
+        </script>
+        <input type="button" onclick="javascript: document.location = create_url;" value="Go" />
     </div>
     <script type="text/javascript">
         var can_redirect = false;
@@ -93,5 +118,6 @@
                 document.location = location;
         };
     </script>
+    <a id="root" class="clicked" href="<?php echo url("/nano_cms/admin/pages"); ?>">root</a>
     <?php $tree_id = \nanomvc\jquery\jstree_write($this->page_tree, "admin", $this->selected_site_node, "default", true); ?>
 </div>

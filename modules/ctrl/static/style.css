@@ -56,7 +56,7 @@ ul#menu > li > a:hover {
     background-color: #dfdfdf;
 }
 
-input[type="text"], input[type="password"] {
+input[type="text"], input[type="password"], select {
     padding: 2px;
     border-width: 1px;
     border-style: solid;

@@ -88,6 +88,7 @@ function autoload($name) {
         }
         $file_name = \nanomvc\string\cased_to_underline($file_name);
         // Using nanoMVC naming rules to find the class.
+
         if (\nanomvc\string\ends_with($class_name, "Controller")) {
             $path .= "/controllers/" . $subdir . substr($file_name, 0, -11) . "_controller.php";
             $expecting = $app? "nanomvc\\AppController": "nanomvc\\Controller";

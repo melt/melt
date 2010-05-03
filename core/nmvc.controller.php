@@ -143,10 +143,10 @@ class Controller {
         if ($ret_view === false)
             return true;
         else if ($ret_view === null) {
-            if ($controller_name == "index") {
+            if (strtolower($controller_name) == "index") {
                 $path_parts[] = "index";
                 $path_parts[] = "index";
-            } else if ($action_name == "index")
+            } else if (strtolower($controller_name) == "index")
                 $path_parts[] = "index";
             if (count($arguments) > 0)
                 $path_parts = array_slice($path_parts, 0, -count($arguments));

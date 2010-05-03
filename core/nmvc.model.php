@@ -315,6 +315,7 @@ abstract class Model implements \Iterator {
         $id = intval($this->_id);
         // Find all pointers that will get broken by this unlink and garbage collect.
         $pointer_map = self::getMetaData("pointer_map");
+        if (isset($pointer_map[$name]))
         foreach ($pointer_map[$name] as $pointer) {
             list($child_model, $child_column) = $pointer;
             $instances = $child_model::selectWhere("$child_column = $id");
@@ -546,14 +547,14 @@ abstract class Model implements \Iterator {
         $offset = intval($offset);
         $limit = intval($limit);
         if ($where != "")
-            $where = " WHERE ".$where;
+            $where = " WHERE " . $where;
         if ($limit != 0)
-            $limit = " LIMIT ".$offset.",".$limit;
+            $limit = " LIMIT " . $offset . "," . $limit;
         else if ($offset != 0)
-            $limit = " OFFSET ".$offset;
+            $limit = " OFFSET " . $offset;
         else $limit = "";
         if ($order != "")
-            $order = " ORDER BY ".$order;
+            $order = " ORDER BY " . $order;
         return self::selectFreely($where . $order . $limit);
     }
 
@@ -762,9 +763,12 @@ abstract class Model implements \Iterator {
                 db\sync_table_layout_with_model($table_name, $parsed_col_array);
                 // Record pointers for pointer map.
                 $columns = $cls_name::getColumnNames();
-                // TODO ersätt $model
-                foreach ($parsed_col_array as $col_name => $col_type)
-                    $pointer_map[$cls_name][] = array(get_class($col_type->parent), $col_name);
+                foreach ($parsed_col_array as $col_name => $col_type) {
+                    if (substr($col_name, -3) != "_id")
+                        continue;
+                    $target_model = $col_type->getTargetModel();
+                    $pointer_map[$target_model][] = array($cls_name, $col_name);
+                }
                 // If creating sequence, record max.
                 if ($creating_sequence) {
                     $max_result = db\next_array(db\query("SELECT MAX(id) FROM " . table($table_name)));

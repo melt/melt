@@ -18,11 +18,4 @@ class DirectoryModel extends SiteNodeModel {
     public static function getJsTreeIcon() {
         return "/static/mod/iconize/crystal/16x16/filesystems/folder.png";
     }
-
-    public function getURL($what_url = null) {
-        if ($what_url == "admin")
-            return parent::getURL("admin");
-        else
-            return null;
-    }
 }
