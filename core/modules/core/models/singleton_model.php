@@ -5,7 +5,7 @@
  * Singleton models does not have an unlinked state.
  * Use get() to get the instance.
  */
-abstract class SingletonModel extends \nanomvc\Controller {
+abstract class SingletonModel extends \nanomvc\Model {
     /**
      * Returns this SingletonModel instance.
      * This function ensures that exactly one exists.

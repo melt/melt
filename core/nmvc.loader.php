@@ -111,7 +111,7 @@ function autoload($name) {
             trigger_error("nanoMVC: '$path' did not declare a class named '$class_name' as expected!", \E_USER_ERROR);
         else if ($expecting !== null && !is_subclass_of($class_name, $expecting))
             trigger_error("nanoMVC: '$class_name' must extend '$expecting'! (Declared in '$path')", \E_USER_ERROR);
-        else if ($prevent_bare_model && get_class($class_name) == 'nanomvc\Model')
+        else if ($prevent_bare_model && $class_name == 'nanomvc\Model')
             trigger_error("nanoMVC: Your application model '$class_name' must extend nanomvc\\AppModel or another more specific module declared Model. (Declared in '$path')", \E_USER_ERROR);
         return true;
     }
