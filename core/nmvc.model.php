@@ -109,12 +109,12 @@ abstract class Model implements \Iterator {
                     if (!class_exists($pointer_target_class_name) || !is_subclass_of($pointer_target_class_name, 'nanomvc\Model'))
                         trigger_error("Invalid model column: $model_name.\$$column_name - Reference target '$pointer_target_class_name' is undefined or not a nanomvc\\Model.", \E_USER_ERROR);
                 }
-                $type_handler = new $type_class_name($pointer_target_class_name);
+                $type_handler = new $type_class_name($column_name, null, $pointer_target_class_name);
             } else if (is_subclass_of($type_class_name, 'nanomvc\Type')) {
                 if (string\ends_with($column_name, "_id"))
                     trigger_error("Invalid model column: $model_name.\$$column_name - nanoMVC name convention doesn't allow non-reference type columns to end with '_id'!", \E_USER_ERROR);
                 // Standard type handles must extend the type class.
-                $type_handler = new $type_class_name();
+                $type_handler = new $type_class_name($column_name, null);
             } else
                 trigger_error("Invalid model column: $model_name.\$$column_name - The specified type '$type_class_name' is not a nanomvc\\Type.", \E_USER_ERROR);
             foreach ($column_attributes as $key => $attribute) {
@@ -801,63 +801,10 @@ abstract class Model implements \Iterator {
     }
 }
 
-/**
- * A singleton model is a model that only and always has exactly one instance.
- * Singleton models does not have an unlinked state.
- * Use get() to get the instance.
- */
-abstract class SingletonModel extends Model {
-    /**
-     * Returns this SingletonModel instance.
-     * This function ensures that exactly one exists.
-     */
-    public static function get() {
-        static $singleton_model = null;
-        if ($singleton_model === null) {
-            // Fetching singleton model is done in an atomic operations to ensure no duplicates.
-            forward_static_call(array('nanomvc\Model', "lock"));
-            $singleton_model = parent::selectFirst("");
-            if ($singleton_model === null)
-                $singleton_model = forward_static_call(array('nanomvc\Model', "insert"));
-            $singleton_model->store();
-            // Exiting critical section.
-            db\unlock();
-        }
-        return $singleton_model;
-    }
-    
-    private static function noSupport($function) {
-        throw new \Exception("SingletonModels does not support $function().", \E_USER_ERROR);
-    }
-
-
-    public static function selectByID($id) {
-        return self::get();
-    }
-    
-    public static function selectFirst($where, $order = "") {
-        return self::get();
-    }
-
-    public static function insert() {
-        return self::get();
-    }
-
-    // Functions not supported by SingletonModels.
-    public static function selectFreely($sqldata) { self::noSupport(__FUNCTION__);}
-    public static function selectWhere($where = "", $offset = 0, $limit = 0, $order = "") { self::noSupport(__FUNCTION__);}
-    public static function unlinkByID($id) { self::noSupport(__FUNCTION__);}
-    public static function unlinkFreely($sqldata) { self::noSupport(__FUNCTION__);}
-    public static function unlinkWhere($where = "", $offset = 0, $limit = 0) { self::noSupport(__FUNCTION__);}
-    public function unlink() { self::noSupport(__FUNCTION__);}
-    public static function count($where = "") { self::noSupport(__FUNCTION__);}
-    public function __clone() { self::noSupport(__FUNCTION__);}
-}
-
-
-
 /** A type defines what a model column stores, and how. */
 abstract class Type {
+    /** @var string The key of this type instance. */
+    protected $key = null;
     /** @var mixed The value of this type instance. */
     protected $value = null;
     /** @var Model The parent of this type instance. */
@@ -893,7 +840,8 @@ abstract class Type {
     }
 
     /** Constructs this typed field with this initialized parent and value. */
-    public function Type($value = null) {
+    public function Type($key, $value) {
+        $this->key = $key;
         $this->value = $value;
     }
 
@@ -949,7 +897,9 @@ abstract class Reference extends Type {
     }
 
     /** Constructs this reference to the specified model. */
-    public final function Reference($target_model) {
+    public final function Reference($key, $value, $target_model) {
+        $this->key = $key;
+        $this->value = $value;
         $this->target_model = $target_model;
     }
 
@@ -983,15 +933,5 @@ abstract class Reference extends Type {
 
     public function getSQLValue() {
         return intval($this->value);
-    }
-}
-
-/**
- * A model that automatically unlinks itself whenever any of
- * the instances it's pointers points to gets unlinked.
- */
-class GCModel extends Model {
-    public function gcPointer($field_name) {
-        $this->unlink();
     }
 }

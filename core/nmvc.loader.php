@@ -88,16 +88,18 @@ function autoload($name) {
         }
         $file_name = \nanomvc\string\cased_to_underline($file_name);
         // Using nanoMVC naming rules to find the class.
-
+        $prevent_bare_model = false;
         if (\nanomvc\string\ends_with($class_name, "Controller")) {
             $path .= "/controllers/" . $subdir . substr($file_name, 0, -11) . "_controller.php";
             $expecting = $app? "nanomvc\\AppController": "nanomvc\\Controller";
         } else if (\nanomvc\string\ends_with($class_name, "Type")) {
             $path .= "/types/" . $subdir . substr($file_name, 0, -5) . "_type.php";
-            $expecting = "nanomvc\\Type";
+            $expecting = 'nanomvc\Type';
         } else if (\nanomvc\string\ends_with($class_name, "Model")) {
             $path .= "/models/" . $subdir . substr($file_name, 0, -6) . "_model.php";
-            $expecting = $app? "nanomvc\\AppModel": "nanomvc\\Model";
+            $expecting = 'nanomvc\Model';
+            if ($app)
+                $prevent_bare_model = true;
         } else {
             $path .= "/classes/" . $subdir . $file_name . ".php";
             $expecting = null;
@@ -109,6 +111,8 @@ function autoload($name) {
             trigger_error("nanoMVC: '$path' did not declare a class named '$class_name' as expected!", \E_USER_ERROR);
         else if ($expecting !== null && !is_subclass_of($class_name, $expecting))
             trigger_error("nanoMVC: '$class_name' must extend '$expecting'! (Declared in '$path')", \E_USER_ERROR);
+        else if ($prevent_bare_model && get_class($class_name) == 'nanomvc\Model')
+            trigger_error("nanoMVC: Your application model '$class_name' must extend nanomvc\\AppModel or another more specific module declared Model. (Declared in '$path')", \E_USER_ERROR);
         return true;
     }
 }
