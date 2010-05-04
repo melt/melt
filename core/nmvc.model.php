@@ -382,8 +382,13 @@ abstract class Model implements \Iterator {
             $column->setSyncPoint();
         }
         $value_list = implode(',', $value_list);
-        db\run("UPDATE " . table('core\seq') . " SET id = LAST_INSERT_ID(id+1)");
-        return "INSERT INTO " . table($table_name) . " (id, $key_list) VALUES (LAST_INSERT_ID(), $value_list)";
+        if (!config\USE_TRIGGER_SEQUENCING) {
+            db\run("UPDATE " . table('core\seq') . " SET id = LAST_INSERT_ID(id+1)");
+            $id = "LAST_INSERT_ID()";
+        } else {
+            $id = 0;
+        }
+        return "INSERT INTO " . table($table_name) . " (id, $key_list) VALUES ($id, $value_list)";
     }
 
     private function getUpdateSQL() {

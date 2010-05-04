@@ -19,6 +19,7 @@ namespace nanomvc\config {
     const MAINTENANCE = true;
     /** The application host. nanoMVC needs to know where it is located. */
     const ROOT_URL = "http://localhost/";
+
 }
 
 namespace nanomvc\translate\config {
@@ -43,6 +44,10 @@ namespace nanomvc\db\config {
     const NAME = "nanomvc";
     /** Database table prefix to use. */
     const PREFIX = "nanomvc";
+    /** Trigger sequenceing is faster and safer as it allows other mysql
+     * software to insert rows without corrupting tables with duplicate ids.
+     * However, it requires special TRIGGER permissions. */
+    const USE_TRIGGER_SEQUENCING = false;
 }
 
 namespace nanomvc\mail\config {

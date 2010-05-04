@@ -4,4 +4,5 @@
     "PASSWORD" => "",
     "NAME" => "nanomvc",
     "PREFIX" => "nanomvc",
+    "USE_TRIGGER_SEQUENCING" => true,
 );
