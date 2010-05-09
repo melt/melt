@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\html_purifyer;
+namespace nmvc\html_purifyer;
 
-class HtmlPurifyerModule extends \nanomvc\Module {
+class HtmlPurifyerModule extends \nmvc\Module {
     public static function beforeRequestProcess() {
         // Include HTML Purifyer.
         $path = dirname(__FILE__) . "/htmlpurifier-4.0.0/library/HTMLPurifier.auto.php";

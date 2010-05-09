@@ -1,9 +1,7 @@
-<?php
-
-namespace nanomvc;
+<?php namespace nmvc;
 
 /** Application specific model. */
-class AppModel extends Model {
+abstract class AppModel extends Model {
 
 }
 

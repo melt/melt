@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc;
+namespace nmvc;
 
 /**
  * nanoController
@@ -18,8 +18,10 @@ class Controller {
      * This function is executed before every action in the controller.
      * It's a handy place to check for an active session or
      * inspect user permissions.
+     * @param $action_name Action name about to be called. This function may
+     * be called with additional parameters.
      */
-    public function beforeFilter() {}
+    public function beforeFilter($action_name) {}
 
     /**
      * Called after controller action logic, but before the view is rendered.
@@ -65,9 +67,9 @@ class Controller {
                 return false;
             $controller_name = ucfirst(string\underline_to_cased($controller_name));
             if ($i == 0)
-                $controller_class_name = "nanomvc\\" . $controller_name . "Controller";
+                $controller_class_name = "nmvc\\" . $controller_name . "Controller";
             else
-                $controller_class_name = "nanomvc\\" . $path_parts[0] . "\\" . $controller_name . "Controller";
+                $controller_class_name = "nmvc\\" . $path_parts[0] . "\\" . $controller_name . "Controller";
             $action_name = strtolower(@$path_parts[$i + 1]);
             if (strlen($action_name) == 0)
                 $action_name = "index";
@@ -82,7 +84,7 @@ class Controller {
                 // Class not found.
                 return false;
         }
-        return array($controller_class_name, $controller_name, $action_name, array_slice($path, $i + 2));
+        return array($controller_class_name, $controller_name, $action_name, array_slice($path_parts, $i + 2));
     }
 
 
@@ -112,6 +114,7 @@ class Controller {
         $controller = new $controller_class_name();
         static $first_invoke = true;
         if ($first_invoke || $standard_invoke) {
+            $first_invoke = false;
             // Enable programmers to leave out the layout specifyer for
             // controllers that are invoked the standard way.
             // This should increese productivity and result in less confusion
@@ -121,9 +124,7 @@ class Controller {
             // header("Content-Type: text/html") by itself.)
             if (!isset($controller->layout) || $controller->layout == "")
                 $controller->layout = '/html/xhtml1.1';
-            $first_invoke = false;
         }
-        $controller->beforeFilter();
         if ($standard_invoke) {
             $method_reflector = new \ReflectionMethod($controller_class_name, $action_name);
             $total_req_parameters = $method_reflector->getNumberOfRequiredParameters();
@@ -133,8 +134,19 @@ class Controller {
             if (count($arguments) > $max_parameters)
                 return false;
         }
+        // Before filter.
+        call_user_func_array(array($controller, "beforeFilter"), array_merge(array($action_name), $arguments));
         // Call the action now.
         $ret_view = call_user_func_array(array($controller, $action_name), $arguments);
+        // Invoke before render callbacks.
+        static $first_render = true;
+        if (!$first_render) {
+            $first_render = false;
+            foreach (internal\get_all_modules() as $module_parameters) {
+                $module_clsname = $module_parameters[0];
+                $module_clsname::beforeRender();
+            }
+        }
         $controller->beforeRender();
         // NULL = Display default view if it exists,
         // FALSE = Display nothing,

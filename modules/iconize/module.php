@@ -1,6 +1,6 @@
-<?php namespace nanomvc\iconize;
+<?php namespace nmvc\iconize;
 
-class IconizeModule extends \nanomvc\Module {
+class IconizeModule extends \nmvc\Module {
     public static function getAuthor() {
         return "Wrapper by Hannes Landeholm, Media People Sverige AB";
     }

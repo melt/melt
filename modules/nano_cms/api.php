@@ -1,4 +1,4 @@
-<?php namespace nanomvc\nano_cms;
+<?php namespace nmvc\nano_cms;
 
 /**
  * Returns the dynamic page class names mapped to their friendly name
@@ -6,7 +6,7 @@
  */
 function get_dynamic_pages() {
     $dynamic_pages = array();
-    foreach (\nanomvc\core\require_shared_data("dynamic_pages") as $dpage_mod_array)
+    foreach (\nmvc\core\require_shared_data("dynamic_pages") as $dpage_mod_array)
     foreach ($dpage_mod_array as $dynamic_page_class_name) {
         $page_type_name = $dynamic_page_class_name::getPageTypeName();
         $dynamic_pages[$dynamic_page_class_name] = $page_type_name;
@@ -20,7 +20,7 @@ function get_dynamic_pages() {
  */
 function get_breadcrumbs() {
     $url_map = UrlMapperModule::$url_map;
-    if (!\nanomvc\is($url_map, '\nanomvc\nano_cms\SiteNodeModel'))
+    if (!\nmvc\is($url_map, '\nmvc\nano_cms\SiteNodeModel'))
         // Outside breadcrumbs.
         return array();
     $out = array();
@@ -32,13 +32,13 @@ function get_breadcrumbs() {
 }
 
 function get_page_tree() {
-    return \nanomvc\core\ModelTree::makeFromModel(
+    return \nmvc\core\ModelTree::makeFromModel(
         array(
-            'nanomvc\nano_cms\SiteNodeModel' => 'parent_id',
+            'nmvc\nano_cms\SiteNodeModel' => 'parent_id',
         ),
         array(),
         array(
-            'nanomvc\nano_cms\SiteNodeModel' => 'title ASC',
+            'nmvc\nano_cms\SiteNodeModel' => 'title ASC',
         )
     );
 }
@@ -51,7 +51,7 @@ function print_site_menu($branch = null) {
     if ($branch === null) {
         $page_tree = get_page_tree();
         $branch = $page_tree->getBranch();
-        $menu_items = \nanomvc\core\require_shared_data("menu_items");
+        $menu_items = \nmvc\core\require_shared_data("menu_items");
         foreach ($menu_items as $module_menu_items)
         foreach ($module_menu_items as $menu_key => $menu_value)
             $branch[$menu_key] = $menu_value;
@@ -60,7 +60,7 @@ function print_site_menu($branch = null) {
         return;
     echo "<ul>";
     foreach ($branch as $key => $value) {
-        if (is($value, '\nanomvc\core\ModelTree')) {
+        if (is($value, '\nmvc\core\ModelTree')) {
             $node = $sub_tree->getNode();
             $sub_tree = $value;
             $url = $node->getURL();

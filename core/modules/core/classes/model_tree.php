@@ -1,4 +1,4 @@
-<?php namespace nanomvc\core;
+<?php namespace nmvc\core;
 
 /** A tree constructed by one or more sets models with internal pointers. */
 class ModelTree {
@@ -7,7 +7,7 @@ class ModelTree {
 
     /**
      * Returns this node.
-     * @return nanomvc\Model
+     * @return nmvc\Model
      */
     public function getNode() {
         return $this->node;
@@ -35,8 +35,8 @@ class ModelTree {
     public static function makeFromModel($model_names, $wheres = array(), $orderings = array()) {
         // Validate.
         foreach ($model_names as $model_name => $parent_pointer_name) {
-            if (!class_exists($model_name) || !is_subclass_of($model_name, 'nanomvc\Model'))
-                trigger_error("'$model_name' is not a nanomvc\\Model!", \E_USER_ERROR);
+            if (!class_exists($model_name) || !is_subclass_of($model_name, 'nmvc\Model'))
+                trigger_error("'$model_name' is not a nmvc\\Model!", \E_USER_ERROR);
             $columns = $model_name::getColumnNames();
             if (substr($parent_pointer_name, -3) != "_id" || !isset($columns[$parent_pointer_name]))
                 trigger_error("'$model_name' does not have a reference column named '$parent_pointer_name'.", \E_USER_ERROR);
@@ -71,7 +71,7 @@ class ModelTree {
      * Depth first searches down this node.
      * @param array $backlog Backlog to keep track of what nodes we have added.
      * This even makes circular graphs into trees depending on where we started.
-     * @param nanomvc\Model $node The node to search from.
+     * @param nmvc\Model $node The node to search from.
      * @param array $array_branch The branch in the array we're adding items on.
      * @param array $model_names Model names mapped to the parent pointer
      * up in the tree.
@@ -79,7 +79,7 @@ class ModelTree {
      * @param array $wheres Model names mapped to where conditions.
      * @param array $orders Model names mapped to orderings.
      */
-    private static function dfs($backlog, \nanomvc\Model $node, &$array_branch, $model_names, $node_model_name, $wheres = array(), $orderings = array()) {
+    private static function dfs($backlog, \nmvc\Model $node, &$array_branch, $model_names, $node_model_name, $wheres = array(), $orderings = array()) {
         // Backlog check.
         if (isset($backlog[$node_model_name][$node->getID()]))
             return;

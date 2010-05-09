@@ -1,11 +1,11 @@
-<?php namespace nanomvc\url_mapper;
+<?php namespace nmvc\url_mapper;
 
 /**
  * URL mapped models have perma links to their display pages.
  * The default behaviour is to create a perma link as soon as they
  * are linked but this can be changed by overloading beforeStore().
  */
-abstract class UrlMappedModel extends \nanomvc\Model {
+abstract class UrlMappedModel extends \nmvc\Model {
     public $url_map_id = array('core\SelectModelType', 'url_mapper\UrlMapModel');
     public $title = 'core\TextType';
 

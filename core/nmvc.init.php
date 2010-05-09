@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc {
+namespace nmvc {
     // Core constants.
-    const VERSION = "1.1.1";
+    const VERSION = "1.2.0";
     define("APP_CORE_DIR", dirname(__FILE__));
     // Standard function to restore the working dir to the core directory.
     function restore_workdir() {
@@ -11,7 +11,7 @@ namespace nanomvc {
     }
     restore_workdir();
     // Send Powered By Header.
-    header("X-Powered-By: nanoMVC/" . VERSION, false);
+    header("X-Powered-By: nMVC/" . VERSION, false);
     // Explicitly set the default timezone if neccessary.
     if (function_exists("date_default_timezone_set"))
         date_default_timezone_set(@date_default_timezone_get());
@@ -29,7 +29,7 @@ namespace nanomvc {
         trigger_error("nanoMVC: Could not load config.php, bootstrap.php not found in include stack.", \E_CORE_ERROR);
 }
 
-namespace nanomvc\config {
+namespace nmvc\config {
     // Read configuration.
     define("APP_DIR", dirname($path));
     require APP_DIR . "/config.php";

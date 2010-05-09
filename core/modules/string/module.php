@@ -1,7 +1,7 @@
 <?php
 
-namespace nanomvc\string;
+namespace nmvc\string;
 
-class StringModule extends \nanomvc\CoreModule { }
+class StringModule extends \nmvc\CoreModule { }
 
 

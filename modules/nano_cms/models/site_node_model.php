@@ -1,6 +1,6 @@
-<?php namespace nanomvc\nano_cms;
+<?php namespace nmvc\nano_cms;
 
-abstract class SiteNodeModel extends \nanomvc\url_mapper\UrlMappedModel implements \nanomvc\jquery\HasJsTreeIcon {
+abstract class SiteNodeModel extends \nmvc\url_mapper\UrlMappedModel implements \nmvc\jquery\HasJsTreeIcon {
     // Parent node.
     public $parent_id = array('core\SelectModelType', 'nano_cms\SiteNodeModel');
 
@@ -35,7 +35,7 @@ abstract class SiteNodeModel extends \nanomvc\url_mapper\UrlMappedModel implemen
         // Generate new permalink.
         $this->createPermalink();
         // Notify all children that I was moved so they can get new permalinks.
-        $children = $this->selectChildren('nanomvc\nano_cms\SiteNodeModel');
+        $children = $this->selectChildren('nmvc\nano_cms\SiteNodeModel');
         foreach ($children as $child)
             $child->move($this);
         if (!$no_store)

@@ -1,4 +1,4 @@
-<?php namespace nanomvc\qmi;
+<?php namespace nmvc\qmi;
 
 /**
  * An interface to a model.
@@ -32,7 +32,7 @@ class ModelInterface {
         unset($_SESSION["qmi_invalid"]);
     }
 
-    private function getInstanceKey(\nanomvc\Model $instance) {
+    private function getInstanceKey(\nmvc\Model $instance) {
         // Stores and identifies instances by appending the ID to the class name.
         $id = $instance->getID();
         $instance_key = ($id > 0? $id: 0) . get_class($instance);
@@ -46,7 +46,7 @@ class ModelInterface {
      * @param Model $instance
      * @param <type> $values
      */
-    public function setOnSuccess(\nanomvc\Model $instance, $values) {
+    public function setOnSuccess(\nmvc\Model $instance, $values) {
         // Reading the setters from the rest of the arguments.
         $instance_key = $this->getInstanceKey($instance);
         foreach ($values as $field_name => $value) {
@@ -59,10 +59,12 @@ class ModelInterface {
     /**
      * This function returns a set of HTML components for this model.
      * @param Model $instance Instance to operate on.
-     * @param array $components Name of the fields to generate HTML components for mapped to their labels.
-     * @return array
+     * @param array $components Name of the fields to generate HTML components
+     * for mapped to their labels.
+     * @return array Items of either HTML components, or if the components have
+     * labels, an array consisting of (HTML component, label).
      */
-    public function getComponents(\nanomvc\Model $instance, $components, $component_css_class = "qmi_component", $invalid_label_css_class = "qmi_invalid_label") {
+    public function getComponents(\nmvc\Model $instance, $components, $component_css_class = "qmi_component", $invalid_label_css_class = "qmi_invalid_label") {
         if ($instance->isLinked())
             $this->creating = false;
         $html_components = array();
@@ -94,7 +96,7 @@ class ModelInterface {
             if (!isset($instance->$field_name))
                 trigger_error("'$field_name' is not a valid field/column name!", \E_USER_ERROR);
             // Set the output html name.
-            $component_html_name = \nanomvc\string\random_alphanum_str(7);
+            $component_html_name = \nmvc\string\random_alphanum_str(7);
             // Get the output html array key.
             if (isset($this->component_name_use[$field_name])) {
                 $this->component_name_use[$field_name] = 0;
@@ -102,18 +104,21 @@ class ModelInterface {
             } else
                 $output_key = $field_name . "_" . ($this->component_name_use[$field_name]++);
             // Generate the component interface.
-            $component_interface = $instance->type($field_name)->getInterface($component_html_name, $component_label);
+            $component_interface = $instance->type($field_name)->getInterface($component_html_name);
             // If an interface was returned, output it.
             if (is_string($component_interface) && strlen($component_interface) > 0) {
                 // Append error label if one is specified.
-                if (isset($invalidation_data[$instance_key][$component_html_name])) {
+                if (isset($invalidation_data[$instance_key][$field_name])) {
                     $component_interface .= "<span class=\"$invalid_label_css_class\">"
-                    . $invalidation_data[$instance_key][$component_html_name]
+                    . $invalidation_data[$instance_key][$field_name]
                     . "</span>";
                 }
                 // Returning the interface.
-                $html_components[$output_key] = "<div class=\"$component_css_class\">"
-                . $component_interface . "</div>";
+                $component_interface = "<span class=\"$component_css_class\">"
+                . $component_interface . "</span>";
+                $html_components[$output_key] = strlen($component_label) > 0?
+                array($component_interface, $component_label):
+                $component_interface;
             }
             // Registering the component.
             $this->components[$component_html_name] = array($instance_key, $field_name);
@@ -125,7 +130,7 @@ class ModelInterface {
      * Ends the interface. Prints a html form end tag.
      */
     public function finalize($auto_submit = true, $auto_delete = false) {
-        $qmi_data = \nanomvc\string\simple_crypt(gzcompress(serialize(array($this->success_url, $this->instances, $this->components, $this->setters))));
+        $qmi_data = \nmvc\string\simple_crypt(gzcompress(serialize(array($this->success_url, $this->instances, $this->components, $this->setters))));
         echo '<div><input type="hidden" name="_qmi" value="' . $qmi_data . '" />';
         if ($auto_submit) {
             $msg = $this->creating? __("Create"): __("Save Changes");
@@ -143,9 +148,9 @@ class ModelInterface {
      * Do not call directly.
      */
     public static function _interface_callback() {
-        $qmi_data = \nanomvc\string\simple_decrypt(@$_POST['_qmi']);
+        $qmi_data = \nmvc\string\simple_decrypt(@$_POST['_qmi']);
         if ($qmi_data === false) {
-            \nanomvc\messenger\redirectMessage(url(REQ_URL), __("The action failed, your session might have timed out. Please try again."));
+            \nmvc\messenger\redirect_message(REQ_URL, __("The action failed, your session might have timed out. Please try again."));
             return;
         }
         list($success_url, $instance_keys, $components, $setters) = unserialize(gzuncompress($qmi_data));
@@ -157,7 +162,7 @@ class ModelInterface {
             if ($id > 0) {
                 $instance = call_user_func(array($name, "selectByID"), $id);
                 if ($instance === null) {
-                    \nanomvc\messenger\redirectMessage(url(REQ_URL), __("Action failed, the entry you edited has been deleted."));
+                    \nmvc\messenger\redirect_message(REQ_URL, __("Action failed, the entry you edited has been deleted."));
                     return;
                 }
             } else
@@ -192,7 +197,7 @@ class ModelInterface {
             if (count($invalidation_data) > 0) {
                 // Store invalid and reload this URL.
                 $_SESSION['qmi_invalid'] = $invalidation_data;
-                \nanomvc\messenger\redirectMessage(url(REQ_URL), __("Validation failed. Please check your input."));
+                \nmvc\messenger\redirect_message(REQ_URL, __("Validation failed. Please check your input."));
             }
             // Store all instances.
             $iid = null;
@@ -204,7 +209,7 @@ class ModelInterface {
             $success_url = str_replace("{id}", $iid, $success_url);
         }
         // Redirect to the success url and don't display success message (overkill).
-        \nanomvc\request\reset();
-        \nanomvc\request\redirect($success_url);
+        \nmvc\request\reset();
+        \nmvc\request\redirect($success_url);
     }
 }

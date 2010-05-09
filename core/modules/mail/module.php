@@ -1,7 +1,7 @@
 <?php
 
-namespace nanomvc\mail;
+namespace nmvc\mail;
 
-class MailModule extends \nanomvc\CoreModule { }
+class MailModule extends \nmvc\CoreModule { }
 
 

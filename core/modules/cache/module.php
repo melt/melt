@@ -1,5 +1,5 @@
 <?php
 
-namespace nanomvc\cache;
+namespace nmvc\cache;
 
-class CacheModule extends \nanomvc\CoreModule { }
+class CacheModule extends \nmvc\CoreModule { }

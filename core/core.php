@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc\internal;
+namespace nmvc\internal;
 
 // Core design
 require "nmvc.model.php";

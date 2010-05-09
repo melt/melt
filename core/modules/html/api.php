@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc\html;
+namespace nmvc\html;
 
 /** Echos a complete xhtml 1.1 document. */
 function write($head, $body) {
@@ -24,17 +24,17 @@ function decode($html) {
 /**
  * Outputs a linked tree from the given iterator.
  * The models on it's nodes is expected to have a getUrl function.
- * @param nanomvc\core\ModelTree $iterator The tree iterator.
+ * @param nmvc\core\ModelTree $iterator The tree iterator.
  * @param string $id ID of tree (if specified).
  * @param string $get_url_arg If specified, the first argument to getUrl().
  */
-function create_linked_tree(\nanomvc\core\ModelTree $tree, $get_url_arg = null) {
+function create_linked_tree(\nmvc\core\ModelTree $tree, $get_url_arg = null) {
     if (count($tree->getBranch()) == 0)
         return;
     echo "<ul>";
     foreach ($tree->getBranch() as $node) {
         $node_obj = $node->getNode();
-        $cls_name = \nanomvc\string\cased_to_underline(basename(str_replace('\\', '/', get_class($node_obj))));
+        $cls_name = \nmvc\string\cased_to_underline(basename(str_replace('\\', '/', get_class($node_obj))));
         $cls_name = substr($cls_name, 0, -6);
         echo "<li class=\"" . $cls_name . "\">";
         $url = $node_obj->getUrl($get_url_arg);

@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
-class TextType extends \nanomvc\Type {
+class TextType extends \nmvc\Type {
     public function getSQLType() {
         return "text";
     }
@@ -11,9 +11,9 @@ class TextType extends \nanomvc\Type {
         return strfy($this->value);
     }
 
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $value = escape($this->value);
-        return "$label <input type=\"text\" name=\"$name\" value=\"$value\" />";
+        return "<input type=\"text\" name=\"$name\" value=\"$value\" />";
     }
 
     public function readInterface($name) {

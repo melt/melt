@@ -1,19 +1,19 @@
-<?php namespace nanomvc\jquery;
+<?php namespace nmvc\jquery;
 
 const JSTREE_DEFAULT_ICON = "/static/mod/iconize/crystal/16x16/filesystems/folder.png";
 
 /**
  * Outputs a linked tree from the given iterator.
  * The models on it's nodes is expected to have a getUrl function.
- * @param nanomvc\core\ModelTree $iterator The tree iterator.
+ * @param nmvc\core\ModelTree $iterator The tree iterator.
  * @param string $id ID of tree (if specified).
  * @param string $get_url_arg If specified, the first argument to getUrl().
  * @return string ID of tree.
  */
-function jstree_write(\nanomvc\core\ModelTree $tree, $get_url_arg = null, $selected = null, $theme_name = "default", $draggable = false) {
+function jstree_write(\nmvc\core\ModelTree $tree, $get_url_arg = null, $selected = null, $theme_name = "default", $draggable = false) {
     if (count($tree->getBranch()) == 0)
         return;
-    $id = "i" . \nanomvc\string\random_alphanum_str();
+    $id = "i" . \nmvc\string\random_alphanum_str();
     echo '<div class="jstree" id="' . $id . '">';
     echo '</div><script type="text/javascript">';
     echo '$("#' . $id . '").tree(';
@@ -37,12 +37,12 @@ function jstree_write(\nanomvc\core\ModelTree $tree, $get_url_arg = null, $selec
 
 /**
  * Returns tree branch.
- * @param nanomvc\core\ModelTree $iterator The tree iterator.
+ * @param nmvc\core\ModelTree $iterator The tree iterator.
  * @param string $id ID of tree (if specified).
  * @param string $get_url_arg If specified, the first argument to getUrl().
  * @param array $types
  */
-function jstree_get_branch(\nanomvc\core\ModelTree $tree, $get_url_arg, &$types, $draggable) {
+function jstree_get_branch(\nmvc\core\ModelTree $tree, $get_url_arg, &$types, $draggable) {
     $out = array();
     foreach ($tree->getBranch() as $node) {
         $node_data = array();
@@ -55,7 +55,7 @@ function jstree_get_branch(\nanomvc\core\ModelTree $tree, $get_url_arg, &$types,
         $node_data["data"]["attributes"]["href"] = $url;
         if (!isset($types[$node_model_id])) {
             // Need to add this type of node.
-            $icon = url(\nanomvc\core\implementing($node_obj, 'nanomvc\jquery\HasJsTreeIcon')? $node_obj->getJsTreeIcon(): JSTREE_DEFAULT_ICON);
+            $icon = url(\nmvc\core\implementing($node_obj, 'nmvc\jquery\HasJsTreeIcon')? $node_obj->getJsTreeIcon(): JSTREE_DEFAULT_ICON);
             $types[$node_model_id] = array(
                 "clickable" => true,
                 "renameable" => false,
@@ -93,7 +93,7 @@ function jstree_model_to_model_id($model) {
     if ($model === null)
         return false;
     $cls_name = get_class($model);
-    $cls_name = \nanomvc\string\cased_to_underline(basename(str_replace('\\', '/', $cls_name)));
+    $cls_name = \nmvc\string\cased_to_underline(basename(str_replace('\\', '/', $cls_name)));
     $cls_name = substr($cls_name, 0, -6);
     return $cls_name;
 }

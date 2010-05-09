@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
-class BooleanType extends \nanomvc\Type {
+class BooleanType extends \nmvc\Type {
     public $true_str = "yes";
     public $false_str = "no";
 
@@ -12,9 +12,9 @@ class BooleanType extends \nanomvc\Type {
     public function getSQLValue() {
         return $this->value? "TRUE": "FALSE";
     }
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $value = ($this->value == true)? "checked=\"checked\"": "";
-        return "<input type=\"checkbox\" name=\"$name\" $value value=\"checked\" /> $label";
+        return "<input type=\"checkbox\" name=\"$name\" $value value=\"checked\" />";
     }
     public function readInterface($name) {
         $this->value = (@$_POST[$name] == "checked");

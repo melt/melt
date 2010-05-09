@@ -1,7 +1,7 @@
 <?php
 
-namespace nanomvc\request;
+namespace nmvc\request;
 
-class RequestModule extends \nanomvc\CoreModule { }
+class RequestModule extends \nmvc\CoreModule { }
 
 

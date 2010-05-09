@@ -1,5 +1,5 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
-class CoreModule extends \nanomvc\CoreModule { }
+class CoreModule extends \nmvc\CoreModule { }

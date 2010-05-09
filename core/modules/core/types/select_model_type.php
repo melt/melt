@@ -1,11 +1,11 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
 /**
  * SelectType, the only built-in reference type.
  */
-class SelectModelType extends \nanomvc\Reference {
+class SelectModelType extends \nmvc\Reference {
     /** @var Where condition to filter targets. */
     public $where = "";
     /** @var Column in target to use for labeling objects. */
@@ -20,15 +20,18 @@ class SelectModelType extends \nanomvc\Reference {
     }
     private $denied_ids = array();
 
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $value = intval($this->value);
-        $html = "$label <select name=\"$name\">";
+        $html = "<select name=\"$name\">";
         $nothing = __("Nothing Selected");
         $html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
-        $results = forward_static_call(array($this->to_model, 'selectWhere'), $this->where);
+        $results = forward_static_call(array($this->target_model, 'selectWhere'), $this->where);
         $selected = ' selected="selected"';
         foreach ($results as $model) {
-            $label = escape($model->{$this->label_column});
+            if (isset($model->{$this->label_column}))
+                $label = escape($model->{$this->label_column});
+            else
+                $label = escape((string) $model);
             $id = $model->getID();
             if (in_array($id, $this->denied_ids))
                 continue;
@@ -50,7 +53,7 @@ class SelectModelType extends \nanomvc\Reference {
         if ($where != "")
             $where .= " AND ";
         $where .= "id = $value";
-        $count = forward_static_call(array($this->to_model, 'count'), $where);
+        $count = forward_static_call(array($this->target_model, 'count'), $where);
         if ($count != 1)
             $value = 0;
         $this->value = $value;
@@ -62,7 +65,7 @@ class SelectModelType extends \nanomvc\Reference {
             if (in_array($target->getID(), $this->denied_ids))
                 $this->value = 0;
             else
-                $label = empty($this->label_column)? $this->to_model: $target->{$this->label_column}->get();
+                $label = empty($this->label_column)? $this->target_model: $target->{$this->label_column}->get();
         else
             $this->value = 0;
         return ($this->value > 0)? $label . " (#" . intval($this->value) . ")": __("Not Set");

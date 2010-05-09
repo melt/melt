@@ -1,4 +1,4 @@
-<?php namespace nanomvc\tinymce; ?>
+<?php namespace nmvc\tinymce; ?>
 <script type="text/javascript">
 tinyMCE.init({
 	// General options

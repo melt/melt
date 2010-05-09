@@ -1,4 +1,4 @@
-<?php namespace nanomvc\tinymce;
+<?php namespace nmvc\tinymce;
 
 /**
  * tinyMCE wysiwyg with HTML Purifyer and spelling attached.
@@ -7,7 +7,7 @@
  * @see http://tinymce.moxiecode.com/
  * @see http://htmlpurifier.org/live/configdoc/plain.html
  */
-class WysiwygType extends \nanomvc\Type {
+class WysiwygType extends \nmvc\Type {
     // The Tiny Mce class of initialization/attach configuration to use.
     public $config_class = "/tinymce/config_simple";
 
@@ -38,22 +38,22 @@ class WysiwygType extends \nanomvc\Type {
         return strfy($this->value);
     }
 
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         static $initialized = false;
         if (!$initialized) {
             // If not using jquery, then load the standard module.
-            $version = \nanomvc\core\module_loaded("jquery")? "jquery": "standard";
-            \nanomvc\View::render("/tinymce/include_$version", null, false, true);
+            $version = \nmvc\core\module_loaded("jquery")? "jquery": "standard";
+            \nmvc\View::render("/tinymce/include_$version", null, false, true);
             $initialized = true;
         }
-        $textarea_id = "i" . \nanomvc\string\random_hex_str(8);
+        $textarea_id = "i" . \nmvc\string\random_hex_str(8);
         // Call the tiny_mce_init_$STYLE intitalizer element that
         // is modified by the user to match this site.
-        $controller = new \nanomvc\Controller();
+        $controller = new \nmvc\Controller();
         $controller->textarea_id = $textarea_id;
         $controller->config_class = $this->config_class;
-        \nanomvc\View::render("/tinymce/tiny_mce_init", $controller, false);
-        return "$label<textarea rows=\"0\" cols=\"0\" id=\"$textarea_id\" name=\"" . $name . "\">" . escape($this->value) . "</textarea>";
+        \nmvc\View::render("/tinymce/tiny_mce_init", $controller, false);
+        return "<textarea rows=\"0\" cols=\"0\" id=\"$textarea_id\" name=\"" . $name . "\">" . escape($this->value) . "</textarea>";
     }
 
     private static $objectElements;
@@ -65,7 +65,7 @@ class WysiwygType extends \nanomvc\Type {
 
     public function readInterface($name) {
         $this->value = @$_POST[$name];
-        if ($this->disable_purify == "true" || !\nanomvc\core\module_loaded("html_purifyer"))
+        if ($this->disable_purify == "true" || !\nmvc\core\module_loaded("html_purifyer"))
             return;
         // Purify incomming data. Prevents XSS and crap code that breaks layout.
         // It can however do this with the html_purifyer module loaded.

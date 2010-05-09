@@ -1,11 +1,11 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
 /**
 *@desc Stores a remote address.
 */
-class IpAddressType extends \nanomvc\Type {
+class IpAddressType extends \nmvc\Type {
     public function getSQLType() {
         // Enough to store IPv6.
         return "varbinary(16)";
@@ -15,9 +15,9 @@ class IpAddressType extends \nanomvc\Type {
         return strfy($this->value);
     }
 
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $value = inet_ntop($this->value);
-        return "$label <input type=\"text\" name=\"$name\" value=\"$value\" />";
+        return "<input type=\"text\" name=\"$name\" value=\"$value\" />";
     }
 
     /**

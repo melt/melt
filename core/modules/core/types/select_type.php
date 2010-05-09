@@ -1,14 +1,14 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
 /** SelectType, for selecting multiple options. */
-class SelectType extends \nanomvc\Type {
+class SelectType extends \nmvc\Type {
     /** @var Where condition to filter targets. */
     public $options = array();
 
-    public function getInterface($name, $label) {
-        $html = "$label <select name=\"$name\">";
+    public function getInterface($name) {
+        $html = "<select name=\"$name\">";
         $nothing = __("Nothing Selected");
         //$html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
         $selected = ' selected="selected"';

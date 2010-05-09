@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\userx;
+namespace nmvc\userx;
 
-class UserxModule extends \nanomvc\Module {
+class UserxModule extends \nmvc\Module {
     public static function getAuthor() {
         $year = date("Y");
         return "Hannes Landeholm, Media People Sverige AB, ©$year";

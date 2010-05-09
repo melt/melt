@@ -1,4 +1,4 @@
-<?php namespace nanomvc; ?>
+<?php namespace nmvc\messenger; ?>
 <?php $this->layout->enterSection("head"); ?>
 <script type="text/javascript" src="<?php echo url("/static/cmod/messenger/blend.js"); ?>"></script>
 <link rel="stylesheet" type="text/css" href="<?php echo url("/static/cmod/messenger/msg_bar.css"); ?>" />

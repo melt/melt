@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
 /**
  * Forks a function call, allowing parallell execution.
@@ -20,8 +20,8 @@ function fork($callback, $parameters = array()) {
         $forkkey = file_get_contents(".forkkey");
     // Execute fork.
     $headers = array(
-        "Host" => \nanomvc\config\APP_ROOT_HOST,
-        "User-Agent" => "nanoMVC/" . \nanomvc\VERSION . " (Internal Fork)",
+        "Host" => \nmvc\config\APP_ROOT_HOST,
+        "User-Agent" => "nanoMVC/" . \nmvc\VERSION . " (Internal Fork)",
     );
     $data = serialize(array(
         "forkkey" => $forkkey,
@@ -29,7 +29,7 @@ function fork($callback, $parameters = array()) {
         "parameters" => $parameters,
     ));
     $base_path = Config::$root_path;
-    $status = \nanomvc\http\raw_request("http://localhost" . $base_path . "core/action/fork", "POST", $headers, $data, 15);
+    $status = \nmvc\http\raw_request("http://localhost" . $base_path . "core/action/fork", "POST", $headers, $data, 15);
     $return_code = $status[1];
     if ($return_code != "200")
         trigger_error("fork() failed! Return code: $return_code", \E_USER_ERROR);
@@ -92,7 +92,7 @@ function require_module($module_name, $min_version = null) {
             $of = ($min_version != null)? " of '$min_version'": "";
             request\show_invalid("Module '$module_name'$of not installed but required.");
         } else
-            \nanomvc\request\show_404();
+            \nmvc\request\show_404();
     }
 }
 
@@ -103,7 +103,7 @@ function require_module($module_name, $min_version = null) {
  * @param string $min_version NULL for no version checkor or a minimum version eg "1.5.3"
  */
 function module_loaded($module_name, $min_version = null) {
-    $module_class_name = 'nanomvc\\' . $module_name . '\\' . \nanomvc\string\underline_to_cased($module_name) . "Module";
+    $module_class_name = 'nmvc\\' . $module_name . '\\' . \nmvc\string\underline_to_cased($module_name) . "Module";
     if (class_exists($module_class_name)) {
         if ($min_version !== null) {
             $module_version = call_user_func(array($module_class_name, "getVersion"));
@@ -127,7 +127,7 @@ function require_shared_data($entry_name) {
     if (!isset($entry_cache[$entry_name])) {
         $shared_data = array();
         $func_name = "bcd_" . $entry_name;
-        foreach (array(\nanomvc\internal\get_all_modules(), array('Application' => array('nanomvc\AppController'))) as $module_class_names)
+        foreach (array(\nmvc\internal\get_all_modules(), array('Application' => array('nmvc\AppController'))) as $module_class_names)
         foreach ($module_class_names as $module_name => $module) {
             $module_clsname = $module[0];
             if (method_exists($module_clsname, $func_name)) {
@@ -156,15 +156,19 @@ function implementing($class, $interface) {
  */
 function is_abstract($class) {
     static $cache = array();
-    if (is_object($class))
+    if (is_object($class)) {
         $class = get_class($class);
-    if (isset($cache[$class]))
+        if (isset($cache[$class]))
+            return $cache[$class];
+    } else if (!class_exists($class))
+        trigger_error("Class '$class' does not exist.", \E_USER_ERROR);
+    else if (isset($cache[$class]))
         return $cache[$class];
     $rc = new \ReflectionClass($class);
     return $cache[$class] = $rc->isAbstract();
 }
 
-namespace nanomvc;
+namespace nmvc;
 
 /**
  * Returns TRUE if class is a base_class.

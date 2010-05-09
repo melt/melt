@@ -1,4 +1,4 @@
-<?php namespace nanomvc\ctrl; ?>
+<?php namespace nmvc\ctrl; ?>
 <?php echo $this->view("layout"); ?>
 <h1>About ctrl</h1>
 <p>

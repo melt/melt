@@ -1,9 +1,9 @@
-<?php namespace nanomvc\cache;
+<?php namespace nmvc\cache;
 
 /**
  * Blob type - only designed to be used inside cache module.
  */
-class BlobType extends \nanomvc\Type {
+class BlobType extends \nmvc\Type {
     public function getSQLType() {
         return "MEDIUMBLOB";
     }
@@ -18,7 +18,7 @@ class BlobType extends \nanomvc\Type {
 
     // Blobs are not designed to have interfaces.
     // They are binary data that can be anything.
-    public function getInterface($name, $label) { }
+    public function getInterface($name) { }
 
     public function readInterface($name) { }
 }

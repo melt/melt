@@ -1,6 +1,6 @@
-<?php namespace nanomvc\ctrl;
+<?php namespace nmvc\ctrl;
 
-class AdminController extends \nanomvc\Controller {
+class AdminController extends \nmvc\AppController {
     public $layout = "/html/xhtml1.1";
 
     function about() { }

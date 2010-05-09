@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\tinymce;
+namespace nmvc\tinymce;
 
-class TinymceModule extends \nanomvc\Module {
+class TinymceModule extends \nmvc\Module {
     public static function getAuthor() {
         return "Hannes Landeholm, Media People Sverige AB";
     }

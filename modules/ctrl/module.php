@@ -1,6 +1,6 @@
-<?php namespace nanomvc\ctrl;
+<?php namespace nmvc\ctrl;
 
-class CtrlModule extends \nanomvc\Module {
+class CtrlModule extends \nmvc\Module {
     public static function getAuthor() {
         $year = date("Y");
         return "Hannes Landeholm, Media People Sverige AB, ©$year";

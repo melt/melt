@@ -1,4 +1,4 @@
-<?php namespace nanomvc\url_mapper;
+<?php namespace nmvc\url_mapper;
 
 /**
  * Returns true if the requested alias is not reserved by url_map.
@@ -22,7 +22,7 @@ function alias_reserved($requested_alias) {
 function add_invoke_alias($requested_alias, $invoke_path) {
     // TODO: Make it possible to override any existing alias.
     // Alias cannot match module, any controller and may not be taken.
-    $modules = \nanomvc\internal\get_all_modules();
+    $modules = \nmvc\internal\get_all_modules();
     $requested_alias = url_tokenify($requested_alias);
     // Forward slash is allowed.
     $requested_alias = str_replace(array("%2f", "%2F"), "/", $requested_alias);
@@ -30,9 +30,9 @@ function add_invoke_alias($requested_alias, $invoke_path) {
     $requested_alias = trim($requested_alias, "/");
     // Replace empty aliases with random ones.
     if ($requested_alias == "")
-        $requested_alias = \nanomvc\string\random_alphanum_str(8);
+        $requested_alias = \nmvc\string\random_alphanum_str(8);
     // Require all reserved url aliases.
-    $reserved_url_aliases = \nanomvc\core\require_shared_data("reserved_url_aliases");
+    $reserved_url_aliases = \nmvc\core\require_shared_data("reserved_url_aliases");
     $count = 0;
     // Critical section when looking for collisions and inserting.
     UrlMapModel::lock();
@@ -55,7 +55,7 @@ function add_invoke_alias($requested_alias, $invoke_path) {
             $alias_first_part = $attempt_alias;
         // Collision detector.
         if (isset($modules[$alias_first_part])
-        || \nanomvc\Controller::pathToController("/$alias_first_part/a", true) !== false
+        || \nmvc\Controller::pathToController("/$alias_first_part/a", true) !== false
         || alias_reserved($requested_alias))
             continue;
         // Also cannot be reserved by any other module.
@@ -71,7 +71,7 @@ function add_invoke_alias($requested_alias, $invoke_path) {
     $url_map->invoke = $invoke_path;
     $url_map->store();
     // Exiting critical section.
-    \nanomvc\db\unlock();
+    \nmvc\db\unlock();
     return $url_map;
 }
 

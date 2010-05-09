@@ -1,5 +1,5 @@
 <?php
 
-namespace nanomvc\http;
+namespace nmvc\http;
 
-class HttpModule extends \nanomvc\CoreModule { }
+class HttpModule extends \nmvc\CoreModule { }

@@ -1,6 +1,6 @@
-<?php namespace nanomvc\qmi;
+<?php namespace nmvc\qmi;
 
-class QmiModule extends \nanomvc\Module {
+class QmiModule extends \nmvc\Module {
     public static function beforeRequestProcess() {
         if (isset($_POST['_qmi']))
             ModelInterface::_interface_callback();

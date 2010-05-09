@@ -1,25 +1,25 @@
 <?php
 
-namespace nanomvc\jquery;
+namespace nmvc\jquery;
 
-class JqueryModule extends \nanomvc\Module {
+class JqueryModule extends \nmvc\Module {
     public static function beforeRequestProcess() {
         // Auto include scripts.
-        \nanomvc\View::render("/jquery/include_jquery", null, false, true);
+        \nmvc\View::render("/jquery/include_jquery", null, false, true);
         $ui_theme = config\JQUERY_UI_THEME;
         if (is_string($ui_theme) && strlen($ui_theme) > 0) {
-            $controller = new \nanomvc\Controller();
+            $controller = new \nmvc\Controller();
             $controller->theme = $ui_theme;
-            \nanomvc\View::render("/jquery/include_ui", $controller, false, true);
+            \nmvc\View::render("/jquery/include_ui", $controller, false, true);
         }
         if (config\INCLUDE_JQUERY_CORNER)
-            \nanomvc\View::render("/jquery/include_corner", null, false, true);
+            \nmvc\View::render("/jquery/include_corner", null, false, true);
         if (config\INCLUDE_JQUERY_LIGHTBOX)
-            \nanomvc\View::render("/jquery/include_lightbox", null, false, true);
+            \nmvc\View::render("/jquery/include_lightbox", null, false, true);
         if (config\INCLUDE_JQUERY_TREE)
-            \nanomvc\View::render("/jquery/include_tree", null, false, true);
+            \nmvc\View::render("/jquery/include_tree", null, false, true);
         if (config\INCLUDE_JQUERY_DATATABLES)
-            \nanomvc\View::render("/jquery/include_datatables", null, false, true);
+            \nmvc\View::render("/jquery/include_datatables", null, false, true);
     }
 
     public static function getAuthor() {

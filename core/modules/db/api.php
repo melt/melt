@@ -1,13 +1,13 @@
 <?php
 
-namespace nanomvc\db;
+namespace nmvc\db;
 
 /**
  * @desc Calling this function enables buffer printing of all SQL queries.
  *       Useful for SQL batch scripts.
  */
 function enable_display() {
-    \nanomvc\request\reset();
+    \nmvc\request\reset();
     header('Content-Type: text/plain');
     define("OUTPUT_MYSQL_QUERIES", true);
 }
@@ -95,13 +95,13 @@ function run($query) {
         // Using a stripslashes callback for any gpc data.
         if (get_magic_quotes_gpc()) {
             function _stripslashes_deep($value) {
-                $value = is_array($value)? array_map('\nanomvc\db\_stripslashes_deep', $value): stripslashes($value);
+                $value = is_array($value)? array_map('\nmvc\db\_stripslashes_deep', $value): stripslashes($value);
                 return $value;
             }
-            $_POST = array_map('\nanomvc\db\_stripslashes_deep', $_POST);
-            $_GET = array_map('\nanomvc\db\_stripslashes_deep', $_GET);
-            $_COOKIE = array_map('\nanomvc\db\_stripslashes_deep', $_COOKIE);
-            $_REQUEST = array_map('\nanomvc\db\_stripslashes_deep', $_REQUEST);
+            $_POST = array_map('\nmvc\db\_stripslashes_deep', $_POST);
+            $_GET = array_map('\nmvc\db\_stripslashes_deep', $_GET);
+            $_COOKIE = array_map('\nmvc\db\_stripslashes_deep', $_COOKIE);
+            $_REQUEST = array_map('\nmvc\db\_stripslashes_deep', $_REQUEST);
         }
         // USE the configured database.
         if (strlen(config\NAME) == 0)
@@ -223,7 +223,7 @@ function sync_table_layout_with_columns($table_name, $columns) {
             $expected_type = $columns[$current_name];
             // ID column is special case.
             if ($current_name == 'id') {
-                if (!\nanomvc\string\starts_with($current_type, "int"))
+                if (!\nmvc\string\starts_with($current_type, "int"))
                     trigger_error("ID column found in table '$table_name', but with unexpected type ($current_type). Has it been tampered with? nanoMVC not written to handle this condition.", \E_USER_ERROR);
                 continue;
             }
@@ -256,7 +256,7 @@ function sync_table_layout_with_columns($table_name, $columns) {
     $trigger = table("aid_trigger_" . $table_name);
     run("DROP TRIGGER " . $trigger);
     if (config\USE_TRIGGER_SEQUENCING) {
-        $result = run("CREATE TRIGGER " . $trigger . " BEFORE INSERT ON " . table($table_name) . " FOR EACH ROW BEGIN UPDATE " . table('core\seq') . " SET id = LAST_INSERT_ID(id+1); SET NEW.id = LAST_INSERT_ID(); END;");
+        $result = run("CREATE TRIGGER " . $trigger . " BEFORE INSERT ON " . table($table_name) . " FOR EACH ROW BEGIN UPDATE " . table('core\seq') . " SET id = LAST_INSERT_ID(id+1); SET @last_insert = LAST_INSERT_ID(); SET NEW.id = @last_insert; END;");
         if ($result === false)
             trigger_error("Adding trigger failed. Probably due to lack of TRIGGER permission or old mySQL version. Either GRANT TRIGGER permissions to current user or set USE_TRIGGER_SEQUENCING to false in config.php to use a slower method that doesn't protect against data corruption from to duplicate table spanning ID's (by other mySQL software).", \E_USER_ERROR);
     }

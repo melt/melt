@@ -1,4 +1,4 @@
-<?php namespace nanomvc\data_tables;
+<?php namespace nmvc\data_tables;
 
 /**
  * Helper interface for standardizing the way models are enlisted.

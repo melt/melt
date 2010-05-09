@@ -1,24 +1,23 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
-class PasswordType extends \nanomvc\Type {
+class PasswordType extends \nmvc\Type {
     public function getSQLType() {
         return "text";
     }
 
     public function getSQLValue() {
-        return api_database::strfy($this->value);
+        return strfy($this->value);
     }
 
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $value = api_html::escape($this->value);
-        return "$label <input type=\"password\" name=\"$name\" value=\"$value\" />";
+        return "<input type=\"password\" name=\"$name\" value=\"$value\" />";
     }
 
     public function readInterface($name) {
-        $this->value = sha1(@$_POST[$name] . CONFIG::$crypt_salt);
-        unset($_POST[$this->name]);
+        $this->value = $_POST[$name];
     }
     
     public function view() {

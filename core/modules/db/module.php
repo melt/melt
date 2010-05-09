@@ -1,5 +1,5 @@
 <?php
 
-namespace nanomvc\db;
+namespace nmvc\db;
 
-class DbModule extends \nanomvc\CoreModule { }
+class DbModule extends \nmvc\CoreModule { }

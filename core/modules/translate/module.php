@@ -1,14 +1,12 @@
-<?php
+<?php namespace nmvc\translate;
 
-namespace nanomvc\translate;
-
-class TranslateModule extends \nanomvc\CoreModule {
+class TranslateModule extends \nmvc\CoreModule {
     /** RPC function that exports a translation from the database. */
     public static function export() {
         // See if the language exists.
-        \nanomvc\db\enable_display();
+        \nmvc\db\enable_display();
         $language = strtolower($_GET["lang"]);
-        $lang_table = \nanomvc\db\query("DESCRIBE " . config\TRANSLATION_TABLE);
+        $lang_table = \nmvc\db\query("DESCRIBE " . config\TRANSLATION_TABLE);
         while (false !== ($column = api_database::next_array($lang_table))) {
             $column_name = strtolower($column[0]);
             if ($column_name == $language) {
@@ -29,7 +27,7 @@ class TranslateModule extends \nanomvc\CoreModule {
         die("The language you specified: $language, does not exist in the language table. Export failed!");
     }
 
-    private static function try_set_language($set_to, $languages) {
+    private static function trySetLanguage($set_to, $languages) {
         $set_to = substr($set_to, 0, 2);
         if (in_array($set_to, $languages)) {
             $_SESSION['language'] = $set_to;
@@ -43,9 +41,9 @@ class TranslateModule extends \nanomvc\CoreModule {
             return false;
     }
 
-    public static function beforeRequestProcess() {
+    public static function initializeTranslation() {
         // Ignore the rest of this file if not translating.
-        if (!\nanomvc\translate\config\ENABLE)
+        if (!\nmvc\translate\config\ENABLE)
             return;
         // Get array of supported languages.
         $language_files = glob(APP_DIR . "/lang.??.php");
@@ -60,7 +58,7 @@ class TranslateModule extends \nanomvc\CoreModule {
             $lang = null;
             if (isset($_SESSION['language']))
                 // 1. Set by session, if it can.
-                if (self::try_set_language($_SESSION['language'], $languages))
+                if (self::trySetLanguage($_SESSION['language'], $languages))
                     return;
             if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
                 // 2. Set by accept-language, if it can.
@@ -77,11 +75,11 @@ class TranslateModule extends \nanomvc\CoreModule {
                 }
                 arsort($lang_try_order);
                 foreach ($lang_try_order as $lang => $q)
-                    if (self::try_set_language($lang, $languages))
+                    if (self::trySetLanguage($lang, $languages))
                         return;
             }
             // 3. Set to english, if it can.
-            if (self::try_set_language('en', $languages))
+            if (self::trySetLanguage('en', $languages))
                 return;
         }
         // 4. Set to one of the supported.

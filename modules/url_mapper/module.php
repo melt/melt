@@ -1,6 +1,6 @@
-<?php namespace nanomvc\url_mapper;
+<?php namespace nmvc\url_mapper;
 
-class UrlMapperModule extends \nanomvc\Module {
+class UrlMapperModule extends \nmvc\Module {
     /** @var UrlMapModel The url mapped model that matched this request. */
     public static $url_map = null;
 
@@ -10,7 +10,7 @@ class UrlMapperModule extends \nanomvc\Module {
         if ($url_map === null)
             return;
         self::$url_map = $url_map;
-        \nanomvc\Controller::invoke($url_map->invoke . $url_map->getID(), false);
+        \nmvc\Controller::invoke($url_map->invoke . $url_map->getID(), false);
         exit;
     }
 

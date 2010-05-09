@@ -1,12 +1,12 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
 /**
 *@desc Stores a remote address.
 */
 class IpAddressChangedType extends RemoteAddressType {
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         return false;
     }
     public function readInterface($name) {

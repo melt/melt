@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
-class TimespanType extends \nanomvc\Type {
+class TimespanType extends \nmvc\Type {
     public $title = "";
 
     private function getTokenValue($token) {
@@ -30,12 +30,12 @@ class TimespanType extends \nanomvc\Type {
     public function getSQLValue() {
         return intval($this->value);
     }
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $title = ($this->title != "")? ' title="' . $this->title . '" ': '';
         $span = ($this->value != 0)? (string) $this: $date_syntax_helper;
         if (!$dateonly)
             $stamp .= $time_syntax_helper;
-        return "$label <input$title type=\"text\" name=\"$name\" value=\"$span\" />"
+        return "<input$title type=\"text\" name=\"$name\" value=\"$span\" />"
             . "<br /><span style=\"font-size: 9px;\">" . __("Time interval, example: 9 days, 5 hours and 3 minutes.") . "</span>";
     }
     public function readInterface($name) {

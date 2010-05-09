@@ -7,5 +7,5 @@
 * @return String A clean, non relative, formated URL to local destination.
 */
 function url($path, $get = null) {
-    return \nanomvc\request\url($path, $get);
+    return \nmvc\request\url($path, $get);
 }

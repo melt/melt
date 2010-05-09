@@ -1,2 +1,2 @@
-<?php namespace nanomvc\tinymce; ?>
+<?php namespace nmvc\tinymce; ?>
 theme : "simple",

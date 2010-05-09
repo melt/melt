@@ -1,10 +1,10 @@
 <?php
 
-namespace nanomvc\internal;
+namespace nmvc\internal;
 
 /**
  * Returns an array of all availible modules.
- * Mapped MODULE_NAME => MODULE_PATH
+ * Mapped MODULE_NAME => array(MODULE_CLASSNAME, MODULE_PATH)
  */
 function get_all_modules() {
     static $modules = null;
@@ -15,10 +15,10 @@ function get_all_modules() {
     $modules = array();
     foreach (scandir(APP_DIR . "/modules") as $module)
         if ($module[0] != ".")
-            $modules[$module] = array("nanomvc\\$module\\" . underline_to_cased($module) . "Module", APP_DIR . "/modules/" . $module);
+            $modules[$module] = array("nmvc\\$module\\" . underline_to_cased($module) . "Module", APP_DIR . "/modules/" . $module);
     foreach (scandir(APP_CORE_DIR . "/modules") as $module)
         if ($module[0] != ".")
-            $modules[$module] = array("nanomvc\\$module\\" . underline_to_cased($module) . "Module", APP_CORE_DIR . "/modules/" . $module);
+            $modules[$module] = array("nmvc\\$module\\" . underline_to_cased($module) . "Module", APP_CORE_DIR . "/modules/" . $module);
     return $modules;
 }
 
@@ -64,8 +64,7 @@ function autoload($name) {
             $path = APP_DIR;
             $subdir = "";
             $file_name = $parts[1];
-            $class_name = "nanomvc\\" . $parts[1];
-            $app = true;
+            $class_name = "nmvc\\" . $parts[1];
         } else if ($i == 1) {
             // Application level module override.
             if ($part_cnt == 2)
@@ -73,8 +72,7 @@ function autoload($name) {
             $path = APP_DIR;
             $subdir = $parts[1] . "/";
             $file_name = $parts[2];
-            $class_name = "nanomvc\\" . $parts[1] . "\\" . $parts[2];
-            $app = false;
+            $class_name = "nmvc\\" . $parts[1] . "\\" . $parts[2];
         } else if ($i == 2) {
             // Module.
             $modules = get_all_modules();
@@ -84,22 +82,24 @@ function autoload($name) {
             $path = $modules[$module_name][1];
             $subdir = "";
             $file_name = $parts[2];
-            $class_name = "nanomvc\\" . $parts[1] . "\\" . $parts[2];
+            $class_name = "nmvc\\" . $parts[1] . "\\" . $parts[2];
         }
-        $file_name = \nanomvc\string\cased_to_underline($file_name);
+        $file_name = \nmvc\string\cased_to_underline($file_name);
         // Using nanoMVC naming rules to find the class.
-        $prevent_bare_model = false;
-        if (\nanomvc\string\ends_with($class_name, "Controller")) {
+        if (\nmvc\string\ends_with($class_name, "Controller")) {
             $path .= "/controllers/" . $subdir . substr($file_name, 0, -11) . "_controller.php";
-            $expecting = $app? "nanomvc\\AppController": "nanomvc\\Controller";
-        } else if (\nanomvc\string\ends_with($class_name, "Type")) {
+            $expecting = 'nmvc\AppController';
+        } else if (\nmvc\string\ends_with($class_name, "Type")) {
             $path .= "/types/" . $subdir . substr($file_name, 0, -5) . "_type.php";
-            $expecting = 'nanomvc\Type';
-        } else if (\nanomvc\string\ends_with($class_name, "Model")) {
+            $expecting = 'nmvc\AppType';
+        } else if (\nmvc\string\ends_with($class_name, "Model")) {
             $path .= "/models/" . $subdir . substr($file_name, 0, -6) . "_model.php";
-            $expecting = 'nanomvc\Model';
-            if ($app)
-                $prevent_bare_model = true;
+            $expecting = 'nmvc\AppModel';
+        } else if (\nmvc\string\ends_with($class_name, "Module")) {
+            if ($i < 2)
+                continue;
+            $path .= "/" . $subdir . "module.php";
+            $expecting = 'nmvc\Module';
         } else {
             $path .= "/classes/" . $subdir . $file_name . ".php";
             $expecting = null;
@@ -111,14 +111,12 @@ function autoload($name) {
             trigger_error("nanoMVC: '$path' did not declare a class named '$class_name' as expected!", \E_USER_ERROR);
         else if ($expecting !== null && !is_subclass_of($class_name, $expecting))
             trigger_error("nanoMVC: '$class_name' must extend '$expecting'! (Declared in '$path')", \E_USER_ERROR);
-        else if ($prevent_bare_model && $class_name == 'nanomvc\Model')
-            trigger_error("nanoMVC: Your application model '$class_name' must extend nanomvc\\AppModel or another more specific module declared Model. (Declared in '$path')", \E_USER_ERROR);
         return true;
     }
 }
 
 // Registers autoload function.
-spl_autoload_register("nanomvc\internal\autoload");
+spl_autoload_register("nmvc\internal\autoload");
 
 // Include the API's of all modules.
 foreach (get_all_modules() as $module_name => $module_parameters) {
@@ -128,10 +126,15 @@ foreach (get_all_modules() as $module_name => $module_parameters) {
         require $api_path;
 }
 
-// Include default application classes.
-require APP_DIR . "/app_controller.php";
-if (!class_exists('\nanomvc\AppController') || !is_subclass_of('\nanomvc\AppController', '\nanomvc\Controller'))
-    trigger_error("\\nanomvc\\AppController must be declared in app_controller.php and extend \\nanomvc\\Controller!", \E_USER_ERROR);
-require APP_DIR . "/app_model.php";
-if (!class_exists('\nanomvc\AppModel') || !is_subclass_of('\nanomvc\AppModel', '\nanomvc\Model'))
-    trigger_error("\\nanomvc\\AppModel must be declared in app_model.php and extend \\nanomvc\\Model!", \E_USER_ERROR);
+// Include application specifyers.
+foreach(array(
+array('\nmvc\AppController', '\nmvc\Controller', 'app_controller.php'),
+array('\nmvc\AppModel', '\nmvc\Model', 'app_model.php'),
+array('\nmvc\AppType', '\nmvc\Type', 'app_type.php')) as $app_include) {
+    list($class, $base, $file) = $app_include;
+    require APP_DIR . "/" . $file;
+    if (!class_exists($class) || !is_subclass_of($class, $base))
+        trigger_error("$class must be declared in $file and extend $base! (Application design restriction)", \E_USER_ERROR);
+    else if (!\nmvc\core\is_abstract($class))
+        trigger_error("$class must be declared abstract! (Application design restriction)", \E_USER_ERROR);
+}

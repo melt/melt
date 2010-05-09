@@ -1,4 +1,4 @@
-<?php namespace nanomvc\nano_cms;
+<?php namespace nmvc\nano_cms;
 
 class PageModel extends SiteNodeModel {
     public $content = 'tinymce\WysiwygType';
@@ -23,7 +23,7 @@ class PageModel extends SiteNodeModel {
 
     public function initialize() {
         // Configure the wysiwyg.
-        \nanomvc\ctrl\configure_wysiwyg($this->type("content"));
+        \nmvc\ctrl\configure_wysiwyg($this->type("content"));
     }
 }
 

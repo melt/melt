@@ -1,4 +1,4 @@
-<?php namespace nanomvc; ?>
+<?php namespace nmvc; ?>
 <?php $this->layout->enterSection("head"); ?>
 <title><?php echo $this->topic; ?></title>
 <?php $this->layout->exitSection(); ?>

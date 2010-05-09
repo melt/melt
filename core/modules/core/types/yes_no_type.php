@@ -1,11 +1,11 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
 define("STR_YES", __("YES"));
 define("STR_NO", __("NO"));
 
-class YesNoType extends \nanomvc\Type {
+class YesNoType extends \nmvc\Type {
     public $true_str = null;
     public $false_str = null;
 
@@ -15,7 +15,7 @@ class YesNoType extends \nanomvc\Type {
     public function getSQLValue() {
         return $this->value? "1": "0";
     }
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $yes_check = $no_check = "selected=\"selected\"";
         if ($this->value)
             $no_check = "";
@@ -23,7 +23,7 @@ class YesNoType extends \nanomvc\Type {
             $yes_check = "";
         $yes = $this->true_str == null? STR_YES: $this->true_str;
         $no = $this->false_str == null? STR_NO: $this->false_str;
-        return "$label <select name=\"$name\"><option value=\"0\" $no_check>$no</option><option value=\"1\" $yes_check>$yes</option></select>";
+        return "<select name=\"$name\"><option value=\"0\" $no_check>$no</option><option value=\"1\" $yes_check>$yes</option></select>";
     }
     public function readInterface($name) {
         $this->value = (@$_POST[$name] == true);

@@ -1,9 +1,9 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
 class CreatedTimestampType extends TimestampType {
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         return false;
     }
     public function readInterface($name) {

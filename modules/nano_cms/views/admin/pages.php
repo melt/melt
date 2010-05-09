@@ -1,4 +1,4 @@
-<?php namespace nanomvc\nano_cms; ?>
+<?php namespace nmvc\nano_cms; ?>
 <?php $this->layout->enterSection("head"); ?>
 <style type="text/css">
 #tree_admin {
@@ -82,7 +82,7 @@
         <select onchange="javascript: create_url = $(this).attr('value');">
             <?php $rooted_in = isset($this->site_node)? "/" . $this->site_node->getID(): null; ?>
             <?php foreach (get_dynamic_pages() as $class_name => $name): ?>
-                <?php $url = url("/nano_cms/admin/pages/new/" . \nanomvc\string\base64_alphanum_encode($class_name) . $rooted_in); ?>
+                <?php $url = url("/nano_cms/admin/pages/new/" . \nmvc\string\base64_alphanum_encode($class_name) . $rooted_in); ?>
                 <?php if (!isset($first_url)) $first_url = $url; ?>
                 <option value="<?php echo $url; ?>"><?php echo escape($name); ?></option>
             <?php endforeach; ?>
@@ -119,5 +119,5 @@
         };
     </script>
     <a id="root" class="clicked" href="<?php echo url("/nano_cms/admin/pages"); ?>">root</a>
-    <?php $tree_id = \nanomvc\jquery\jstree_write($this->page_tree, "admin", $this->selected_site_node, "default", true); ?>
+    <?php $tree_id = \nmvc\jquery\jstree_write($this->page_tree, "admin", $this->selected_site_node, "default", true); ?>
 </div>

@@ -1,4 +1,4 @@
-<?php namespace nanomvc\cache;
+<?php namespace nmvc\cache;
 
 /**
  * A binary data field that points to the binary data and uses
@@ -8,7 +8,7 @@
  *
  * Be sure to understand how it works before you use it.
  */
-abstract class BlobPointerType extends \nanomvc\Reference {
+abstract class BlobPointerType extends \nmvc\Reference {
     // Always points to a blob model.
     const STATIC_TARGET_MODEL = 'cache\blob';
     
@@ -31,7 +31,7 @@ abstract class BlobPointerType extends \nanomvc\Reference {
                 // Need to delete the blob I'm pointing on.
                 // As unlink would require loading the blob into memory
                 // direct querying will be used instead.
-                \nanomvc\db\run("DELETE FROM " . table('cache\blob') . " WHERE id = " . intval($this->value));
+                \nmvc\db\run("DELETE FROM " . table('cache\blob') . " WHERE id = " . intval($this->value));
             }
             if ($this->change_to === null) {
                 // Reset.
@@ -60,7 +60,7 @@ abstract class BlobPointerType extends \nanomvc\Reference {
             // Prepare storing the binary data in a new blob model.
             $blob_model = BlobModel::insert();
             $blob_model->dta = $data;
-            $blob_model->tag = \nanomvc\string\random_alphanum_str(8);
+            $blob_model->tag = \nmvc\string\random_alphanum_str(8);
             $blob_model->ext = $extention;
             $this->change_to = $blob_model;
         } else {
@@ -78,7 +78,7 @@ abstract class BlobPointerType extends \nanomvc\Reference {
             return null;
         // Returns the tag for the blob I'm pointing to.
         // Uses SQL querying to prevent loading BLOB into memory.
-        $result = \nanomvc\db\query("SELECT tag,ext FROM " . table('cache\blob') . " WHERE id = " . intval($this->value));
+        $result = \nmvc\db\query("SELECT tag,ext FROM " . table('cache\blob') . " WHERE id = " . intval($this->value));
         $res = db\next_array($result);
         if (!is_array($result))
             return null;
@@ -91,7 +91,7 @@ abstract class BlobPointerType extends \nanomvc\Reference {
     protected function getCachePath($file_name, $custom_extention = null) {
         static $path = null;
         if ($path === null) {
-            $path = \nanomvc\config\APP_DIR . "/static/cache";
+            $path = \nmvc\config\APP_DIR . "/static/cache";
             if (!file_exists($path))
                 mkdir($path, 0660, true);
         }
@@ -131,7 +131,7 @@ abstract class BlobPointerType extends \nanomvc\Reference {
                 file_put_contents($file_tag_path, $blob_model->tag);
         }
         // Convert local filesystem path to url.
-        $path = substr($file_path, strlen(\nanomvc\config\APP_DIR));
+        $path = substr($file_path, strlen(\nmvc\config\APP_DIR));
         return url($path);
     }
 }

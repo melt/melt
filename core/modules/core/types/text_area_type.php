@@ -1,10 +1,10 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
 class TextAreaType extends TextType {
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $value = escape($this->value);
-        return "$label <textarea name=\"$name\">$value</textarea>";
+        return "<textarea name=\"$name\">$value</textarea>";
     }
 }

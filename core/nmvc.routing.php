@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc;
+namespace nmvc;
 
 // URL Parsing.
 {
@@ -27,14 +27,14 @@ foreach (internal\get_all_modules() as $module_name => $module_parameters) {
     if (is_file($mod_cfg_path)) {
         $config_directives = require($mod_cfg_path);
         foreach ($config_directives as $name => $default) {
-            $const = "nanomvc\\$module_name\\config\\$name";
+            $const = "nmvc\\$module_name\\config\\$name";
             if (!defined($const)) {
                 define($const, $default);
                 // Add constant to application configuration.
                 if ($config_file_data === null)
                     $config_file_data = file_get_contents(APP_DIR . "/config.php");
                 $default = var_export($default, true);
-                if (preg_match('#namespace\s+nanomvc\\\\' . $module_name . '\\\\config\s*{#si', $config_file_data, $match, \PREG_OFFSET_CAPTURE)) {
+                if (preg_match('#namespace\s+nmvc\\\\' . $module_name . '\\\\config\s*{#si', $config_file_data, $match, \PREG_OFFSET_CAPTURE)) {
                     // Insert.
                     $offset = $match[0][1] + strlen($match[0][0]);
                     $config_file_data = substr($config_file_data, 0, $offset)
@@ -42,7 +42,7 @@ foreach (internal\get_all_modules() as $module_name => $module_parameters) {
                     . substr($config_file_data, $offset);
                 } else {
                     // Append.
-                    $config_file_data .= "\r\n\r\nnamespace nanomvc\\$module_name\\config {\r\n\tconst $name = $default;\r\n}\r\n";
+                    $config_file_data .= "\r\n\r\nnamespace nmvc\\$module_name\\config {\r\n\tconst $name = $default;\r\n}\r\n";
                 }
             }
         }
@@ -52,8 +52,8 @@ foreach (internal\get_all_modules() as $module_name => $module_parameters) {
     require($mod_path);
     if (!class_exists($class_name))
         trigger_error("nanoMVC: '$class_name' was not declared in '$mod_path'!", \E_USER_ERROR);
-    else if (!is_subclass_of($class_name, 'nanomvc\Module'))
-        trigger_error("nanoMVC: '$class_name' must extend 'nanomvc\\Module'! (Declared in '$mod_path')", \E_USER_ERROR);
+    else if (!is_subclass_of($class_name, 'nmvc\Module'))
+        trigger_error("nanoMVC: '$class_name' must extend 'nmvc\\Module'! (Declared in '$mod_path')", \E_USER_ERROR);
     call_user_func(array($class_name, "beforeRequestProcess"));
 }
 

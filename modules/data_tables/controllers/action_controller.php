@@ -1,10 +1,10 @@
-<?php namespace nanomvc\data_tables;
+<?php namespace nmvc\data_tables;
 
-class ActionController extends \nanomvc\Controller {
+class ActionController extends \nmvc\Controller {
     function ajax_callback($data) {
-        $data = \nanomvc\string\simple_decrypt($data);
+        $data = \nmvc\string\simple_decrypt($data);
         if ($data === false)
-            \nanomvc\request\show_invalid();
+            \nmvc\request\show_invalid();
         list($class_name, $base_where, $column_names) = unserialize($data);
         // Determine filtering.
         $search = $_GET['sSearch'];
@@ -58,7 +58,7 @@ class ActionController extends \nanomvc\Controller {
         $instances = $class_name::selectWhere($where, $offset, $limit, $order);
         // Determine if it can use value_enlist.
         $interfaces = class_implements($class_name);
-        $do_enlist_value = isset($interfaces['nanomvc\data_tables\DataTablesListable']);
+        $do_enlist_value = isset($interfaces['nmvc\data_tables\DataTablesListable']);
         // Piece together the JS output.
         $output = '{';
 	$output .= '"sEcho": ' . intval($_GET['sEcho']) . ', ';
@@ -84,7 +84,7 @@ class ActionController extends \nanomvc\Controller {
         }
 	$output .= '] }';
         // AJAX Response
-        \nanomvc\request\reset();
+        \nmvc\request\reset();
         header("Content-Type: application/json");
         die($output);
     }
@@ -95,7 +95,7 @@ class ActionController extends \nanomvc\Controller {
         $where = ((strlen($where) > 0)? "$where AND ": "") . " id IN $ids";
         $class_name::unlinkWhere($where);
         // AJAX Response
-        \nanomvc\request\reset();
+        \nmvc\request\reset();
         die();
     }
 }

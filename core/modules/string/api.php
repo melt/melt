@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc\string;
+namespace nmvc\string;
 
 
 /** Returns a random alpha-numeric string. */
@@ -186,14 +186,14 @@ function simple_decrypt($crypttext, $password = null) {
 * @desc Takes a text that is cased like this: fooBar and converts it to underlined form: foo_bar
 */
 function cased_to_underline($text) {
-    return \nanomvc\internal\cased_to_underline($text);
+    return \nmvc\internal\cased_to_underline($text);
 }
 
 /**
  * @desc Takes a text that is underlined like this: foo_bar and converts it to cased form: FooBar
  */
 function underline_to_cased($text) {
-    return \nanomvc\internal\underline_to_cased($text);
+    return \nmvc\internal\underline_to_cased($text);
 }
 
 /**

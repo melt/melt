@@ -1,4 +1,4 @@
-<?php namespace nanomvc\ctrl;
+<?php namespace nmvc\ctrl;
 
 function get_admin_menu() {
     static $menu_tree = null;
@@ -6,7 +6,7 @@ function get_admin_menu() {
         return $menu_tree;
     // Transform the categories and items into a single "pre tree".
     $menu_pre_tree = array();
-    $admin_menu_items = \nanomvc\core\require_shared_data("admin_menu_items");
+    $admin_menu_items = \nmvc\core\require_shared_data("admin_menu_items");
     foreach ($admin_menu_items as $module_name => $module_menu_items)
     foreach ($module_menu_items as $category_id => $admin_menu_category) {
         if (isset($admin_menu_category["category"])
@@ -43,7 +43,7 @@ function get_admin_menu() {
 }
 
 /** Configures a wyswiyg. */
-function configure_wysiwyg(\nanomvc\tinymce\WysiwygType $wysiwyg) {
+function configure_wysiwyg(\nmvc\tinymce\WysiwygType $wysiwyg) {
     $config = CtrlSettingsModel::get();
     $config_classes = array(
         "simple" => "/tinymce/config_simple",

@@ -6,10 +6,10 @@
  * @return String The escaped and quoted string you inputed.
  */
 function strfy($string, $max_length = -1) {
-    return \nanomvc\db\strfy($string, $max_length);
+    return \nmvc\db\strfy($string, $max_length);
 }
 
 /** Convenience function for prefixing tables. */
 function table($table_name) {
-    return \nanomvc\db\table($table_name);
+    return \nmvc\db\table($table_name);
 }

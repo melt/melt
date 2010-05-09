@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc\mail;
+namespace nmvc\mail;
 
 // nanoMVC wrapper class for sending RFC compatible e-mails.
 class Mailer {

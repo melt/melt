@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\wordr;
+namespace nmvc\wordr;
 
-class WordrModule extends \nanomvc\Module {
+class WordrModule extends \nmvc\Module {
     public static function getAuthor() {
         $year = date("Y");
         return "Hannes Landeholm, Media People Sverige AB, ©$year";

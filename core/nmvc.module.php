@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc;
+namespace nmvc;
 
 /**
  * A nanoMVC module provides some sort of API and
@@ -21,6 +21,14 @@ abstract class Module {
      * for further routing.
      */
     public static function beforeRequestProcess() {
+        return;
+    }
+
+    /**
+     * Overridable event-function.
+     * Called just before application rendering.
+     */
+    public static function beforeRender() {
         return;
     }
 
@@ -67,7 +75,7 @@ abstract class CoreModule extends Module {
     }
 
     public static function getVersion() {
-        return nanomvc\VERSION;
+        return nmvc\VERSION;
     }
 }
 

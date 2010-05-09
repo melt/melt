@@ -1,4 +1,4 @@
-<?php namespace nanomvc\ctrl; ?>
+<?php namespace nmvc\ctrl; ?>
 <?php $this->layout->enterSection("head"); ?>
 <title>Ctrl Administration</title>
 <link rel="stylesheet" type="text/css" href="<?php echo url("/static/mod/ctrl/style.css"); ?>" media="screen" />

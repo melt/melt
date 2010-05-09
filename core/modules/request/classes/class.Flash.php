@@ -1,6 +1,6 @@
 <?php
 
-namespace \nanomvc\request;
+namespace \nmvc\request;
 
 class Flash {
     public static $flash_message = null;

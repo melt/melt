@@ -1,6 +1,6 @@
-<?php namespace nanomvc\nano_cms;
+<?php namespace nmvc\nano_cms;
 
-class NanoCmsModule extends \nanomvc\Module {
+class NanoCmsModule extends \nmvc\Module {
     public static function getAuthor() {
         $year = date("Y");
         return "Hannes Landeholm, Media People Sverige AB, ©$year";
@@ -16,9 +16,9 @@ class NanoCmsModule extends \nanomvc\Module {
     }
 
     public static function bcd_dynamic_pages() {
-        $ret = array('nanomvc\nano_cms\DirectoryModel');
+        $ret = array('nmvc\nano_cms\DirectoryModel');
         if (!config\NO_DEFAULT_PAGES)
-            $ret[] = 'nanomvc\nano_cms\PageModel';
+            $ret[] = 'nmvc\nano_cms\PageModel';
         return $ret;
     }
     

@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
 class PictureType extends cache\BlobPointerType {
     public $thumb_width = 35;
@@ -41,7 +41,7 @@ class PictureType extends cache\BlobPointerType {
         }
     }
 
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         // Returns the status and a file upload control.
         $picture_url = $this->getUrl();
         if ($picture_url !== null) {
@@ -145,7 +145,7 @@ class PictureType extends cache\BlobPointerType {
             assert(imagepng($thumb, $thumb_path, 9));
         }
         // Convert local filesystem path to url.
-        $path = substr($thumb_path, strlen(\nanomvc\config\APP_DIR));
+        $path = substr($thumb_path, strlen(\nmvc\config\APP_DIR));
         return url($path);
     }
 

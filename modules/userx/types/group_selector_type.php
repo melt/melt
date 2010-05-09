@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\userx;
+namespace nmvc\userx;
 
-class GroupSelectorType extends \nanomvc\Type {
+class GroupSelectorType extends \nmvc\Type {
     public function getSQLType() {
         return "int";
     }
@@ -11,13 +11,13 @@ class GroupSelectorType extends \nanomvc\Type {
         return intval($this->value);
     }
 
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $value = strval($this->value);
-        $html = "$label <select name=\"$name\">";
+        $html = "<select name=\"$name\">";
         $selected = ' selected="selected"';
-        foreach (config\getApplicationUserGroups() as $group_id => $group) {
+        foreach (GroupModel::selectWhere() as $group_id => $group) {
             $s = ($value == $group_id)? $selected: null;
-            $html .= "<option$s value=\"$group_id\">$group</option>";
+            $html .= "<option$s value=\"$group_id\">" . $group->name . "</option>";
         }
         $html .= "</select>";
         return $html;

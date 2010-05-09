@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc\request;
+namespace nmvc\request;
 
 /**
 * @desc Attempts to reset the output buffer to the default state
@@ -20,7 +20,7 @@ function reset() {
     if (intval(ob_get_length()) > 0)
         ob_clean();
     // Reset the application layout.
-    \nanomvc\View::reset_app_layout();
+    \nmvc\View::reset_app_layout();
 }
 
 /**
@@ -148,11 +148,11 @@ function show_invalid($reason = null) {
 function info($topic, $body) {
     $try_styled = false;
     reset();
-    $controller = new \nanomvc\Controller();
+    $controller = new \nmvc\Controller();
     $controller->layout = "/html/xhtml1.1";
     $controller->topic = $topic;
     $controller->body = $body;
-    \nanomvc\View::render("/request/info", $controller, false, true);
+    \nmvc\View::render("/request/info", $controller, false, true);
     exit;
 }
 
@@ -222,9 +222,9 @@ function get_url_query($url) {
 function url($path, $get = null) {
     if (strlen($path) == 0 || $path[0] != '/')
         $path = '/' . $path;
-    $path = (substr(\nanomvc\config\ROOT_URL, -1) == '/'?
-             substr(\nanomvc\config\ROOT_URL, 0, -1):
-             \nanomvc\config\ROOT_URL) . $path;
+    $path = (substr(\nmvc\config\ROOT_URL, -1) == '/'?
+             substr(\nmvc\config\ROOT_URL, 0, -1):
+             \nmvc\config\ROOT_URL) . $path;
     return $get === null? $path: make_url($path, $get);
 }
 

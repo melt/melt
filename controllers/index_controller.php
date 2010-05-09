@@ -1,4 +1,4 @@
-<?php namespace nanomvc;
+<?php namespace nmvc;
 
 class IndexController extends AppController {
     function index() { }

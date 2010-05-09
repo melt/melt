@@ -1,15 +1,15 @@
 <?php
 
-namespace nanomvc\tinymce;
+namespace nmvc\tinymce;
 
-class ActionsController extends \nanomvc\Controller {
+class ActionsController extends \nmvc\Controller {
 
     /**
      * Spellchecker: Library provided by TinyMCE.
      */
     function spell_check() {
         $path = dirname(__DIR__) . "/spellchecker/rpc.php";
-        \nanomvc\request\forward($path);
+        \nmvc\request\forward($path);
     }
 
 }

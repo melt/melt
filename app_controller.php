@@ -1,7 +1,7 @@
-<?php namespace nanomvc;
+<?php namespace nmvc;
 
 /** Application specific controller. */
-class AppController extends Controller {
+abstract class AppController extends Controller {
     public $layout = "/html/xhtml1.1";
 
     public function beforeFilter() {

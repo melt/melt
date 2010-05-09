@@ -1,1 +1,1 @@
-<?php namespace nanomvc\nano_cms; ?>
+<?php namespace nmvc\nano_cms; ?>

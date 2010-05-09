@@ -1,11 +1,11 @@
-<?php namespace nanomvc\core;
+<?php namespace nmvc\core;
 
 /**
  * A singleton model is a model that only and always has exactly one instance.
  * Singleton models does not have an unlinked state.
  * Use get() to get the instance.
  */
-abstract class SingletonModel extends \nanomvc\Model {
+abstract class SingletonModel extends \nmvc\AppModel {
     /**
      * Returns this SingletonModel instance.
      * This function ensures that exactly one exists.
@@ -14,10 +14,10 @@ abstract class SingletonModel extends \nanomvc\Model {
         static $singleton_model = null;
         if ($singleton_model === null) {
             // Fetching singleton model is done in an atomic operations to ensure no duplicates.
-            forward_static_call(array('nanomvc\Model', "lock"));
+            forward_static_call(array('nmvc\Model', "lock"));
             $singleton_model = parent::selectFirst("");
             if ($singleton_model === null)
-                $singleton_model = forward_static_call(array('nanomvc\Model', "insert"));
+                $singleton_model = forward_static_call(array('nmvc\Model', "insert"));
             $singleton_model->store();
             // Exiting critical section.
             db\unlock();

@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc;
+namespace nmvc;
 
 /**
  * nanoView
@@ -174,7 +174,7 @@ final class View {
      * Renders a view (template) in an internal subrequest and returns content.
      * @param string $view_path The path of the view to show.
      * @param boolean $final_render If this should be rendered in the final
-     * @param nanomvc\Controller $controller The controller instance that runs this view.
+     * @param nmvc\Controller $controller The controller instance that runs this view.
      * @param boolean $return Set to false to ouput buffer instead of returning it.
      * @param boolean $final Set to true to render this in the final layout.
      * If a layout path is specified in the controller with this set to true,
@@ -182,14 +182,14 @@ final class View {
      * all section data will be consumed.
      * @param mixed $just_try Set to false to return instead of crashing if view doesn't exist.
      */
-    public static function render($view_path, \nanomvc\Controller $controller = null, $return = true, $final = false, $just_try = false) {
+    public static function render($view_path, \nmvc\Controller $controller = null, $return = true, $final = false, $just_try = false) {
         // Initialize application layout.
         if (self::$application_layout == null)
             self::$application_layout = new Layout();
         // Create a dummy controller if no controller was specified.
         if ($controller === null)
             $controller = new Controller();
-        if (!is_a($controller->layout, "nanomvc\Layout")) {
+        if (!is_a($controller->layout, "nmvc\Layout")) {
             // Layout not initialized yet.
             $layout_path = $controller->layout;
             if ($final)
@@ -214,12 +214,12 @@ final class View {
         // Make sure there's no level imbalance.
         $level = $controller->layout->getLevel();
         // Enter content (if not done so).
-        if (!is_a($controller->layout, "nanomvc\\VoidLayout") && $level == 0)
+        if (!is_a($controller->layout, "nmvc\\VoidLayout") && $level == 0)
             $controller->layout->enterSection("content");
         // Render the view.
         new View($controller, $view_file_path, $module_context);
         // Exit content.
-        if (!is_a($controller->layout, "nanomvc\\VoidLayout") && $level == 0)
+        if (!is_a($controller->layout, "nmvc\\VoidLayout") && $level == 0)
             $controller->layout->exitSection();
         // Should now be back at last level.
         if ($controller->layout->getLevel() != $level)
@@ -286,7 +286,7 @@ class Layout {
     */
     public function exitSection() {
         $section = array_pop($this->buffer_stack);
-        if (!is_a($section, "nanomvc\\SectionBuffer"))
+        if (!is_a($section, "nmvc\\SectionBuffer"))
               trigger_error("Cannot exit section. No section to exit from!", \E_USER_ERROR);
         $section->leave();
     }

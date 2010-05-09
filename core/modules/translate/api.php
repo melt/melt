@@ -1,12 +1,16 @@
-<?php
-
-namespace nanomvc\translate;
+<?php namespace nmvc\translate;
 
 /**
  * Human language wrapper function for translations.
  * @see  sprintf()
  */
 function __($str) {
+    // Initialize
+    static $initialized = false;
+    if (!$initialized) {
+        TranslateModule::initializeTranslation();
+        $initialized = true;
+    }
     // Using translation!
     global $_lang_translation;
     if (config\ENABLE && TRANSLATION_AVAILIBLE) {
@@ -17,12 +21,12 @@ function __($str) {
                 $str = $translate;
         } else if (config\TRANSLATION_CAPTURE) {
             // Capture.
-            $count = \nanomvc\db\query("SELECT COUNT(*) FROM " . \nanomvc\db\table(config\TRANSLATION_TABLE) . " WHERE original = " . \nanomvc\db\strfy($str));
+            $count = \nmvc\db\query("SELECT COUNT(*) FROM " . \nmvc\db\table(config\TRANSLATION_TABLE) . " WHERE original = " . \nmvc\db\strfy($str));
             $count = api_database::next_array($count);
             $count = intval($count[0]);
             if ($count == 0) {
                 // Insert.
-                \nanomvc\db\query("INSERT INTO " . \nanomvc\db\table(config\TRANSLATION_TABLE) . " (original) VALUES (" . \nanomvc\db\strfy($str) . ")");
+                \nmvc\db\query("INSERT INTO " . \nmvc\db\table(config\TRANSLATION_TABLE) . " (original) VALUES (" . \nmvc\db\strfy($str) . ")");
             }
         }
     }

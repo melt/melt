@@ -1,4 +1,4 @@
-<?php namespace nanomvc\nano_cms;
+<?php namespace nmvc\nano_cms;
 
 class DirectoryModel extends SiteNodeModel {
     /** Path url_mapper will invoke and pass ID to. */

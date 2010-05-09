@@ -1,6 +1,6 @@
-<?php namespace nanomvc\data_tables;
+<?php namespace nmvc\data_tables;
 
-class DataTablesModule extends \nanomvc\Module {
+class DataTablesModule extends \nmvc\Module {
     public static function getAuthor() {
         $year = date("Y");
         return "Hannes Landeholm, Media People Sverige AB, ©$year";

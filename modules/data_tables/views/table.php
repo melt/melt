@@ -1,4 +1,4 @@
-<?php namespace nanomvc\data_tables; ?>
+<?php namespace nmvc\data_tables; ?>
 <?php include_dt(); ?>
 <?php if (count($this->batch_ops) > 0): ?>
 <div class="dt_batch_op">

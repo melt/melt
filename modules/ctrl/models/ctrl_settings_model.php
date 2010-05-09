@@ -1,6 +1,6 @@
-<?php namespace nanomvc\ctrl;
+<?php namespace nmvc\ctrl;
 
-class CtrlSettingsModel extends \nanomvc\SingletonModel {
+class CtrlSettingsModel extends \nmvc\SingletonModel {
     public $wysiwyg_type = array(
         'core\SelectType',
         "options" => array(

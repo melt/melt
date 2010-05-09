@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
-class BytesType extends \nanomvc\Type {
+class BytesType extends \nmvc\Type {
     public function getSQLType() {
         return "int";
     }
@@ -11,9 +11,9 @@ class BytesType extends \nanomvc\Type {
         return intval($this->value);
     }
 
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $value = escape($this->value . " B");
-        return "$label <input type=\"text\" name=\"$name\" value=\"$value\" />";
+        return "<input type=\"text\" name=\"$name\" value=\"$value\" />";
     }
 
     public function addBytes($bytes) {

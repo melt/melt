@@ -1,4 +1,4 @@
-<?php namespace nanomvc\ctrl; ?>
+<?php namespace nmvc\ctrl; ?>
 <ul id="menu">
 <?php foreach (get_admin_menu() as $category): ?>
     <li>

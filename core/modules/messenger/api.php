@@ -1,6 +1,4 @@
-<?php
-
-namespace nanomvc\messenger;
+<?php namespace nmvc\messenger;
 
 /**
  * Displays a message inline in the current request if the
@@ -9,11 +7,11 @@ namespace nanomvc\messenger;
  * @param string $status Determines how the message is rendered.
  * Application should at least support good|bad.
  */
-function showMessage($message, $status = "bad") {
-    $controller = new \nanomvc\Controller();
+function show_message($message, $status = "bad") {
+    $controller = new \nmvc\Controller();
     $controller->message = $message;
     $controller->status = $status;
-    \nanomvc\View::render("/messenger/message", $controller, false, true);
+    \nmvc\View::render("/messenger/message", $controller, false, true);
 }
 
 /**
@@ -23,7 +21,7 @@ function showMessage($message, $status = "bad") {
  * @param string $status Determines how the message is rendered.
  * Application should at least support good|bad.
  */
-function redirectMessage($local_url, $message, $status = "bad") {
+function redirect_message($local_url, $message, $status = "bad") {
     $_SESSION['next_flash'] = array($message, $status);
-    api_navigation::redirect(url($url));
+    \nmvc\request\redirect(url($local_url));
 }

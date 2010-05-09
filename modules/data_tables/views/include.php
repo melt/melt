@@ -1,4 +1,4 @@
-<?php namespace nanomvc\data_tables; ?>
+<?php namespace nmvc\data_tables; ?>
 <?php $this->layout->enterSection("head"); ?>
 <style type="text/css" title="currentStyle">
         @import "<?php echo url("/static/mod/data_tables/demo_page.css"); ?>";

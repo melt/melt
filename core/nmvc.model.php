@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc;
+namespace nmvc;
 
 /**
  * nanoModel
@@ -93,30 +93,30 @@ abstract class Model implements \Iterator {
             unset($column_attributes[0]);
             if ($type_class_name == "")
                 trigger_error("Invalid type: '$model_name.\$$column_name' has nothing specified in type field.", \E_USER_ERROR);
-            $type_class_name = 'nanomvc\\' . $type_class_name;
+            $type_class_name = 'nmvc\\' . $type_class_name;
             $type_handler = null;
             if (!class_exists($type_class_name)) {
                 trigger_error("Invalid model column: $model_name.\$$column_name - Type '$type_class_name' is undefined.", \E_USER_ERROR);
-            } else if (is_subclass_of($type_class_name, 'nanomvc\Reference')) {
+            } else if (is_subclass_of($type_class_name, 'nmvc\Reference')) {
                 if (!string\ends_with($column_name, "_id"))
                     trigger_error("Invalid model column: $model_name.\$$column_name - nanoMVC name convention requires reference type columns to end with '_id'!", \E_USER_ERROR);
                 // Expects the type handler of this class to extend the special reference type.;
                 $pointer_target_class_name = $type_class_name::STATIC_TARGET_MODEL;
                 if ($pointer_target_class_name === null) {
                     // Using default parsing to determine target model (2nd argument).
-                    $pointer_target_class_name = 'nanomvc\\' . $column_attributes[1];
+                    $pointer_target_class_name = 'nmvc\\' . $column_attributes[1];
                     unset($column_attributes[1]);
-                    if (!class_exists($pointer_target_class_name) || !is_subclass_of($pointer_target_class_name, 'nanomvc\Model'))
-                        trigger_error("Invalid model column: $model_name.\$$column_name - Reference target '$pointer_target_class_name' is undefined or not a nanomvc\\Model.", \E_USER_ERROR);
+                    if (!class_exists($pointer_target_class_name) || !is_subclass_of($pointer_target_class_name, 'nmvc\Model'))
+                        trigger_error("Invalid model column: $model_name.\$$column_name - Reference target '$pointer_target_class_name' is undefined or not a nmvc\\Model.", \E_USER_ERROR);
                 }
                 $type_handler = new $type_class_name($column_name, null, $pointer_target_class_name);
-            } else if (is_subclass_of($type_class_name, 'nanomvc\Type')) {
+            } else if (is_subclass_of($type_class_name, 'nmvc\Type')) {
                 if (string\ends_with($column_name, "_id"))
                     trigger_error("Invalid model column: $model_name.\$$column_name - nanoMVC name convention doesn't allow non-reference type columns to end with '_id'!", \E_USER_ERROR);
                 // Standard type handles must extend the type class.
                 $type_handler = new $type_class_name($column_name, null);
             } else
-                trigger_error("Invalid model column: $model_name.\$$column_name - The specified type '$type_class_name' is not a nanomvc\\Type.", \E_USER_ERROR);
+                trigger_error("Invalid model column: $model_name.\$$column_name - The specified type '$type_class_name' is not a nmvc\\Type.", \E_USER_ERROR);
             foreach ($column_attributes as $key => $attribute) {
                 if (!property_exists(get_class($type_handler), $key))
                     trigger_error("Invalid model column: $model_name.\$$column_name - The type '$type_class_name' does not have an attribute named '$key'.", \E_USER_ERROR);
@@ -183,7 +183,7 @@ abstract class Model implements \Iterator {
             trigger_error("Trying to write to non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_NOTICE);
             return;
         }
-        if (is_a($value, '\nanomvc\Type'))
+        if (is_a($value, '\nmvc\Type'))
             // Transfer value automagically.
             $this->_cols[$name]->set($value->get());
         else
@@ -205,6 +205,12 @@ abstract class Model implements \Iterator {
             $type_instance = clone $type_instance;
             $type_instance->parent = $this;
         }
+    }
+
+    /** Describing the model as a string.
+     * The default implementation is pretty poor. */
+    public function __toString() {
+        return get_class($this) . " #" . $this->getID();
     }
 
     /** Allows foreach iteration on models. */
@@ -239,7 +245,7 @@ abstract class Model implements \Iterator {
         if (isset($columns_name_cache[$name]))
             return $columns_name_cache[$name];
         $columns = array();
-        if (!class_exists($name) || !is_subclass_of($name, 'nanomvc\Model'))
+        if (!class_exists($name) || !is_subclass_of($name, 'nmvc\Model'))
             trigger_error("'$name' is not a valid Model!", \E_USER_ERROR);
         foreach (get_class_vars($name) as $colname => $def)
             if ($colname[0] != '_')
@@ -281,7 +287,12 @@ abstract class Model implements \Iterator {
             // Inserting.
             $this->beforeStore(false);
             db\query($this->getInsertSQL());
-            $this->_id = db\insert_id();
+            if (db\config\USE_TRIGGER_SEQUENCING) {
+                $id = db\next_array(db\query("SELECT @last_insert"));
+                $id = $id[0];
+            } else
+                $id = db\insert_id();
+            $this->_id = intval($id);
             $this->afterStore(false);
         }
     }
@@ -362,7 +373,7 @@ abstract class Model implements \Iterator {
         if (!isset($columns_array[$pointer_name]))
             trigger_error("'$pointer_name' is not a column of '$model_name'.", \E_USER_ERROR);
         $column = $columns_array[$pointer_name];
-        if (!is_subclass_of($column, 'nanomvc\Reference'))
+        if (!is_subclass_of($column, 'nmvc\Reference'))
             trigger_error("'$model_name.$pointer_name' is not a reference column.", \E_USER_ERROR);
         return $column->getTargetModel();
     }
@@ -382,7 +393,7 @@ abstract class Model implements \Iterator {
             $column->setSyncPoint();
         }
         $value_list = implode(',', $value_list);
-        if (!config\USE_TRIGGER_SEQUENCING) {
+        if (!db\config\USE_TRIGGER_SEQUENCING) {
             db\run("UPDATE " . table('core\seq') . " SET id = LAST_INSERT_ID(id+1)");
             $id = "LAST_INSERT_ID()";
         } else {
@@ -589,7 +600,7 @@ abstract class Model implements \Iterator {
     * @desc This function unlinks the model instance with the given ID.
     */
     public static function unlinkByID($id) {
-        $instance = forward_static_call(array('nanomvc\Model', "selectByID"), $id);
+        $instance = forward_static_call(array('nmvc\Model', "selectByID"), $id);
         if ($instance !== null)
             $instance->unlink();
     }
@@ -600,7 +611,7 @@ abstract class Model implements \Iterator {
     * @param String $sqldata SQL command(s) that will be appended after the DELETE query for free selection.
     */
     public static function unlinkFreely($sqldata) {
-        $instances = forward_static_call(array('nanomvc\Model', "selectFreely"), $sqldata);
+        $instances = forward_static_call(array('nmvc\Model', "selectFreely"), $sqldata);
         foreach ($instances as $instance)
             $instance->unlink();
     }
@@ -614,7 +625,7 @@ abstract class Model implements \Iterator {
     * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
     */
     public static function unlinkWhere($where = "", $offset = 0, $limit = 0) {
-        $instances = forward_static_call(array('nanomvc\Model', "selectWhere"), $where, $offset, $limit);
+        $instances = forward_static_call(array('nmvc\Model', "selectWhere"), $where, $offset, $limit);
         foreach ($instances as $instance)
             $instance->unlink();
     }
@@ -661,7 +672,7 @@ abstract class Model implements \Iterator {
 
     /** Locks read and write on this model.
      * Useful when doing critical operations.
-     * @see \nanomvc\db\unlock() for unlocking all locks.  */
+     * @see \nmvc\db\unlock() for unlocking all locks.  */
     public static function lock($read = true, $write = true) {
         $family_tree = self::getMetaData("family_tree");
         $name = get_called_class();
@@ -682,7 +693,7 @@ abstract class Model implements \Iterator {
         if (!isset($cache[$table_name])) {
             $base_offs = strrpos($table_name, '\\');
             $base_offs++;
-            $cls_name = 'nanomvc\\' . substr($table_name, 0, $base_offs) . string\underline_to_cased(substr($table_name, $base_offs)) . "Model";
+            $cls_name = 'nmvc\\' . substr($table_name, 0, $base_offs) . string\underline_to_cased(substr($table_name, $base_offs)) . "Model";
             $cache[$table_name] = $cls_name;
         }
         return $cache[$table_name];
@@ -749,13 +760,13 @@ abstract class Model implements \Iterator {
                 if (!is_file($model_filename))
                     continue;
                 $table_name = substr(basename($model_filename), 0, -10);
-                $cls_name = \nanomvc\string\underline_to_cased($table_name);
+                $cls_name = \nmvc\string\underline_to_cased($table_name);
                 if ($has_module) {
                     $module_name = basename(dirname(dirname($model_filename)));
                     $cls_name = $module_name . "\\" . $cls_name;
                     $table_name = $module_name . "\\" . $table_name;
                 }
-                $cls_name = "nanomvc\\" . $cls_name . "Model";
+                $cls_name = "nmvc\\" . $cls_name . "Model";
                 // Expect model to be declared after require.
                 if (!class_exists($cls_name))
                     trigger_error("Found model file that didn't declare it's expected model: $cls_name", \E_USER_ERROR);
@@ -792,7 +803,7 @@ abstract class Model implements \Iterator {
             $model_class_table_name = self::classNameToTableName($model_class);
             $family_tree[$model_class][] = $model_class_table_name;
             foreach (class_parents($model_class) as $model_parent) {
-                if ($model_parent == 'nanomvc\Model')
+                if ($model_parent == 'nmvc\Model')
                     continue;
                 $family_tree[$model_parent][] = $model_class_table_name;
             }
@@ -871,9 +882,8 @@ abstract class Type {
     /**
     * @desc Should return an interface component that handles modification of the data in a form.
     * @param string $name The HTML name of the component.
-    * @param string $label The label of the component.
     */
-    abstract public function getInterface($name, $label);
+    abstract public function getInterface($name);
 
     /**
      * Reads the component data from POST and possibly sets the value to something different.

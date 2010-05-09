@@ -1,4 +1,4 @@
-<?php namespace nanomvc\tinymce; ?>
+<?php namespace nmvc\tinymce; ?>
 theme : "advanced",
 plugins : "spellchecker,pagebreak,style,layer,table,save,advhr,advimage,advlink,emotions,inlinepopups,insertdatetime,preview,media,searchreplace,print,contextmenu,paste,directionality,fullscreen,noneditable,visualchars,nonbreaking,xhtmlxtras,template",
 

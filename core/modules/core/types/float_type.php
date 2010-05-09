@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
-class FloatType extends \nanomvc\Type {
+class FloatType extends \nmvc\Type {
     public function getSQLType() {
         return "float";
     }
@@ -11,9 +11,9 @@ class FloatType extends \nanomvc\Type {
         return floatval($this->value);
     }
 
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $value = floatval($this->value);
-        return "$label <input type=\"text\" name=\"$name\" value=\"$value\" />";
+        return "<input type=\"text\" name=\"$name\" value=\"$value\" />";
     }
 
     public function readInterface($name) {

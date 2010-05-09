@@ -1,9 +1,9 @@
-<?php namespace nanomvc\cache;
+<?php namespace nmvc\cache;
 
 /**
  * Tag module - only designed to be used inside cache module.
  */
-class Str8Type extends \nanomvc\Type {    
+class Str8Type extends \nmvc\Type {    
     public function getSQLType() {
         return "varchar(8)";
     }
@@ -16,7 +16,7 @@ class Str8Type extends \nanomvc\Type {
         return escape($this->value);
     }
 
-    public function getInterface($name, $label) { }
+    public function getInterface($name) { }
 
     public function readInterface($name) { }
 }

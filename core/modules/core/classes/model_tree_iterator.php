@@ -1,4 +1,4 @@
-<?php namespace nanomvc\core;
+<?php namespace nmvc\core;
 
 /**
  * Allows flat foreach iteration trough the tree.

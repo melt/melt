@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc\mail;
+namespace nmvc\mail;
 
 /**
 * @desc Wraps a list of email addressess.

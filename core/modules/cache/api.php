@@ -1,3 +1,3 @@
 <?php
 
-namespace nanomvc\cache;
+namespace nmvc\cache;

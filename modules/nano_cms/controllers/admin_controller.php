@@ -1,19 +1,19 @@
-<?php namespace nanomvc\nano_cms;
+<?php namespace nmvc\nano_cms;
 
-class AdminController extends \nanomvc\Controller {
+class AdminController extends \nmvc\AppController {
     public function beforeFilter() {
         // Using Ctrl Administration Panel Module.
-        \nanomvc\core\require_module("ctrl");
+        \nmvc\core\require_module("ctrl");
     }
 
     public function pages($edit_id = null, $new_type = null, $new_parent = null) {
         // Get the editing site node.
         $this->site_node = null;
         if ($edit_id == "new") {
-            $new_node_name = \nanomvc\string\base64_alphanum_decode($new_type);
+            $new_node_name = \nmvc\string\base64_alphanum_decode($new_type);
             $possible_pages = get_dynamic_pages();
             if (!isset($possible_pages[$new_node_name]))
-                \nanomvc\request\show_404();
+                \nmvc\request\show_404();
             $this->page_type = $new_node_name;
             $this->site_node = $new_node_name::insert();
             $this->site_node->parent_id = SiteNodeModel::selectByID($new_parent);

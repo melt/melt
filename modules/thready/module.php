@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\thready;
+namespace nmvc\thready;
 
-class ThreadyModule extends \nanomvc\Module {
+class ThreadyModule extends \nmvc\Module {
     public static function getAuthor() {
         $year = date("Y");
         return "Hannes Landeholm, Media People Sverige AB, ©$year";

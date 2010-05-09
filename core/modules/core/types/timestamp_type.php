@@ -1,8 +1,8 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
-class TimestampType extends \nanomvc\Type {
+class TimestampType extends \nmvc\Type {
     public $only_date = "false";
     public $title = "";
 
@@ -12,7 +12,7 @@ class TimestampType extends \nanomvc\Type {
     public function getSQLValue() {
         return intval($this->value);
     }
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         $title = ($this->title != "")? ' title="' . $this->title . '" ': '';
         $dateonly = $this->only_date == "true";
         $date_syntax_helper = __('YYYY-MM-DD');
@@ -20,7 +20,7 @@ class TimestampType extends \nanomvc\Type {
         $stamp = ($this->value != 0)? (string) $this: $date_syntax_helper;
         if (!$dateonly && $this->value == 0)
             $stamp .= $time_syntax_helper;
-        return "$label <input$title type=\"text\" name=\"$name\" value=\"$stamp\" />"
+        return "<input$title type=\"text\" name=\"$name\" value=\"$stamp\" />"
             . "<br /><span style=\"font-size: 9px;\">" . __('Timestamp Format')
             . ": " . $date_syntax_helper . ($dateonly? "": $time_syntax_helper) . "</span>";
     }

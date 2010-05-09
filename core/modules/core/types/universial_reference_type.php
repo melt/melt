@@ -1,4 +1,4 @@
-<?php namespace nanomvc\core;
+<?php namespace nmvc\core;
 
 /**
  * Universial references can point to any model. (See Object pointers in Java)
@@ -16,7 +16,7 @@ abstract class UniversialReference extends Type {
         if ($id <= 0)
             return null;
         $target_model = $this->value[0];
-        if (!is_subclass_of($target_model, 'nanomvc\Model'))
+        if (!is_subclass_of($target_model, 'nmvc\Model'))
             return null;
         $model = $target_model::selectByID($id);
         if (!is_object($model))
@@ -26,7 +26,7 @@ abstract class UniversialReference extends Type {
 
     public function set($value) {
         $id = $value->getID();
-        if (!is_a($value, 'nanomvc\Model'))
+        if (!is_a($value, 'nmvc\Model'))
             trigger_error("Attempted to set a reference to an incorrect object. The reference expects a Model.", \E_USER_ERROR);
         $this->value = array(get_class($value), $id);
     }

@@ -1,6 +1,6 @@
 <?php
 
-namespace nanomvc\core;
+namespace nmvc\core;
 
 class UploadType extends cache\BlobPointerType {
     public $allowed_extentions = ".zip|.gz|.tar|.rar|.7z|.png|.gif|.jpg|.jpeg";
@@ -28,7 +28,7 @@ class UploadType extends cache\BlobPointerType {
             $remote_name = $_FILES[$name]['name'];
             $is_ext = null;
             foreach ($allowed_extentions as $extention) {
-                if (\nanomvc\string\ends_with($remote_name, $extention)) {
+                if (\nmvc\string\ends_with($remote_name, $extention)) {
                     $is_ext = $extention;
                     break;
                 }
@@ -47,7 +47,7 @@ class UploadType extends cache\BlobPointerType {
         }
     }
 
-    public function getInterface($name, $label) {
+    public function getInterface($name) {
         // Returns the status and a file upload control.
         $file_url = $this->getCachePath();
         if ($file_url !== null) {
