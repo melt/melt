@@ -148,7 +148,7 @@ function show_invalid($reason = null) {
 function info($topic, $body) {
     $try_styled = false;
     reset();
-    $controller = new \nmvc\Controller();
+    $controller = new \nmvc\core\StdController();
     $controller->layout = "/html/xhtml1.1";
     $controller->topic = $topic;
     $controller->body = $body;

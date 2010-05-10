@@ -45,13 +45,7 @@ foreach (internal\get_all_modules() as $module_name => $module_parameters) {
             }
         }
     }
-    // Load module.
-    $mod_path = $module_path . "/module.php";
-    require($mod_path);
-    if (!class_exists($class_name))
-        trigger_error("nanoMVC: '$class_name' was not declared in '$mod_path'!", \E_USER_ERROR);
-    else if (!is_subclass_of($class_name, 'nmvc\Module'))
-        trigger_error("nanoMVC: '$class_name' must extend 'nmvc\\Module'! (Declared in '$mod_path')", \E_USER_ERROR);
+    // Call before request process.
     call_user_func(array($class_name, "beforeRequestProcess"));
 }
 

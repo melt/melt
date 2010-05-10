@@ -3,7 +3,7 @@
 /**
  * nanoController
  */
-class Controller {
+abstract class Controller {
     /**
      * @var mixed The name of the layout to render the view inside of.
      * The name specified is the filename of the layout in /app/layouts
@@ -32,12 +32,44 @@ class Controller {
      */
     public function afterRender() {}
 
+    /** Reading non-set variables is allowed. */
+    public function __get($name) {
+        return null;
+    }
+
     /*
      * Override this function in application controller to rewrite urls.
      * @param array $path_tokens An array of path tokens to manipulate.
      *
     public static function rewriteRequestUrl(&$path_tokens) {}*/
 
+
+    /**
+     * Generates a path to this controller action and parameters.
+     */
+    public function getPath($action = null, $parameters = array()) {
+        return self::controllerToPath(get_class($this), $action, $parameters);
+    }
+
+    /**
+     * Generates a path from a controller class name, action and parameters array.
+     */
+    public static function controllerToPath($controller_class_name, $action = null, $parameters = array()) {
+        $controller = string\cased_to_underline($controller_class_name);
+        $controller = substr($controller, 5, -11);
+        if ($action == "index")
+            $action = null;
+        $path = "/";
+        if ($controller != "index") {
+            $path .= $controller;
+            if ($action !== null) {
+                $controller .= "/" . $action;
+                foreach ($parameters as $parameter)
+                    $path .= "/" . $parameter;
+            }
+        }
+        return $path;
+    }
     
     /**
      * Attempts to find the controller specified by the given path.
@@ -156,7 +188,7 @@ class Controller {
             if (strtolower($controller_name) == "index") {
                 $path_parts[] = "index";
                 $path_parts[] = "index";
-            } else if (strtolower($controller_name) == "index")
+            } else if (strtolower($action_name) == "index")
                 $path_parts[] = "index";
             if (count($arguments) > 0)
                 $path_parts = array_slice($path_parts, 0, -count($arguments));
@@ -168,6 +200,11 @@ class Controller {
         // Rendering complete.
         $controller->afterRender();
         return true;
+    }
+
+    /** Renders view in this controller. */
+    public function _render_in_this($path) {
+        require $path;
     }
 }
 

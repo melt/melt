@@ -12,24 +12,7 @@ final class View {
     private function __construct(Controller $controller, $path, $module_context) {
         $this->_controller = $controller;
         $this->_module_context = $module_context;
-        require $path;
-    }
-
-    // Syncronize view variables with their respective controller.
-    function __get($name) {
-        return property_exists($this->_controller, $name)? $this->_controller->$name: null;
-    }
-
-    function __set($name, $value) {
-        $this->_controller->$name = $value;
-    }
-
-    function __isset($name) {
-        return isset($this->_controller->$name);
-    }
-
-    function __unset($name) {
-        unset($this->_controller->$name);
+        $this->_controller->_render_in_this($path);
     }
 
     /* Extends a view as they are defined by cake. */
@@ -172,7 +155,10 @@ final class View {
      * Renders a view (template) in an internal subrequest and returns content.
      * @param string $view_path The path of the view to show.
      * @param boolean $final_render If this should be rendered in the final
-     * @param nmvc\Controller $controller The controller instance that runs this view.
+     * @param mixed $controller The controller instance that runs this view or
+     * or an array of controller data to insert into a standard controller
+     * without layout, or null to use standard controller without layout
+     * and no data.
      * @param boolean $return Set to false to ouput buffer instead of returning it.
      * @param boolean $final Set to true to render this in the final layout.
      * If a layout path is specified in the controller with this set to true,
@@ -180,14 +166,27 @@ final class View {
      * all section data will be consumed.
      * @param mixed $just_try Set to false to return instead of crashing if view doesn't exist.
      */
-    public static function render($view_path, \nmvc\Controller $controller = null, $return = true, $final = false, $just_try = false) {
+    public static function render($view_path, $controller_data = null, $return = true, $final = false, $just_try = false) {
         // Initialize application layout.
         if (self::$application_layout == null)
             self::$application_layout = new Layout();
-        // Create a dummy controller if no controller was specified.
-        if ($controller === null)
-            $controller = new Controller();
-        if (!is_a($controller->layout, "nmvc\Layout")) {
+        // Use standard controller with empty layout
+        // if no controller was specified.
+        if (!is_null($controller_data) && !is_array($controller_data)
+        && (!is_object($controller_data) || !is_subclass_of($controller_data, "nmvc\Controller")))
+            trigger_error("Unexpected controller_data data type. Expected NULL, ARRAY or nmvc\\Controller.", \E_USER_NOTICE);
+        if (!is_object($controller_data)) {
+            $controller = new core\StdController();
+            $controller->layout = null;
+            if (is_array($controller_data)) {
+                foreach ($controller_data as $key => $val)
+                    $controller->$key = $val;
+            }
+        } else {
+            $controller = $controller_data;
+        }
+        if ((!is_object($controller->layout) && !class_exists($controller->layout))
+        || !is_subclass_of($controller->layout, "nmvc\Layout")) {
             // Layout not initialized yet.
             $layout_path = $controller->layout;
             if ($final)
@@ -201,9 +200,8 @@ final class View {
         $ret_view = self::findView($view_path);
         if ($ret_view === false) {
             if (!$just_try)
-                trigger_error("nanoMVC: The view '$view_path.php' could not be found!", \E_USER_ERROR);
-            else
-                return false;
+                trigger_error("nanoMVC: The view '$view_path.php' could not be found!", \E_USER_NOTICE);
+            return false;
         }
         list($view_file_path, $module_context) = $ret_view;
         // Buffer if returning.
@@ -257,8 +255,9 @@ class Layout {
     public function render($path) {
         if (count($this->buffer_stack) > 0)
             trigger_error("Rendering layout without exiting all sections!", \E_USER_ERROR);
-        // Render layout just like a view.
-        $layout_controller = new Controller();
+        // Render layout just like a view, but without specified layout.
+        $layout_controller = new core\StdController();
+        $layout_controller->layout = null;
         foreach ($this->section_buffers as $name => $section)
             $layout_controller->$name = $section->output();
         $layout_controller->layout = new VoidLayout();

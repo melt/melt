@@ -8,10 +8,7 @@
  * Application should at least support good|bad.
  */
 function show_message($message, $status = "bad") {
-    $controller = new \nmvc\Controller();
-    $controller->message = $message;
-    $controller->status = $status;
-    \nmvc\View::render("/messenger/message", $controller, false, true);
+    \nmvc\View::render("/messenger/message", compact("message", "status"), false, true);
 }
 
 /**
