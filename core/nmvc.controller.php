@@ -32,11 +32,6 @@ abstract class Controller {
      */
     public function afterRender() {}
 
-    /** Reading non-set variables is allowed. */
-    public function __get($name) {
-        return null;
-    }
-
     /*
      * Override this function in application controller to rewrite urls.
      * @param array $path_tokens An array of path tokens to manipulate.
@@ -63,7 +58,7 @@ abstract class Controller {
         if ($controller != "index") {
             $path .= $controller;
             if ($action !== null) {
-                $controller .= "/" . $action;
+                $path .= "/" . $action;
                 foreach ($parameters as $parameter)
                     $path .= "/" . $parameter;
             }
@@ -200,11 +195,6 @@ abstract class Controller {
         // Rendering complete.
         $controller->afterRender();
         return true;
-    }
-
-    /** Renders view in this controller. */
-    public function _render_in_this($path) {
-        require $path;
     }
 }
 

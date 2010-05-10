@@ -12,50 +12,44 @@ final class View {
     private function __construct(Controller $controller, $path, $module_context) {
         $this->_controller = $controller;
         $this->_module_context = $module_context;
-        $this->_controller->_render_in_this($path);
+        require $path;
+    }
+
+    // Transparent access to invoking controller.
+    public function __call($name,  $arguments) {
+        if (!method_exists($this->_controller, $name)) {
+            trigger_error("The function " . get_class($name) . "->$name() does not exist!", \E_USER_WARNING);
+            return null;
+        }
+        return call_user_func_array(array($this->_controller, $name), $arguments);
+    }
+
+    public static function __callStatic($name,  $arguments) {
+        $ctrl_clsname = get_class($this->_controller);
+        if (!method_exists($ctrl_clsname, $name)) {
+            trigger_error("The static function $ctrl_clsname::$name() does not exist!", \E_USER_WARNING);
+            return null;
+        }
+        return call_user_func_array(array($ctrl_clsname, $name), $arguments);
+    }
+
+    public function __set ($name,  $value) {
+        $this->_controller->$name = $value;
+    }
+
+    public function __get ($name) {
+        return isset($this->_controller->$name)? $this->_controller->$name: null;
+    }
+
+    public function __isset ($name) {
+        return property_exists($this->_controller, $name);
+    }
+
+    public function __unset ($name) {
+        unset($this->_controller->$name);
     }
 
     /* Extends a view as they are defined by cake. */
-
-    /**
-     * @desc Views have a set() method that is analogous to the set() found in Controller objects. It allows you to add variables to the viewVars. Using set() from your view file will add the variables to the layout and elements that will be rendered later.
-     * @param string $var The var to set.
-     * @param mixed $value The value to write.
-     * @see http://book.cakephp.org/view/821/set
-     */
-    function set($var, $value) {
-        $this->_controller->$var = $value;
-    }
-
-    /**
-     * @desc Gets the value of the viewVar with the name $var.
-     * @param string $var The var to get.
-     * @see http://book.cakephp.org/view/822/getVar
-     * @return The value of that variable or NULL if no such variable exists.
-     */
-    function getVar($var) {
-        return @$this->_controller->$var;
-    }
-
-    /**
-     * @desc Gets a list of all the available view variables in the current
-     * rendering scope. Returns an array of variable names.
-     * @see http://book.cakephp.org/view/823/getVars
-     */
-    function getVars() {
-        return get_object_vars($this->controller);
-    }
-
-    /**
-     * @desc Displays an error page to the user.
-     *       DOES NOT USE layouts/error.ctp to render the page, and DOES stop the code execution.
-     * @param integer $code HTTP status code.
-     * @param string $name Name of the error. (null to show default)
-     * @param string $message Error message. (null to show default)
-     */
-    function error($code, $name = null, $message = null) {
-        api_navigation::show_xyz($code, $name, $message);
-    }
 
     /**
      * @desc Renders a view in the same controller.
@@ -222,7 +216,7 @@ final class View {
             trigger_error("nanoMVC: After rendering '$view_path.php', a level imbalance was detected! The enterSections() does not have a balanced ammount of exitSections().", \E_USER_ERROR);
         // Will render the layout if a layout is set.
         if ($layout_path != '') {
-            $controller->layout->render($layout_path);
+            $controller->layout->render($layout_path, $controller);
             // If this is a render into the final "application layout",
             // that layout should now be reset.
             if ($final)
@@ -252,11 +246,10 @@ class Layout {
     /**
     * @desc Displays the layout with it's buffered sections.
     */
-    public function render($path) {
+    public function render($path, $layout_controller) {
         if (count($this->buffer_stack) > 0)
             trigger_error("Rendering layout without exiting all sections!", \E_USER_ERROR);
         // Render layout just like a view, but without specified layout.
-        $layout_controller = new core\StdController();
         $layout_controller->layout = null;
         foreach ($this->section_buffers as $name => $section)
             $layout_controller->$name = $section->output();

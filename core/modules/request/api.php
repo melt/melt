@@ -21,6 +21,8 @@ function reset() {
         ob_clean();
     // Reset the application layout.
     \nmvc\View::reset_app_layout();
+    // Always using using a single buffer level to enable reset at any point.
+    ob_start();
 }
 
 /**

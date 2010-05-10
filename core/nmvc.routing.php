@@ -15,6 +15,9 @@
     define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
 }
 
+// Stuff can be rendered beyond this point, so reset output buffer.
+request\reset();
+
 // Include all module descriptor classes and call their beforeRequestProcesses.
 $config_file_data = null;
 foreach (internal\get_all_modules() as $module_name => $module_parameters) {
