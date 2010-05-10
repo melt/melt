@@ -1,14 +1,14 @@
 <?php namespace nmvc\core;
 
 /**
- * Universial references can point to any model. (See Object pointers in Java)
+ * Universial pointers can point to any model. (See Object pointers in Java)
  * The downside is that they aren't "normal" pointers, so they cannot be
  * used for child lookups and cannot garbage collect themselves.
  */
-abstract class UniversialReference extends Type {
+abstract class UniversialPointer extends Type {
     protected $value = array(null, 0);
 
-    /** Resolves this reference and returns the model it points to. */
+    /** Resolves this pointer and returns the model it points to. */
     public function get() {
         if (!is_array($this->value) || count($this->value) != 2)
             return null;
@@ -27,7 +27,7 @@ abstract class UniversialReference extends Type {
     public function set($value) {
         $id = $value->getID();
         if (!is_a($value, 'nmvc\Model'))
-            trigger_error("Attempted to set a reference to an incorrect object. The reference expects a Model.", \E_USER_ERROR);
+            trigger_error("Attempted to set a pointer to an incorrect object. The pointer expects a Model.", \E_USER_ERROR);
         $this->value = array(get_class($value), $id);
     }
 

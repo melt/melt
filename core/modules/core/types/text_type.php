@@ -2,7 +2,7 @@
 
 namespace nmvc\core;
 
-class TextType extends \nmvc\Type {
+class TextType extends \nmvc\AppType {
     public function getSQLType() {
         return "text";
     }

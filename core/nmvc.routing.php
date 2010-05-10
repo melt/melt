@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc;
+<?php namespace nmvc;
 
 // URL Parsing.
 {

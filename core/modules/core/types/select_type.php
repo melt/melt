@@ -3,7 +3,7 @@
 namespace nmvc\core;
 
 /** SelectType, for selecting multiple options. */
-class SelectType extends \nmvc\Type {
+class SelectType extends \nmvc\AppType {
     /** @var Where condition to filter targets. */
     public $options = array();
 

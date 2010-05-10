@@ -3,7 +3,7 @@
 /**
  * Blob type - only designed to be used inside cache module.
  */
-class BlobType extends \nmvc\Type {
+class BlobType extends \nmvc\AppType {
     public function getSQLType() {
         return "MEDIUMBLOB";
     }

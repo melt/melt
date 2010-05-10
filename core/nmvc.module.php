@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc;
+<?php namespace nmvc;
 
 /**
  * A nanoMVC module provides some sort of API and

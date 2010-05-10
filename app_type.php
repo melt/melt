@@ -5,4 +5,3 @@ abstract class AppType extends Type {
     
 }
 
-?>

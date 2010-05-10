@@ -2,7 +2,7 @@
 
 namespace nmvc\core;
 
-class BooleanType extends \nmvc\Type {
+class BooleanType extends \nmvc\AppType {
     public $true_str = "yes";
     public $false_str = "no";
 

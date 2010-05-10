@@ -5,7 +5,7 @@ namespace nmvc\core;
 /**
 *@desc Stores a remote address.
 */
-class IpAddressType extends \nmvc\Type {
+class IpAddressType extends \nmvc\AppType {
     public function getSQLType() {
         // Enough to store IPv6.
         return "varbinary(16)";

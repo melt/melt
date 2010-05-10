@@ -2,7 +2,7 @@
 
 namespace nmvc\core;
 
-class BytesType extends \nmvc\Type {
+class BytesType extends \nmvc\AppType {
     public function getSQLType() {
         return "int";
     }

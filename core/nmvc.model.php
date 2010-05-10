@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc;
+<?php namespace nmvc;
 
 /**
  * nanoModel
@@ -31,23 +29,23 @@ abstract class Model implements \Iterator {
      * @desc Overidable event. Called on model instances before they are stored.
      * @param boolean $is_linked True if the model instance is currently linked in the database. False if it's about to be INSERTED.
      */
-    public function beforeStore($is_linked) { }
+    public abstract function beforeStore($is_linked);
 
     /**
      * @desc Overidable event. Called on model instances after they are stored.
      * @param boolean $is_linked True if the model instance was linked in the database before the store. False if it was INSERTED just now.
      */
-    public function afterStore($was_linked) { }
+    public abstract function afterStore($was_linked);
 
     /**
      * @desc Overidable event. Called on model instances that is about to be unlinked in the database.
      */
-    public function beforeUnlink() { }
+    public abstract function beforeUnlink();
 
     /**
      * @desc Overidable event. Called on model instances after they have been unlinked in the database.
      */
-    public function afterUnlink() { }
+    public abstract function afterUnlink();
 
     /**
      * @desc Overidable function. Called on model instances when one of their pointers
@@ -62,18 +60,16 @@ abstract class Model implements \Iterator {
      * deleted instances. Also, it enables you to unlink any instances freely
      * in this function, in any model graph, without getting infinite loops.
      */
-    public function gcPointer($field_name) {
-        $this->$field_name = 0;
-        $this->store();
-    }
+    public abstract function gcPointer($field_name);
 
     /**
-     * @desc Override this function to implement application level model access control.
+     * Override this function to implement application
+     * level model access control.
      */
-    public function accessing() { }
+    public abstract function accessing();
 
     /** Override this function to initialize members of this model. */
-    public function initialize() { }
+    public abstract function initialize();
 
     /** Returns a parsed column array for a model. */
     private static function getParsedColumnArray($model_name) {
@@ -82,41 +78,56 @@ abstract class Model implements \Iterator {
             return $parsed_model_cache[$model_name];
         $parsed_col_array = array();
         $vars = get_class_vars($model_name);
-        foreach ($vars as $column_name => $column_attributes) {
+        foreach ($vars as $column_name => $column_args) {
             // Ignore non column members.
             if ($column_name[0] == '_')
                 continue;
-            if (!is_array($column_attributes))
-                $column_attributes = array($column_attributes);
-            // Parse type class name.
-            $type_class_name = $column_attributes[0];
-            unset($column_attributes[0]);
-            if ($type_class_name == "")
-                trigger_error("Invalid type: '$model_name.\$$column_name' has nothing specified in type field.", \E_USER_ERROR);
-            $type_class_name = 'nmvc\\' . $type_class_name;
-            $type_handler = null;
-            if (!class_exists($type_class_name)) {
-                trigger_error("Invalid model column: $model_name.\$$column_name - Type '$type_class_name' is undefined.", \E_USER_ERROR);
-            } else if (is_subclass_of($type_class_name, 'nmvc\Reference')) {
-                if (!string\ends_with($column_name, "_id"))
-                    trigger_error("Invalid model column: $model_name.\$$column_name - nanoMVC name convention requires reference type columns to end with '_id'!", \E_USER_ERROR);
-                // Expects the type handler of this class to extend the special reference type.;
-                $pointer_target_class_name = $type_class_name::STATIC_TARGET_MODEL;
-                if ($pointer_target_class_name === null) {
-                    // Using default parsing to determine target model (2nd argument).
-                    $pointer_target_class_name = 'nmvc\\' . $column_attributes[1];
-                    unset($column_attributes[1]);
-                    if (!class_exists($pointer_target_class_name) || !is_subclass_of($pointer_target_class_name, 'nmvc\Model'))
-                        trigger_error("Invalid model column: $model_name.\$$column_name - Reference target '$pointer_target_class_name' is undefined or not a nmvc\\Model.", \E_USER_ERROR);
+            $column_construct_args = array();
+            $column_attributes = array();
+            
+            if (!is_array($column_args)) {
+                $type_class_name = $column_args;
+            } else {
+                // Read the first value, which should be it's type class.
+                reset($column_args);
+                $type_class_name = current($column_args);
+                if (!is_string($type_class_name))
+                    trigger_error("Invalid type: '$model_name.\$$column_name' does not specify a type class.", \E_USER_ERROR);
+                unset($column_args[key($column_args)]);
+                foreach ($column_args as $attr_key => $attr_value) {
+                    if (is_integer($attr_key))
+                        $column_construct_args[] = $attr_value;
+                    else
+                        $column_attributes[$attr_key] = $attr_value;
                 }
-                $type_handler = new $type_class_name($column_name, null, $pointer_target_class_name);
-            } else if (is_subclass_of($type_class_name, 'nmvc\Type')) {
-                if (string\ends_with($column_name, "_id"))
-                    trigger_error("Invalid model column: $model_name.\$$column_name - nanoMVC name convention doesn't allow non-reference type columns to end with '_id'!", \E_USER_ERROR);
-                // Standard type handles must extend the type class.
-                $type_handler = new $type_class_name($column_name, null);
-            } else
+            }
+            $type_class_name = 'nmvc\\' . $type_class_name;
+            if (!class_exists($type_class_name))
+                trigger_error("Invalid model column: $model_name.\$$column_name - Type '$type_class_name' is undefined.", \E_USER_ERROR);
+            if (!is_subclass_of($type_class_name, 'nmvc\Type'))
                 trigger_error("Invalid model column: $model_name.\$$column_name - The specified type '$type_class_name' is not a nmvc\\Type.", \E_USER_ERROR);
+            // Core pointer name convention check.
+            $ends_with_id = string\ends_with($column_name, "_id");
+            if (is_subclass_of($type_class_name, 'nmvc\core\PointerType')) {
+                if (!$ends_with_id)
+                    trigger_error("Invalid model column: $model_name.\$$column_name. nanoMVC name convention demands that all pointer type columns ends with '_id'!", \E_USER_ERROR);
+            } else if ($ends_with_id)
+                trigger_error("Invalid model column: $model_name.\$$column_name. nanoMVC name convention demands that only pointer type columns ends with '_id'!", \E_USER_ERROR);
+            // Reflect the type constructor.
+            $type_reflector = new \ReflectionClass($type_class_name);
+            // The first argument is always the Type name.
+            $column_construct_args = array_merge(array($column_name), $column_construct_args);
+            // Check if correct number of args where passed to constructor.
+            $constr_reflector = new \ReflectionMethod($type_class_name, "__construct");
+            $tot_args = count($column_construct_args);
+            $max_args = $constr_reflector->getNumberOfParameters();
+            $min_args = $constr_reflector->getNumberOfRequiredParameters();
+            if ($tot_args < $min_args || $tot_args > $max_args) {
+                $tot_args--; $max_args--; $min_args--;
+                trigger_error("Invalid model column: $model_name.\$$column_name - You supplied $tot_args arguments and the constructor of '$type_class_name' takes $min_args to $max_args arguments!", \E_USER_ERROR);
+            }
+            // Call the constructor.
+            $type_handler = $type_reflector->newInstanceArgs($column_construct_args);
             foreach ($column_attributes as $key => $attribute) {
                 if (!property_exists(get_class($type_handler), $key))
                     trigger_error("Invalid model column: $model_name.\$$column_name - The type '$type_class_name' does not have an attribute named '$key'.", \E_USER_ERROR);
@@ -373,8 +384,8 @@ abstract class Model implements \Iterator {
         if (!isset($columns_array[$pointer_name]))
             trigger_error("'$pointer_name' is not a column of '$model_name'.", \E_USER_ERROR);
         $column = $columns_array[$pointer_name];
-        if (!is_subclass_of($column, 'nmvc\Reference'))
-            trigger_error("'$model_name.$pointer_name' is not a reference column.", \E_USER_ERROR);
+        if (!is_subclass_of($column, 'nmvc\core\PointerType'))
+            trigger_error("'$model_name.$pointer_name' is not a pointer column.", \E_USER_ERROR);
         return $column->getTargetModel();
     }
 
@@ -702,8 +713,8 @@ abstract class Model implements \Iterator {
     private static function classNameToTableName($class_name) {
         static $cache = array();
         if (!isset($cache[$class_name])) {
-            // Remove nanomvc prefix and Model suffix.
-            $table_name = string\cased_to_underline(substr($class_name, 8, -5));
+            // Remove nmvc prefix and Model suffix.
+            $table_name = string\cased_to_underline(substr($class_name, 5, -5));
             $cache[$class_name] = $table_name;
         }
         return $cache[$class_name];
@@ -716,9 +727,7 @@ abstract class Model implements \Iterator {
      * Designed to be overriden.
      * @return array All invalid fields, name => reason mapped.
      */
-    public function validate() {
-        return array();
-    }
+    public abstract function validate();
 
     private static $_metadata_cache = array();
 
@@ -814,139 +823,5 @@ abstract class Model implements \Iterator {
             db\run("CREATE TABLE " . table('core\seq') . " (id INT PRIMARY KEY NOT NULL)");
             db\run("INSERT INTO " . table('core\seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
         }
-    }
-}
-
-/** A type defines what a model column stores, and how. */
-abstract class Type {
-    /** @var string The key of this type instance. */
-    protected $key = null;
-    /** @var mixed The value of this type instance. */
-    protected $value = null;
-    /** @var Model The parent of this type instance. */
-    public $parent = null;
-    /** @var mixed The original value that was set from SQL. */
-    protected $original_value = null;
-
-    /** Returns the value from the last sync point. */
-    public final function getSyncPoint() {
-        return $this->original_value;
-    }
-
-    /**
-     * Called to indicate that the type was synced so
-     * that it can measure changes made from this point.
-     */
-    public final function setSyncPoint() {
-        $this->original_value = $this->value;
-    }
-
-    /** Returns TRUE if this type has changed since the last syncronization. */
-    public final function hasChanged() {
-        return $this->original_value != $this->value;
-    }
-
-    /** @desc Returns the value of this typed field. */
-    public function get() {
-        return $this->value;
-    }
-    /** Sets the value of this typed field. */
-    public function set($value) {
-        $this->value = $value;
-    }
-
-    /** Constructs this typed field with this initialized parent and value. */
-    public function Type($key, $value) {
-        $this->key = $key;
-        $this->value = $value;
-    }
-
-    /** Returns the data in a SQLized storeable form. */
-    abstract public function getSQLValue();
-
-    public function setSQLValue($value) {
-        $this->value = $value;
-    }
-
-    /** Should return the SQL type that this input is stored in. */
-    abstract public function getSQLType();
-
-    /**
-     * HTML representation of type instance.
-     * Just prints the value by default.
-     */
-    public function __toString() {
-        return escape($this->value);
-    }
-
-    /**
-    * @desc Should return an interface component that handles modification of the data in a form.
-    * @param string $name The HTML name of the component.
-    */
-    abstract public function getInterface($name);
-
-    /**
-     * Reads the component data from POST and possibly sets the value to something different.
-     * If this function returns a string, that will be handled as a field error
-     * that will be merged with whatever the model validate() returns.
-    * @param string $name The HTML name of the component. */
-    abstract public function readInterface($name);
-}
-
-/**
- * Reference handles pointers to other models.
- */
-abstract class Reference extends Type {
-    public $target_model;
-
-    /**
-     * If this is overridden and set to non null,
-     * the type will not have it's target model parsed, but read from this
-     * constant instead. (Eg. "some_module\SomeModel")
-     */
-    const STATIC_TARGET_MODEL = null;
-
-    /** Returns the model target of this Reference. */
-    public final function getTargetModel() {
-        return $this->target_model;
-    }
-
-    /** Constructs this reference to the specified model. */
-    public final function Reference($key, $value, $target_model) {
-        $this->key = $key;
-        $this->value = $value;
-        $this->target_model = $target_model;
-    }
-
-    /** Resolves this reference and returns the model it points to. */
-    public function get() {
-        $id = intval($this->value);
-        if ($id <= 0)
-            return null;
-        $target_model = $this->target_model;
-        $model = $target_model::selectByID($id);
-        if (!is_object($model))
-            $model = null;
-        return $model;
-    }
-
-    public function set($value) {
-        if (is_object($value)) {
-            // Make sure this is a type of model we are pointing to.
-            if (!is_a($value, $this->target_model))
-                trigger_error("Attempted to set a reference to an incorrect object. The reference expects " . $this->target_model . " objects, you gave it a " . get_class($value) . " object.", \E_USER_ERROR);
-            $this->value = intval($value->getID());
-        } else {
-            // Assuming this is an ID.
-            $this->value = intval($value);
-        }
-    }
-
-    public function getSQLType() {
-        return "int";
-    }
-
-    public function getSQLValue() {
-        return intval($this->value);
     }
 }

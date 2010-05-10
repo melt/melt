@@ -7,7 +7,7 @@
  * configuration option.
  */
 
-namespace nanomvc\config {
+namespace nmvc\config {
     /** IF SET: Treats users that set this developer key under /core/setkey as
      * site developers.
      * IF BLANK: Treats all users as site developers. Warning: Site developers
@@ -22,7 +22,7 @@ namespace nanomvc\config {
 
 }
 
-namespace nanomvc\translate\config {
+namespace nmvc\translate\config {
     /** Enables translation. */
     const ENABLE = true;
     /** Sets the table to use for translation. */
@@ -33,7 +33,7 @@ namespace nanomvc\translate\config {
     const TRANSLATION_CAPTURE = false;
 }
 
-namespace nanomvc\db\config {
+namespace nmvc\db\config {
     /** Database host to connect to. */
     const HOST = "localhost";
     /** Connecting to the database with this username. */
@@ -50,7 +50,7 @@ namespace nanomvc\db\config {
     const USE_TRIGGER_SEQUENCING = false;
 }
 
-namespace nanomvc\mail\config {
+namespace nmvc\mail\config {
     /** Optional. The desired name used by nanoMVC to
      * mail FROM when sending e-mail. */
     const FROM_NAME = "";

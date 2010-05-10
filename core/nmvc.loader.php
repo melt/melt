@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\internal;
+<?php namespace nmvc\internal;
 
 /**
  * Returns an array of all availible modules.
@@ -46,7 +44,7 @@ function underline_to_cased($text) {
  */
 function autoload($name) {
     $parts = explode("\\", $name);
-    if ($parts[0] != "nanomvc")
+    if ($parts[0] != "nmvc")
         return false;
     $part_cnt = count($parts);
     if ($part_cnt == 1 || $part_cnt > 3)

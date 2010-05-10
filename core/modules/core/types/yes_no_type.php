@@ -5,7 +5,7 @@ namespace nmvc\core;
 define("STR_YES", __("YES"));
 define("STR_NO", __("NO"));
 
-class YesNoType extends \nmvc\Type {
+class YesNoType extends \nmvc\AppType {
     public $true_str = null;
     public $false_str = null;
 

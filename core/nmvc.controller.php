@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc;
+<?php namespace nmvc;
 
 /**
  * nanoController
@@ -52,7 +50,6 @@ class Controller {
     public static function pathToController($path, $standard_invoke = false) {
         if ($path[0] == "/")
             $path = substr($path, 1);
-        $controller_name = "nanomvc";
         $path_parts = is_array($path)? $path: explode("/", $path);
         // Try to load application controller first, and if
         // that doesn't exist, try to load module controller.
@@ -112,7 +109,8 @@ class Controller {
             return false;
         // Create an instance of the controller and invoke action.
         $controller = new $controller_class_name();
-        static $first_invoke = true;
+        // The code below is depricated by the all controllers extends AppController system.
+        /*static $first_invoke = true;
         if ($first_invoke || $standard_invoke) {
             $first_invoke = false;
             // Enable programmers to leave out the layout specifyer for
@@ -124,7 +122,7 @@ class Controller {
             // header("Content-Type: text/html") by itself.)
             if (!isset($controller->layout) || $controller->layout == "")
                 $controller->layout = '/html/xhtml1.1';
-        }
+        }*/
         if ($standard_invoke) {
             $method_reflector = new \ReflectionMethod($controller_class_name, $action_name);
             $total_req_parameters = $method_reflector->getNumberOfRequiredParameters();

@@ -2,7 +2,7 @@
 
 namespace nmvc\core;
 
-class TimespanType extends \nmvc\Type {
+class TimespanType extends \nmvc\AppType {
     public $title = "";
 
     private function getTokenValue($token) {

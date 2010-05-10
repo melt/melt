@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\internal;
+<?php namespace nmvc\internal;
 
 function assert_failed($file, $line, $message) {
     throw new \Exception('Assertation failed! '.$message);

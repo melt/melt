@@ -2,7 +2,7 @@
 
 namespace nmvc\core;
 
-class PasswordType extends \nmvc\Type {
+class PasswordType extends \nmvc\AppType {
     public function getSQLType() {
         return "text";
     }

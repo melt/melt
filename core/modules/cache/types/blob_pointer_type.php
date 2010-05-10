@@ -8,11 +8,11 @@
  *
  * Be sure to understand how it works before you use it.
  */
-abstract class BlobPointerType extends \nmvc\Reference {
+abstract class BlobPointerType extends PointerType {
     // Always points to a blob model.
     const STATIC_TARGET_MODEL = 'cache\blob';
     
-    /* Overloads get/set. This reference should not be operated on directly.
+    /* Overloads get/set. This pointer should not be operated on directly.
      * Operating directly on this type would allow a non injective blob pointer
      * setup which might be useful but would require garbage collection. */
     public function set($value) { }

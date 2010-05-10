@@ -3,9 +3,9 @@
 namespace nmvc\core;
 
 /**
- * SelectType, the only built-in reference type.
+ * SelectType, the only built-in pointer type.
  */
-class SelectModelType extends \nmvc\Reference {
+class SelectModelType extends PointerType {
     /** @var Where condition to filter targets. */
     public $where = "";
     /** @var Column in target to use for labeling objects. */

@@ -78,7 +78,7 @@ function request($url, $method = api_http::HTTP_METHOD_GET, $cookies = array(), 
     $headers = array();
     // Write user agent.
     if ($user_agent === null)
-        $user_agent = "nanoMVC/" . nmvc_version;
+        $user_agent = "nmvc/" . nmvc_version;
     $headers["User-Agent"] = $user_agent;
     // Include common client headers if requested.
     if ($include_common_headers) {

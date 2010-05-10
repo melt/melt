@@ -2,7 +2,7 @@
 
 namespace nmvc\core;
 
-class TimestampType extends \nmvc\Type {
+class TimestampType extends \nmvc\AppType {
     public $only_date = "false";
     public $title = "";
 

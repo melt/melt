@@ -2,7 +2,7 @@
 
 namespace nmvc\core;
 
-class IntegerType extends \nmvc\Type {
+class IntegerType extends \nmvc\AppType {
     public function getSQLType() {
         return "int";
     }
