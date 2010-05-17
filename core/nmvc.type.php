@@ -62,15 +62,16 @@ abstract class Type {
     }
 
     /**
-    * @desc Should return an interface component that handles modification of the data in a form.
-    * @param string $name The HTML name of the component.
-    */
+     * @desc Should return an interface component that handles modification of the data in a form.
+     * @param string $name The HTML name/id of the component.
+     */
     abstract public function getInterface($name);
 
     /**
      * Reads the component data from POST and possibly sets the value to something different.
      * If this function returns a string, that will be handled as a field error
      * that will be merged with whatever the model validate() returns.
-    * @param string $name The HTML name of the component. */
+     * @param string $name The HTML name of the component.
+     */
     abstract public function readInterface($name);
 }

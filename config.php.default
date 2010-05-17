@@ -48,6 +48,10 @@ namespace nmvc\db\config {
      * software to insert rows without corrupting tables with duplicate ids.
      * However, it requires special TRIGGER permissions. */
     const USE_TRIGGER_SEQUENCING = false;
+    /** Enable this to log the queries made and the time they take to
+     * complete. This is logged to db_debug_query_benchmark.log in you
+     * application directory. */
+    const DEBUG_QUERY_BENCHMARK = false;
 }
 
 namespace nmvc\mail\config {

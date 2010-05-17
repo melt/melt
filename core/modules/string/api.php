@@ -2,6 +2,21 @@
 
 namespace nmvc\string;
 
+/** Returns a string from a numeric index. Eg 0 = a, 1 = b... */
+function from_index($index) {
+    // Optimization.
+    if ($index <= 0)
+        return 'A';
+    $out = "";
+    $index = intval($index);
+    while (true) {
+        $char_index = $index % 26;
+        $out .= chr(0x41 + $char_index);
+        $index = ($index - $char_index - 1) / 26;
+        if ($index < 0)
+            return $out;
+    }
+}
 
 /** Returns a random alpha-numeric string. */
 function random_alphanum_str($length = 16, $case_sensitive = true) {

@@ -13,7 +13,7 @@ class BytesType extends \nmvc\AppType {
 
     public function getInterface($name) {
         $value = escape($this->value . " B");
-        return "<input type=\"text\" name=\"$name\" value=\"$value\" />";
+        return "<input type=\"text\" name=\"$name\" id=\"$name\" value=\"$value\" />";
     }
 
     public function addBytes($bytes) {

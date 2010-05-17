@@ -20,7 +20,7 @@ class TimestampType extends \nmvc\AppType {
         $stamp = ($this->value != 0)? (string) $this: $date_syntax_helper;
         if (!$dateonly && $this->value == 0)
             $stamp .= $time_syntax_helper;
-        return "<input$title type=\"text\" name=\"$name\" value=\"$stamp\" />"
+        return "<input$title type=\"text\" name=\"$name\" id=\"$name\" value=\"$stamp\" />"
             . "<br /><span style=\"font-size: 9px;\">" . __('Timestamp Format')
             . ": " . $date_syntax_helper . ($dateonly? "": $time_syntax_helper) . "</span>";
     }

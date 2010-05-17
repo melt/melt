@@ -8,8 +8,8 @@ class SelectType extends \nmvc\AppType {
     public $options = array();
 
     public function getInterface($name) {
-        $html = "<select name=\"$name\">";
-        $nothing = __("Nothing Selected");
+        $html = "<select name=\"$name\" id=\"$name\">";
+        $nothing = __("—");
         //$html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
         $selected = ' selected="selected"';
         foreach ($this->options as $option_key => $option_val) {

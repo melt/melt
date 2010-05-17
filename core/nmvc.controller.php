@@ -72,7 +72,7 @@ abstract class Controller {
      * otherwise an unsplit string path.
      * @param boolean $standard_invoke When set to true
      * controllers, actions or modules with a starting "_" is ignored.
-     * @returns mixed FALSE if path not found, otherwise array(controller_class_name, action_name, arguments)
+     * @returns mixed FALSE if path not found, otherwise array(controller_class_name, controller_name, action_name, arguments)
      */
     public static function pathToController($path, $standard_invoke = false) {
         if ($path[0] == "/")
@@ -119,7 +119,7 @@ abstract class Controller {
      * otherwise an unsplit string path.
      * @param boolean $standard_invoke When set to true behaviour will change:
      * - controllers, actions or modules with a starting "_" is ignored,
-     * - the default XHTML layout is used for non set layouts.
+     * - controller defined layout not ignored,
      * - passing incorrect number of argument will safely return false.
      * @returns boolean FALSE if path not found, otherwise TRUE.
      */
@@ -173,6 +173,9 @@ abstract class Controller {
             }
         }
         $controller->beforeRender();
+        // Non standard invokes ignore layouts.
+        if (!$standard_invoke)
+            $controller->layout = null;
         // NULL = Display default view if it exists,
         // FALSE = Display nothing,
         // STRING = Force display of this view or crash,

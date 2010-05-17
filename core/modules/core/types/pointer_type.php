@@ -9,6 +9,11 @@ abstract class PointerType extends \nmvc\AppType {
         return $this->target_model;
     }
 
+    public function __toString() {
+        $target = $this->get();
+        return ($target !== null)? (string) $target: "—";
+    }
+
     /** Constructs this typed field with this column name. */
     public function __construct($column_name, $target_model) {
         $this->key = $column_name;
@@ -16,6 +21,11 @@ abstract class PointerType extends \nmvc\AppType {
         if (!class_exists($target_model) || !is_subclass_of($target_model, 'nmvc\Model'))
             trigger_error("Attempted to declare a pointer pointing to a non existing model '$target_model'.");
         $this->target_model = $target_model;
+    }
+
+    /** Resolves this pointer by ID. */
+    public function getID() {
+        return intval($this->value);;
     }
 
     /** Resolves this pointer and returns the model it points to. */

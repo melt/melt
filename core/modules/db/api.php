@@ -114,7 +114,15 @@ function run($query) {
         if (ob_get_length() > 0)
             ob_flush();
     }
-    return mysql_query($query);
+    if (!config\DEBUG_QUERY_BENCHMARK)
+        return mysql_query($query);
+    // Benchmark query and log.
+    file_put_contents(APP_DIR . "/db_debug_query_benchmark.log", date("r") . ": $query\n", FILE_APPEND);
+    $time_start = microtime(true);
+    $ret = mysql_query($query);
+    $total = microtime(true) - $time_start;
+    file_put_contents(APP_DIR . "/db_debug_query_benchmark.log",  "^-" . round($total * 1000, 1) . " ms\n\n", FILE_APPEND);
+    return $ret;
 }
 
 /** Returns the number of affected rows in the last query. */
@@ -147,7 +155,7 @@ function data_seek($result, $n) {
 * @return The next row in result as a numeric array, or FALSE if there are no more rows.
 */
 function next_array($result) {
-    return mysql_fetch_array($result);
+    return mysql_fetch_array($result, MYSQL_NUM);
 }
 
 /**

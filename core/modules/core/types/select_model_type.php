@@ -22,8 +22,8 @@ class SelectModelType extends PointerType {
 
     public function getInterface($name) {
         $value = intval($this->value);
-        $html = "<select name=\"$name\">";
-        $nothing = __("Nothing Selected");
+        $html = "<select name=\"$name\" id=\"$name\">";
+        $nothing = __("—");
         $html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
         $results = forward_static_call(array($this->target_model, 'selectWhere'), $this->where);
         $selected = ' selected="selected"';

@@ -35,7 +35,7 @@ class TimespanType extends \nmvc\AppType {
         $span = ($this->value != 0)? (string) $this: $date_syntax_helper;
         if (!$dateonly)
             $stamp .= $time_syntax_helper;
-        return "<input$title type=\"text\" name=\"$name\" value=\"$span\" />"
+        return "<input$title type=\"text\" name=\"$name\" id=\"$name\" value=\"$span\" />"
             . "<br /><span style=\"font-size: 9px;\">" . __("Time interval, example: 9 days, 5 hours and 3 minutes.") . "</span>";
     }
     public function readInterface($name) {

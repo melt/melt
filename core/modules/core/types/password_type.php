@@ -13,7 +13,7 @@ class PasswordType extends \nmvc\AppType {
 
     public function getInterface($name) {
         $value = api_html::escape($this->value);
-        return "<input type=\"password\" name=\"$name\" value=\"$value\" />";
+        return "<input type=\"password\" name=\"$name\" id=\"$name\" value=\"$value\" />";
     }
 
     public function readInterface($name) {

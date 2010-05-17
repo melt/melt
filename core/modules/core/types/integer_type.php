@@ -13,7 +13,7 @@ class IntegerType extends \nmvc\AppType {
 
     public function getInterface($name) {
         $value = intval($this->value);
-        return "<input type=\"text\" name=\"$name\" value=\"$value\" />";
+        return "<input type=\"text\" name=\"$name\" id=\"$name\" value=\"$value\" />";
     }
 
     public function readInterface($name) {

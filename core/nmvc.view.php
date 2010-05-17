@@ -18,7 +18,7 @@ final class View {
     // Transparent access to invoking controller.
     public function __call($name,  $arguments) {
         if (!method_exists($this->_controller, $name)) {
-            trigger_error("The function " . get_class($name) . "->$name() does not exist!", \E_USER_WARNING);
+            trigger_error("The function " . get_class($this->_controller) . "->$name() does not exist!", \E_USER_WARNING);
             return null;
         }
         return call_user_func_array(array($this->_controller, $name), $arguments);
@@ -42,7 +42,7 @@ final class View {
     }
 
     public function __isset ($name) {
-        return property_exists($this->_controller, $name);
+        return isset($this->_controller->$name);
     }
 
     public function __unset ($name) {
@@ -180,7 +180,7 @@ final class View {
             $controller = $controller_data;
         }
         if ((!is_object($controller->layout) && !class_exists($controller->layout))
-        || !is_subclass_of($controller->layout, "nmvc\Layout")) {
+        || !is($controller->layout, "nmvc\Layout")) {
             // Layout not initialized yet.
             $layout_path = $controller->layout;
             if ($final)

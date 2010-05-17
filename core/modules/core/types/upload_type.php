@@ -54,11 +54,11 @@ class UploadType extends cache\BlobPointerType {
             $remname = $name."_rem";
             $status = "<br /><a target=\"_blank\" href=\"$file_url\">" . __("Download current file.") . "</a>"
                 . "<br /><input title=\""
-                . __("Check this box to remove the file.") . "\" type=\"checkbox\" name=\"$remname\" value=\"delete\" /> "
+                . __("Check this box to remove the file.") . "\" type=\"checkbox\" name=\"$remname\" id=\"$remname\" value=\"delete\" /> "
                 . __("Remove existing file.") . "<br /><br />" . __("Replace file:");
         } else
             $status = '<br />' . __('No uploaded image. Upload new one:');
-        return $status."<br /><input type=\"file\" name=\"$name\" />";
+        return $status."<br /><input type=\"file\" name=\"$name\" id=\"$name\" />";
     }
 
     public function view() {

@@ -90,7 +90,7 @@ function exception_handler(\Exception $exception) {
 
 function error_handler($errno, $errstr, $errfile, $errline) {
     if ($errno == E_USER_ERROR) {
-        $e = new \Exception("Error of level USER_LEVEL caught: ".$errstr, $errno);
+        $e = new \Exception("E_USER_ERROR caught: ".$errstr, $errno);
         exception_handler($e);
         exit;
     }

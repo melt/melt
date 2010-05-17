@@ -71,8 +71,9 @@ abstract class Model implements \Iterator {
     /** Override this function to initialize members of this model. */
     public abstract function initialize();
 
-    /** Returns a parsed column array for a model. */
-    private static function getParsedColumnArray($model_name) {
+    /** Returns a parsed column array for this model. */
+    private static function getParsedColumnArray() {
+        $model_name = get_called_class();
         static $parsed_model_cache = array();
         if (isset($parsed_model_cache[$model_name]))
             return $parsed_model_cache[$model_name];
@@ -139,14 +140,14 @@ abstract class Model implements \Iterator {
         $parsed_model_cache[$model_name] = $parsed_col_array;
         return $parsed_col_array;
     }
-
+    
     /**
     * @desc Translates the field specifiers to type handler instances.
     */
     protected final function __construct($id) {
         $this->accessing();
         // Copies all columns into this model.
-        $this->_cols = self::getParsedColumnArray(get_class($this));
+        $this->_cols = static::getParsedColumnArray();
         foreach ($this->_cols as $column_name => &$type_instance) {
             // Assignment overload.
             unset($this->$column_name);
@@ -161,50 +162,96 @@ abstract class Model implements \Iterator {
             $type_instance->setSyncPoint();
     }
 
+
+    private function doSubResolve(&$name) {
+        if (false !== $pos = strpos($name, "->")) {
+            $subresolve = substr($name, $pos + 2);
+            $name = substr($name, 0, $pos);
+            return $subresolve;
+        } else
+            return null;
+    }
+    
     /** Helper function to get the actual type handler of a column. */
     public function type($name) {
+        $subresolve = self::doSubResolve($name);
         if (!isset($this->_cols[$name])) {
             trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_ERROR);
             return;
         }
-        return $this->_cols[$name];
+        if ($subresolve === null)
+            return $this->_cols[$name];
+        else {
+            $model_instance = $this->__get($name);
+            if ($model_instance === null)
+                return null;
+            if (!is_object($model_instance) || !is_subclass_of($model_instance, 'nmvc\Model'))
+                trigger_error("Trying to resolve non pointer column (to get type)!", \E_ERROR);
+            else
+                return $model_instance->type($subresolve);
+        }
     }
 
     /** Helper function to view a column. */
     public function view($name) {
+        $subresolve = self::doSubResolve($name);
         if (!isset($this->_cols[$name])) {
             trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_ERROR);
-            return;
+            return null;
         }
-        return (string) $this->_cols[$name];
+        if ($subresolve === null)
+            return (string) $this->_cols[$name];
+        else {
+            $model_instance = $this->__get($name);
+            if ($model_instance === null)
+                return null;
+            if (!is_object($model_instance) || !is_subclass_of($model_instance, 'nmvc\Model'))
+                trigger_error("Trying to resolve non pointer column (to view column)!", \E_ERROR);
+            else
+                return $model_instance->view($subresolve);
+        }
     }
 
     /** Assignment overloading. Returns value. */
     public function __get($name) {
+        $subresolve = self::doSubResolve($name);
         if (!isset($this->_cols[$name])) {
             trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_NOTICE);
             return;
         }
-        return $this->_cols[$name]->get();
+        $ret = $this->_cols[$name]->get();
+        if ($subresolve !== null)
+            $ret = $name->$subresolve;
+        return $ret;
     }
 
     /** Assignment overloading. Sets value. */
     public function __set($name,  $value) {
+        $subresolve = self::doSubResolve($name);
         if (!isset($this->_cols[$name])) {
             trigger_error("Trying to write to non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_NOTICE);
             return;
         }
-        if (is_a($value, '\nmvc\Type'))
-            // Transfer value automagically.
-            $this->_cols[$name]->set($value->get());
-        else
-            // Just set value.
-            $this->_cols[$name]->set($value);
+        if ($subresolve === null) {
+            if (is_a($value, '\nmvc\Type'))
+                // Transfer value automagically.
+                $this->_cols[$name]->set($value->get());
+            else
+                // Just set value.
+                $this->_cols[$name]->set($value);
+        } else {
+            // Set the value of subresolve.
+            $get = $this->_cols[$name]->get()->$subresolve = $value;
+        }
     }
 
     /** Overloading isset due to assignment overloading. */
     public function __isset($name) {
-        return isset($this->_cols[$name]);
+        $subresolve = self::doSubResolve($name);
+        if ($subresolve === null)
+            return isset($this->_cols[$name]);
+        else
+            return isset($this->_cols[$name]->get()->$subresolve);
     }
 
     /** Allows quickly creating model copies. */
@@ -218,46 +265,38 @@ abstract class Model implements \Iterator {
         }
     }
 
-    /** Describing the model as a string.
-     * The default implementation is pretty poor. */
-    public function __toString() {
-        return get_class($this) . " #" . $this->getID();
-    }
-
     /** Allows foreach iteration on models. */
     public function rewind() {
-        reset($this->_cols);
+        return reset($this->_cols);
     }
 
     public function current() {
-        current($this->_cols);
+        return current($this->_cols);
     }
 
     public function key() {
-        key($this->_cols);
+        return key($this->_cols);
     }
 
     public function next() {
-        next($this->_cols);
+        return next($this->_cols);
     }
 
     public function valid() {
-        current($this->_cols) !== false;
+        return current($this->_cols) !== false;
     }
 
     /**
-    * @desc Returns a list of the column names.
-    * @desc Note: Does not return the implicit ID column.
-    * @return Array An array of the column names in the specified model.
-    */
+     * Returns a list of the column names.
+     * Note: Does not return the implicit ID column.
+     * @return array An array of the column names in the specified model.
+     */
     public static final function getColumnNames() {
         $name = get_called_class();
         static $columns_name_cache = array();
         if (isset($columns_name_cache[$name]))
             return $columns_name_cache[$name];
         $columns = array();
-        if (!class_exists($name) || !is_subclass_of($name, 'nmvc\Model'))
-            trigger_error("'$name' is not a valid Model!", \E_USER_ERROR);
         foreach (get_class_vars($name) as $colname => $def)
             if ($colname[0] != '_')
                 $columns[$colname] = $colname;
@@ -265,8 +304,8 @@ abstract class Model implements \Iterator {
     }
 
     /**
-     * @desc Returns a list of the columns in this model for dynamic iteration.
-     * @return Array An array of the columns in this model.
+     * Returns a list of the columns in this model for dynamic iteration.
+     * @return array An array of the columns in this model.
      */
     public final function getColumns() {
         return $this->_cols;
@@ -292,10 +331,13 @@ abstract class Model implements \Iterator {
         if ($this->_id > 0) {
             // Updating existing row.
             $this->beforeStore(true);
-            db\query($this->getUpdateSQL());
+            $query = $this->getUpdateSQL();
+            // No query if nothing changed.
+            if ($query !== null)
+                db\query($query);
             $this->afterStore(true);
         } else {
-            // Inserting.
+            // Inserting (linking) new row.
             $this->beforeStore(false);
             db\query($this->getInsertSQL());
             if (db\config\USE_TRIGGER_SEQUENCING) {
@@ -377,10 +419,11 @@ abstract class Model implements \Iterator {
 
     /**
      * Returns the target model class name of a pointer in this model.
+     * @return string
      */
-    public final static function getTargetModel($pointer_name) {
+    public static function getTargetModel($pointer_name) {
         $model_name = get_called_class();
-        $columns_array = self::getParsedColumnArray($model_name);
+        $columns_array = static::getParsedColumnArray();
         if (!isset($columns_array[$pointer_name]))
             trigger_error("'$pointer_name' is not a column of '$model_name'.", \E_USER_ERROR);
         $column = $columns_array[$pointer_name];
@@ -389,12 +432,31 @@ abstract class Model implements \Iterator {
         return $column->getTargetModel();
     }
 
+    /**
+     * Returns an associative array of column pointer field names and the model
+     * class names they point to.
+     * @return array
+     */
+    public static function getPointerColumns() {
+        $self = get_called_class();
+        static $cache = array();
+        if (isset($cache[$self]))
+            return $cache[$self];
+        $ret = array();
+        foreach (static::getParsedColumnArray() as $col_name => $column) {
+            if (substr($col_name, -3) != "_id")
+                continue;
+            $ret[$col_name] = $column->getTargetModel();
+        }
+        return $cache[$self] = $ret;
+    }
+
     private function getInsertSQL() {
         $name = get_class($this);
         $table_name = self::classNameToTableName($name);
         static $key_list_cache = array();
         if (!isset($key_list_cache[$table_name])) {
-            $key_list = implode(',', $name::getColumnNames());
+            $key_list = implode(',', $this->getColumnNames());
             $key_list_cache[$table_name] = $key_list;
         } else
             $key_list = $key_list_cache[$table_name];
@@ -405,7 +467,7 @@ abstract class Model implements \Iterator {
         }
         $value_list = implode(',', $value_list);
         if (!db\config\USE_TRIGGER_SEQUENCING) {
-            db\run("UPDATE " . table('core\seq') . " SET id = LAST_INSERT_ID(id+1)");
+            db\run("UPDATE " . table('core\seq') . " SET id = LAST_INSERT_ID(id + 1)");
             $id = "LAST_INSERT_ID()";
         } else {
             $id = 0;
@@ -417,18 +479,22 @@ abstract class Model implements \Iterator {
         $table_name = self::classNameToTableName(get_class($this));
         $value_list = array();
         foreach ($this->getColumns() as $colname => $column) {
+            if (!$column->hasChanged())
+                continue;
             $value_list[] = "`$colname`=" . $column->getSQLValue();
             $column->setSyncPoint();
         }
+        if (count($value_list) == 0)
+            return null;
         $value_list = implode(',', $value_list);
         $id = intval($this->_id);
-        return "UPDATE " . table($table_name) . " SET $value_list WHERE id=$id";
+        return "UPDATE " . table($table_name) . " SET $value_list WHERE id = $id";
     }
 
     /**
-    * @desc This function sets this model instance to the stored ID specified.
-    * @return Model The model with the ID specified or NULL.
-    */
+     * This function sets this model instance to the stored ID specified.
+     * @return Model The model with the ID specified or NULL.
+     */
     public static function selectByID($id) {
         $id = intval($id);
         if ($id <= 0)
@@ -440,47 +506,34 @@ abstract class Model implements \Iterator {
         if (!isset($family_tree[$base_name]))
             trigger_error("Model '$base_name' is out of sync with database.", \E_USER_ERROR);
         foreach ($family_tree[$base_name] as $table_name) {
-            $model_name = self::tableNameToClassName($table_name);
-            $model = self::touchModelInstance($model_name, $id);
+            $model_class_name = self::tableNameToClassName($table_name);
+            $model = $model_class_name::instanceFromData($id);
             if ($model !== null)
                 return $model;
-            $res = db\query("SELECT * FROM " . table($table_name) . " WHERE id = ".$id);
-            if (db\get_num_rows($res) == 1) {
-                $sql_row = db\next_assoc($res);
-                return self::touchModelInstance($model_name, $id, $sql_row);
-            }
+            $return_data = $model_class_name::findDataForSelf($model_class_name::getColumnNames(), "WHERE id = $id");
+            if (count($return_data) > 0)
+                return $model_class_name::instanceFromData($id, reset($return_data));
         }
         return null;
     }
 
     /**
-     * Creates an array of model instances from a given sql result.
-     * @param array $out_array Array to append results too.
+     * Passing all sql result model instancing through this function to enable caching.
+     * @param Mixed $data_row Either a data result or null if function should
+     * return null instead of instancing model (probing cache).
      */
-    private static function makeArrayOf($model_class_name, $sql_result, &$out_array) {
-        $length = db\get_num_rows($sql_result);
-        if ($length == 0)
-            return array();
-        for ($at = 0; $at < $length; $at++) {
-            $sql_row = db\next_assoc($sql_result);
-            $id = $sql_row['id'];
-            $out_array[$id] = self::touchModelInstance($model_class_name, $id, $sql_row);
-        }
-    }
-
-    /**
-    * @desc Passing all sql result model instancing through this function to enable caching.
-    * @param Mixed $sql_row Either a sql row result or null if function should return null instead of instancing model.
-    */
-    private static function touchModelInstance($model_class_name, $id, $sql_row = null) {
+    private static function instanceFromData($id, $data_row = null) {
         if (isset(self::$_instance_cache[$id]))
             return self::$_instance_cache[$id];
-        if ($sql_row === null)
+        if ($data_row === null)
             return null;
+        $model_class_name = get_called_class();
         $model = new $model_class_name($id);
-        foreach ($model->getColumns() as $colname => $column) {
-            $column->setSQLValue($sql_row[strtolower($colname)]);
+        $value = reset($data_row);
+        foreach ($model->getColumns() as $column) {
+            $column->setSQLValue($value);
             $column->setSyncPoint();
+            $value = next($data_row);
         }
         return self::$_instance_cache[$id] = $model;
     }
@@ -511,14 +564,17 @@ abstract class Model implements \Iterator {
     }
 
     /**
-    * @desc Returns the number of children of the specified child model. (Instances that point to this instance.)
-    *       Will throw an exception if the specified child model does not point to this model.
-    * @desc For security reasons, use db\strfy() to escape and quote
-    *       any strings you want to build your sql query from.
-    * @param String $chold_model Name of the child model that points to this model.
-    * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
-    * @return Integer Count of child models.
-    */
+     * Returns the number of children of the specified child model.
+     * (Instances that point to this instance.)
+     * Will throw an exception if the specified child model does not point
+     * to this model. For security reasons, use db\strfy() to escape and quote
+     * any strings you want to build your sql query from.
+     * @param string $chold_model Name of the child model that points
+     * to this model.
+     * @param string $where (WHERE xyz) If specified, any number of where
+     * conditionals to filter out rows.
+     * @return integer Count of child models.
+     */
     public final function countChildren($child_model, $where = "") {
         $ptr_fields = $this->getChildPointers($child_model);
         $id = $this->getID();
@@ -526,7 +582,7 @@ abstract class Model implements \Iterator {
         if (strlen($where) > 0)
             $where = " AND $where";
         $where = "(" . implode(" = $id OR ", $ptr_fields) . " = $id)" . $where;
-        return call_user_func(array($child_model, "count"), $where);
+        return $child_model::count($where);
     }
 
     /** Returns the name of the child pointer fields. */
@@ -544,14 +600,17 @@ abstract class Model implements \Iterator {
     }
 
     /**
-    * @desc This function selects the first model instance that matches the specified $where clause.
-    * @desc If there are no match, it returns NULL.
-    * @desc For security reasons, use db\strfy() to escape and quote
-    * @desc any strings you want to build your sql query from.
-    * @param String $where (WHERE xyz) If specified, any ammount of conditionals to filter out the row.
-    * @param String $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
-    * @desc Model The model instance that matches or NULL if there are no match.
-    */
+     * This function selects the first model instance that matches the specified
+     * $where clause. If there are no match, it returns NULL.
+     * For security reasons, use db\strfy() to escape and quote
+     * @desc any strings you want to build your sql query from.
+     * @param string $where (WHERE xyz) If specified, any ammount of
+     * conditionals to filter out the row.
+     * @param string $order (ORDER BY xyz) Specify this to get the results in
+     * a certain order, like 'description ASC'.
+     * @return Model The model instance that matches or NULL if there
+     * are no match.
+     */
     public static function selectFirst($where, $order = "") {
         $match = self::selectWhere($where, 0, 1, $order);
         if (count($match) == 0)
@@ -561,15 +620,15 @@ abstract class Model implements \Iterator {
     }
 
     /**
-    * @desc This function returns an array of model instances that is selected by the given SQL arguments.
-    * @desc For security reasons, use db\strfy() to escape and quote
-    * @desc any strings you want to build your sql query from.
-    * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
-    * @param Integer $offset (OFFSET xyz) The offset from the begining to select results from.
-    * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
-    * @param String $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
-    * @desc Array An array of the selected model instances.
-    */
+     * This function returns an array of model instances that is selected by the given SQL arguments.
+     * For security reasons, use db\strfy() to escape and quote
+     * any strings you want to build your sql query from.
+     * @param string $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
+     * @param integer $offset (OFFSET xyz) The offset from the begining to select results from.
+     * @param integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
+     * @param string $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
+     * @return array An array of the selected model instances.
+     */
     public static function selectWhere($where = "", $offset = 0, $limit = 0, $order = "") {
         $offset = intval($offset);
         $limit = intval($limit);
@@ -582,8 +641,9 @@ abstract class Model implements \Iterator {
         else $limit = "";
         if ($order != "")
             $order = " ORDER BY " . $order;
-        return self::selectFreely($where . $order . $limit);
+        return static::selectFreely($where . $order . $limit);
     }
+
 
     /**
      * This function returns an array of model instances that matches the
@@ -601,15 +661,221 @@ abstract class Model implements \Iterator {
         if (!isset($family_tree[$name]))
             trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
         foreach ($family_tree[$name] as $table_name) {
-            $sql_result = db\query("SELECT * FROM " . table($table_name) . " " . $sql_select_param);
-            self::makeArrayOf(self::tableNameToClassName($table_name), $sql_result, $out_array);
+            $model_class_name = self::tableNameToClassName($table_name);
+            $result_array = $model_class_name::findDataForSelf($model_class_name::getColumnNames(), $sql_select_param);
+            foreach ($result_array as $id => $result_row)
+                $out_array[$id] = $model_class_name::instanceFromData($id, $result_row);
         }
         return $out_array;
     }
 
     /**
-    * @desc This function unlinks the model instance with the given ID.
-    */
+     * Finding data. Compiles the data in an index based array matrix instead
+     * of instancing for performance. Use -> referencing in column selection
+     * or match conditions.
+     * @param string $where Filter conditions to match columns with.
+     * @param integer $offset Offset of data to start selecting from.
+     * @param integer $limit Limit of data rows to select.
+     * @param string $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
+     * @return array An matrix of returned data.
+     */
+    public static function findData($columns_to_select, $where = "", $offset = 0, $limit = 0, $order = "") {
+                // Compile and transform filter query.
+        if ($where != "")
+            $where = " WHERE " . $where;
+        if ($order != "")
+            $order = " ORDER BY " . $order;
+        $filter_query = $where . $order;
+        // Compile limit query.
+        $offset = intval($offset);
+        $limit = intval($limit);
+        if ($limit != 0)
+            $limit_query = " LIMIT " . $offset . "," . $limit;
+        else if ($offset != 0)
+            $limit_query = " OFFSET " . $offset;
+        else
+            $limit = "";
+        return static::findDataFreely($columns_to_select, $filter_query . " " . $limit_query);
+    }
+
+    /**
+     * Finding data. Compiles the data in an index based array matrix instead
+     * of instancing for performance. Use -> referencing in column selection
+     * or match conditions.
+     * @param array $columns_to_select Columns to return in result.
+     * @param string $sql_select_params mySQL select parameters.
+     * @return array An matrix of returned data.
+     */
+    public static function findDataFreely($columns_to_select, $sql_select_params) {
+        // Select for all child tables.
+        $name = get_called_class();
+        $family_tree = self::getMetaData("family_tree");
+        if (!isset($family_tree[$name]))
+            trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
+        $return_data = array();
+        foreach ($family_tree[$name] as $table_name) {
+            $model_class_name = self::tableNameToClassName($table_name);
+            $result_array = $model_class_name::findDataForSelf($columns_to_select, $sql_select_params);
+            $return_data = array_merge($return_data, $result_array);
+        }
+        return $return_data;
+    }
+
+    /**
+     * Registers a semantic pointer and returns the data array for it.
+     * @return array
+     */
+    private static function registerSemanticColumn($column_name, &$columns_data) {
+        if (isset($columns_data[$column_name]))
+            return $columns_data[$column_name];
+        $base_model_alias = string\from_index(0);
+        if (false === strpos($column_name, "->")) {
+            $col_sql_ref = $base_model_alias . '.' . $column_name;
+            $columns_data[$column_name] = array($col_sql_ref, null, null, null);
+            return $columns_data[$column_name];
+        }
+        $ref_columns = explode("->", $column_name);
+        $parent_class = get_called_class();
+        $parent_alias = $base_model_alias;
+        $parent_pointer_column = $ref_columns[0];
+        $parent_pointer = $cur_pointer = $ref_columns[0];
+        // (col_sql_ref, target_model, table_join_alias, left_join).
+        reset($ref_columns);
+        while (false !== $ref_column = next($ref_columns)) {
+            if (!isset($columns_data[$parent_pointer][1])) {
+                $cur_target_model = $columns_data[$parent_pointer][1] = $parent_class::getTargetModel($parent_pointer_column);
+                $cur_alias = $columns_data[$parent_pointer][2] = string\from_index(count($columns_data));
+                $target_table = self::classNameToTableName($cur_target_model);
+                $columns_data[$parent_pointer][3] = "LEFT JOIN " . table($target_table) . " AS $cur_alias ON $cur_alias.id = $parent_alias.$parent_pointer_column";
+            } else {
+                $cur_target_model = $columns_data[$parent_pointer][1];
+                $cur_alias = $columns_data[$parent_pointer][2];
+            }
+            $cur_pointer .= "->" . $ref_column;
+            if (!isset($columns_data[$cur_pointer])) {
+                $col_sql_ref = $cur_alias . '.' . $ref_column;
+                $columns_data[$cur_pointer] = array($col_sql_ref, null, null, null);
+            }
+            $parent_class = $cur_target_model;
+            $parent_alias = $cur_alias;
+            $parent_pointer_column = $ref_column;
+            $parent_pointer = $ref_column;
+        }
+        return $columns_data[$column_name];
+    }
+
+    /**
+     * Transforms any semantic columns in the query to raw SQL references.
+     * @return string
+     */
+    private static function transformSemanticColumnQuery($query, &$columns_data) {
+        // If query doesn't contain any dollars, there's no semantic column pointers.
+        if (false === strpos($query, '$'))
+            return $query;
+        // Tokenize query, break out column pointers.
+        $string_extracting_pattern = <<<EOP
+#([^"']+)|("(\\.|[^"])*"|'(\\.|[^'])*')#
+EOP;
+        $column_extract_pattern = <<<EOP
+#(\\$[a-zA-Z][a-zA-Z0-9_>-]*)|([^\\$]+)|\\$#
+EOP;
+        preg_match_all($string_extracting_pattern, $query, $matches, PREG_SET_ORDER);
+        $translated_query = '';
+        foreach ($matches as $match) {
+            $other_blob = $match[1];
+            if (strlen($other_blob) == 0) {
+                // Just pass string blobs on.
+                $string_blob = $match[2];
+                $translated_query .= $string_blob;
+                continue;
+            }
+            preg_match_all($column_extract_pattern, $other_blob, $tokens, PREG_SET_ORDER);
+            foreach ($tokens as $token) {
+                $other_token = $token[2];
+                if (strlen($other_token) > 0) {
+                    // Just pass non-semantic column reference tokens on.
+                    $translated_query .= $other_token;
+                    continue;
+                }
+                // Replace the semantic column reference with a sql reference.
+                $col_token = $token[1];
+                $column_name = substr($col_token, 1);
+                $column_data = static::registerSemanticColumn($column_name, $columns_data);
+                $translated_query .= $column_data[0];
+            }
+        }
+        return $translated_query;
+    }
+
+    /**
+     * Finding data just for the model it was called on. (Used internally.)
+     * Compiles the data in an index based array matrix instead
+     * of instancing for performance. Use -> referencing in column selection
+     * or match conditions.
+     * @param array $columns_to_select Columns to return in result.
+     * @param string $sql_select_params mySQL select parameters.
+     * @param bool $supress_id Set to true to supress the ID column and not return any ID in result.
+     * @return array An matrix of returned data.
+     */
+    protected static function findDataForSelf($columns_to_select, $sql_select_params, $supress_id = false) {
+        // SELECT a.per_module, a.peak, b.shortcode, c.name FROM `consumption` AS a LEFT JOIN `media` AS b ON b.id = a.media_id
+        $alias_offset = 1;
+        // Contains pointers mapped to (col_sql_ref, target_model, table_join_alias, left_join).
+        $columns_data = array();
+        // Register all semantic columns.
+        $sql_select_columns = ($supress_id? "": string\from_index(0) . ".id,") . implode(", ", $columns_to_select);
+        $sql_select_columns = static::transformSemanticColumnQuery($sql_select_columns, $columns_data);
+        // Transform any semantic column references to hard SQL ones.
+        $sql_select_params = static::transformSemanticColumnQuery($sql_select_params, $columns_data);
+        // Compile left joins.
+        $left_joins = array();
+        foreach ($columns_data as $column_data) {
+            $left_join = $column_data[3];
+            if ($left_join != null)
+                $left_joins[] = $left_join;
+        }
+        $left_joins = implode(" ", $left_joins);
+        // Comple the rest of the query.
+        $main_table = table(self::classNameToTableName(get_called_class()));
+        $main_alias = string\from_index(0);
+        $found_rows_inject = self::$_have_pending_row_count? "SQL_CALC_FOUND_ROWS": "";
+        $query = "SELECT $found_rows_inject $sql_select_columns FROM $main_table AS $main_alias $left_joins $sql_select_params";
+        $result = db\query($query);
+        if (self::$_have_pending_row_count) {
+            $found_rows_result = db\next_array(db\query("SELECT FOUND_ROWS()"));
+            self::$_found_row_count = intval($found_rows_result[0][0]);
+            self::$_have_pending_row_count = false;
+        }
+        $return_data = array();
+        while (false !== ($row = db\next_array($result))) {
+            if (!$supress_id)
+                $return_data[$row[0]] = array_splice($row, 1);
+            else
+                $return_data[] = $row;
+        }
+        return $return_data;
+    }
+
+    private static $_have_pending_row_count = false;
+    private static $_found_row_count;
+
+    /**
+     * This function prepares the next select statement so that the total
+     * number of rows that would have been selected, would the offset/limit
+     * not have been set, is calculated
+     */
+    public static function prepareCalcFoundRows() {
+        self::$_have_pending_row_count = true;
+        self::$_found_row_count = 0;
+    }
+
+    public static function getCalcFoundRowsResult() {
+        return self::$_found_row_count;
+    }
+
+    /**
+     *  This function unlinks the model instance with the given ID.
+     */
     public static function unlinkByID($id) {
         $instance = forward_static_call(array('nmvc\Model', "selectByID"), $id);
         if ($instance !== null)
@@ -665,7 +931,7 @@ abstract class Model implements \Iterator {
     * @return Integer Number of matched rows.
     */
     public static function count($where = "") {
-        if ($where != "")
+        if (trim($where) != "")
             $where = " WHERE " . $where;
         $family_tree = self::getMetaData("family_tree");
         $count = 0;
@@ -673,9 +939,8 @@ abstract class Model implements \Iterator {
         if (!isset($family_tree[$name]))
             trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
         foreach ($family_tree[$name] as $table_name) {
-            $result = db\query("SELECT COUNT(*) FROM " . table($table_name) . $where);
-            $rows = db\next_array($result);
-            $count += intval($rows[0]);
+            $rows = static::findDataForSelf(array("COUNT(*)"), $where, true);
+            $count += intval($rows[0][0]);
         }
         return $count;
     }
@@ -699,7 +964,7 @@ abstract class Model implements \Iterator {
         }
     }
 
-    private static function tableNameToClassName($table_name) {
+    protected static function tableNameToClassName($table_name) {
         static $cache = array();
         if (!isset($cache[$table_name])) {
             $base_offs = strrpos($table_name, '\\');
@@ -710,7 +975,7 @@ abstract class Model implements \Iterator {
         return $cache[$table_name];
     }
 
-    private static function classNameToTableName($class_name) {
+    protected static function classNameToTableName($class_name) {
         static $cache = array();
         if (!isset($cache[$class_name])) {
             // Remove nmvc prefix and Model suffix.
@@ -784,7 +1049,7 @@ abstract class Model implements \Iterator {
                     continue;
                 $model_classes[$cls_name] = $cls_name;
                 // Syncronize this model.
-                $parsed_col_array = Model::getParsedColumnArray($cls_name);
+                $parsed_col_array = $cls_name::getParsedColumnArray();
                 db\sync_table_layout_with_model($table_name, $parsed_col_array);
                 // Record pointers for pointer map.
                 $columns = $cls_name::getColumnNames();

@@ -23,7 +23,7 @@ class YesNoType extends \nmvc\AppType {
             $yes_check = "";
         $yes = $this->true_str == null? STR_YES: $this->true_str;
         $no = $this->false_str == null? STR_NO: $this->false_str;
-        return "<select name=\"$name\"><option value=\"0\" $no_check>$no</option><option value=\"1\" $yes_check>$yes</option></select>";
+        return "<select name=\"$name\" id=\"$name\"><option value=\"0\" $no_check>$no</option><option value=\"1\" $yes_check>$yes</option></select>";
     }
     public function readInterface($name) {
         $this->value = (@$_POST[$name] == true);

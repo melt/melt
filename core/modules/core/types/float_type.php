@@ -13,7 +13,7 @@ class FloatType extends \nmvc\AppType {
 
     public function getInterface($name) {
         $value = floatval($this->value);
-        return "<input type=\"text\" name=\"$name\" value=\"$value\" />";
+        return "<input type=\"text\" name=\"$name\" id=\"$name\" value=\"$value\" />";
     }
 
     public function readInterface($name) {

@@ -54,7 +54,7 @@ class PictureType extends cache\BlobPointerType {
         } else
             $status = '<br />' . __('No uploaded image. Upload new one:');
         $supported = $this->getSupportedFormats();
-        return $status."<br /><input type=\"file\" name=\"$name\" /><br /><small>$supported</small>";
+        return $status."<br /><input type=\"file\" name=\"$name\" id=\"$name\" /><br /><small>$supported</small>";
     }
 
     public function view() {

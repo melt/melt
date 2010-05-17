@@ -227,7 +227,7 @@ function url($path, $get = null) {
     $path = (substr(\nmvc\config\ROOT_URL, -1) == '/'?
              substr(\nmvc\config\ROOT_URL, 0, -1):
              \nmvc\config\ROOT_URL) . $path;
-    return $get === null? $path: make_url($path, $get);
+    return $get === null? $path: create_url($path, $get);
 }
 
 /**
