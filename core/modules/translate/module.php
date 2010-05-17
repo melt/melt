@@ -47,6 +47,8 @@ class TranslateModule extends \nmvc\CoreModule {
             return;
         // Get array of supported languages.
         $language_files = glob(APP_DIR . "/lang.??.php");
+        if (!is_array($language_files))
+            $language_files = array();
         $languages = array();
         foreach ($language_files as $file)
             $languages[] = substr($file, -6, 2);
