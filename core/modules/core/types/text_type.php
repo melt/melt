@@ -20,7 +20,7 @@ class TextType extends \nmvc\AppType {
         $this->value = @$_POST[$name];
     }
 
-    public function view() {
+    public function __toString() {
         return escape(strval($this->value));
     }
 }

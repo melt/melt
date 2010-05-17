@@ -61,7 +61,7 @@ class UploadType extends cache\BlobPointerType {
         return $status."<br /><input type=\"file\" name=\"$name\" id=\"$name\" />";
     }
 
-    public function view() {
+    public function __toString() {
         $file_url = $this->getCachePath();
         if ($file_url !== null) {
             return "<a target=\"_blank\" href=\"$file_url\">$file_url</a>";

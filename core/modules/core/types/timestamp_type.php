@@ -56,7 +56,7 @@ class TimestampType extends \nmvc\AppType {
         }
         $this->value = intval($time);
     }
-    public function view() {
+    public function __toString() {
         $dateonly = $this->only_date == "true";
         return date(!$dateonly? 'Y-m-d, H:i:s': 'Y-m-d', intval($this->value));
     }

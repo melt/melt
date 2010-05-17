@@ -28,7 +28,7 @@ class YesNoType extends \nmvc\AppType {
     public function readInterface($name) {
         $this->value = (@$_POST[$name] == true);
     }
-    public function view() {
+    public function __toString() {
         return $this->value? YES_STR: NO_STR;
     }
 }

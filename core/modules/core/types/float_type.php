@@ -20,7 +20,7 @@ class FloatType extends \nmvc\AppType {
         $this->value = floatval(@$_POST[$name]);
     }
 
-    public function view() {
+    public function __toString() {
         return strval(floatval($this->value));
     }
 }

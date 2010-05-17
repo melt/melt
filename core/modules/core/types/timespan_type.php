@@ -63,7 +63,7 @@ class TimespanType extends \nmvc\AppType {
         }
         $this->value = $value;
     }
-    public function view() {
+    public function __toString() {
         $value = floatval($this->value);
         $unit_spans = array(60, 3600, 86400, 604800, 2629744, 31557600);
         $value_united = array();

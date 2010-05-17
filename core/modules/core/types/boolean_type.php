@@ -19,7 +19,7 @@ class BooleanType extends \nmvc\AppType {
     public function readInterface($name) {
         $this->value = (@$_POST[$name] == "checked");
     }
-    public function view() {
+    public function __toString() {
         return $this->value? $this->true_str: $this->false_str;
     }
 }

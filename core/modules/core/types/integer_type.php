@@ -20,7 +20,7 @@ class IntegerType extends \nmvc\AppType {
         $this->value = intval(@$_POST[$name]);
     }
 
-    public function view() {
+    public function __toString() {
         return strval(intval($this->value));
     }
 }

@@ -39,7 +39,7 @@ class IpAddressType extends \nmvc\AppType {
         $this->value = inet_pton(@$_POST[$name]);
     }
 
-    public function view() {
+    public function __toString() {
         return strval(inet_ntop($this->value));
     }
 }

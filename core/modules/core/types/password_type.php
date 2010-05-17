@@ -20,7 +20,7 @@ class PasswordType extends \nmvc\AppType {
         $this->value = $_POST[$name];
     }
     
-    public function view() {
+    public function __toString() {
         return "<i>Hidden</i>";
     }
 }

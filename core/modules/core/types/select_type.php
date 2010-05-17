@@ -38,7 +38,7 @@ class SelectType extends \nmvc\AppType {
             $this->value = null;
     }
 
-    public function view() {
+    public function __toString() {
         $set = isset($this->options[$this->value]);
         return $set? "'" . escape($this->options[$this->value]) . "'": __("Not Set");
     }

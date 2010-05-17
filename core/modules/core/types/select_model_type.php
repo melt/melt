@@ -59,7 +59,7 @@ class SelectModelType extends PointerType {
         $this->value = $value;
     }
 
-    public function view() {
+    public function __toString() {
         $target = $this->ref();
         if (is_object($target))
             if (in_array($target->getID(), $this->denied_ids))

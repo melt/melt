@@ -57,7 +57,7 @@ class PictureType extends cache\BlobPointerType {
         return $status."<br /><input type=\"file\" name=\"$name\" id=\"$name\" /><br /><small>$supported</small>";
     }
 
-    public function view() {
+    public function __toString() {
         $purl = $this->getUrl();
         if ($purl !== false) {
             $thumburl = $this->getUrl($this->thumb_width, $this->thumb_height);
