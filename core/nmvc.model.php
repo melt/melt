@@ -176,7 +176,7 @@ abstract class Model implements \Iterator {
     public function type($name) {
         $subresolve = self::doSubResolve($name);
         if (!isset($this->_cols[$name])) {
-            trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_ERROR);
+            trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_WARNING);
             return;
         }
         if ($subresolve === null)
@@ -186,7 +186,7 @@ abstract class Model implements \Iterator {
             if ($model_instance === null)
                 return null;
             if (!is_object($model_instance) || !is_subclass_of($model_instance, 'nmvc\Model'))
-                trigger_error("Trying to resolve non pointer column (to get type)!", \E_ERROR);
+                trigger_error("Trying to resolve non pointer column (to get type)!", \E_USER_WARNING);
             else
                 return $model_instance->type($subresolve);
         }
@@ -196,7 +196,7 @@ abstract class Model implements \Iterator {
     public function view($name) {
         $subresolve = self::doSubResolve($name);
         if (!isset($this->_cols[$name])) {
-            trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_ERROR);
+            trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_WARNING);
             return null;
         }
         if ($subresolve === null)
@@ -206,7 +206,7 @@ abstract class Model implements \Iterator {
             if ($model_instance === null)
                 return null;
             if (!is_object($model_instance) || !is_subclass_of($model_instance, 'nmvc\Model'))
-                trigger_error("Trying to resolve non pointer column (to view column)!", \E_ERROR);
+                trigger_error("Trying to resolve non pointer column (to view column)!", \E_USER_WARNING);
             else
                 return $model_instance->view($subresolve);
         }
