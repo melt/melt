@@ -178,8 +178,8 @@ function redirect($url) {
 */
 function go_back() {
     $referer = @$_SERVER['HTTP_REFERER'];
-    $blen = strlen(CONFIG::$rooturl);
-    if (substr($referer, 0, $blen) == CONFIG::$rooturl)
+    $blen = strlen(\nmvc\config\ROOT_URL);
+    if (substr($referer, 0, $blen) == \nmvc\config\ROOT_URL)
         redirect($referer);
     else
         redirect(make_local_url('/'));
