@@ -37,7 +37,10 @@ namespace nmvc\config {
     $devkey_is_blank = DEV_KEY == "";
     $devkey_matches = isset($_COOKIE['devkey']) && ($_COOKIE['devkey'] === DEV_KEY);
     define("APP_IN_DEVELOPER_MODE", MAINTENANCE && ($devkey_is_blank || $devkey_matches));
-    define("APP_ROOT_HOST", parse_url(ROOT_URL, PHP_URL_HOST));
+    $root_host = parse_url(ROOT_URL, PHP_URL_HOST);
+    $root_port = parse_url(ROOT_URL, PHP_URL_PORT);
+    $root_port = ($root_port != "" && $root_port != "80")? ":$root_port": "";
+    define("APP_ROOT_HOST", $root_host . $root_port);
     define("APP_ROOT_PATH", parse_url(ROOT_URL, PHP_URL_PATH));
     $port = parse_url(ROOT_URL, PHP_URL_PORT);
     if (!$port || $port == "")
