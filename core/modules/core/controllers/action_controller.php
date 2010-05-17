@@ -52,5 +52,10 @@ class ActionController extends \nmvc\AppController {
             \nmvc\request\redirect(url("/"));
         }
     }
-    
+
+    // Override any application beforeFilter.
+    public function beforeFilter($action_name) { }
+
+    // Override any application layout.
+    public $layout = null;
 }
