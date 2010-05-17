@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 class TimestampType extends \nmvc\AppType {
     public $only_date = "false";
