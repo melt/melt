@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\mail;
+<?php namespace nmvc\mail;
 
 // nanoMVC wrapper class for sending RFC compatible e-mails.
 class Mailer {
@@ -28,20 +26,19 @@ class Mailer {
     private function addressEmail() {
         // If from is not set directly then use config.
         if ($this->from->email == null) {
-            if (CONFIG::$email_address != "") {
-                $this->from->email = CONFIG::$email_address;
+            if (config\FROM_ADDRESS != "") {
+                $this->from->email = config\FROM_ADDRESS;
             } else {
                 // Use INI configured from as a last resort.
                 $this->from->email = ini_get('sendmail_from');
                 if ($this->from->email == "")
                     trigger_error("Mailer was told to send with no configured from address. (Not set directly, in config or in ini.)", \E_USER_ERROR);
             }
-            $this->from->name = CONFIG::$email_name;
+            $this->from->name = config\FROM_NAME;
         }
         // Setting this in ini is required to send mail correctly.
         $headers = "From: " . $this->from->getAddress() . PHP_EOL;
         ini_set('sendmail_from', $this->from->email);
-
         if ($this->to->count() == 0)
             trigger_error("No repicents given!", \E_USER_ERROR);
         $headers .= $this->cc->getAsHeader('Cc', true);
@@ -89,10 +86,9 @@ class Mailer {
         $headers .= 'Content-Type: text/html; charset=UTF-8' . PHP_EOL;
 
         // Assemble the content.
-        $html_subject = ($this->subject == null)? 'Untitled': api_html::escape($subject);
-        $html_body = api_html::escape($body);
+        $html_subject = ($subject == null)? 'Untitled': escape($subject);
         $content = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\"\r\n \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\r\n";
-        $content = "<html>\r\n\t<head>\r\n\t\t<title>$html_subject\r\n\t</title>\r\n\t</head>\r\n\t<body>\r\$html_body\r\n\t</body>\r\n</html>\r\n";
+        $content = "<html>\r\n\t<head>\r\n\t\t<title>$html_subject\r\n\t</title>\r\n\t</head>\r\n\t<body>\r$body\r\n\t</body>\r\n</html>\r\n";
 
         // Send the mail.
         $this->doMail($subject, $content, $headers);
@@ -100,18 +96,14 @@ class Mailer {
     }
 
     private function doMail($subject, $content, $headers) {
-        // Also append standard bulk/auto generated indicator headers.
-        $headers .= "Precedence: bulk" . PHP_EOL;
-        $headers .= "Auto-submitted: auto-generated" . PHP_EOL;
-
         // Also append other standard headers.
         $headers .= 'MIME-Version: 1.0' . PHP_EOL;
-        $headers .= 'X-Mailer: nanoMVC/' . nmvc_version . '; PHP/' . phpversion() . PHP_EOL;
+        $headers .= 'X-Mailer: nanoMVC/' . \nmvc\VERSION . '; PHP/' . phpversion() . PHP_EOL;
         $headers .= 'Date: ' . date("r") . PHP_EOL;
 
         // Verify that INI settings are correct.
         $smtp = strtolower(ini_get('smtp'));
-        $trg = strtolower(CONFIG::$email_smtp);
+        $trg = strtolower(config\SMTP_HOST);
         if ($smtp != $trg)
             if (false === ini_set('SMTP', $trg))
                 trigger_error("VMAIL: The SMTP server '".$trg."' could not be set into configuration!", \E_USER_ERROR);
