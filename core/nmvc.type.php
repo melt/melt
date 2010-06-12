@@ -12,7 +12,7 @@ abstract class Type {
     protected $original_value = null;
 
     /** Returns the value from the last sync point. */
-    public final function getSyncPoint() {
+    public function getSyncPoint() {
         return $this->original_value;
     }
 
@@ -20,12 +20,12 @@ abstract class Type {
      * Called to indicate that the type was synced so
      * that it can measure changes made from this point.
      */
-    public final function setSyncPoint() {
+    public function setSyncPoint() {
         $this->original_value = $this->value;
     }
 
     /** Returns TRUE if this type has changed since the last syncronization. */
-    public final function hasChanged() {
+    public function hasChanged() {
         return $this->original_value != $this->value;
     }
 
