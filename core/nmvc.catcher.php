@@ -1,7 +1,7 @@
 <?php namespace nmvc\internal;
 
 function assert_failed($file, $line, $message) {
-    throw new \Exception('Assertation failed! '.$message);
+    throw new \Exception('Assertation failed! ' . $message);
 }
 
 function exception_handler(\Exception $exception) {
@@ -22,7 +22,7 @@ function exception_handler(\Exception $exception) {
     unset($trace[0]);
     $file = ": $file; line #$line";
     $errraised = " - Raised in$file\n";
-    $errmessage = " - Message:\n".$exception->getMessage()."\n";
+    $errmessage = " - Message:\n" . $exception->getMessage() . "\n";
     $errtrace = " - Stack:\n";
     foreach ($trace as $key => $t) {
         if (!isset($t['file']) || $t['file'] == '') {
@@ -71,33 +71,27 @@ function exception_handler(\Exception $exception) {
             // Only output pure text
             die("\r\n\r\n$topic\r\n\r\n$errraised\r\n$errmessage\r\n$errtrace\r\nError tag: #$errcode");
         } else {
-            $msg = '<div style="font:14px monospace;">';
-            $errmsgs = explode("\n", "\n" . \nmvc\html\escape($errraised) . "\n" . \nmvc\html\escape($errmessage) . "\n" . \nmvc\html\escape($errtrace) . "\nError tag: #$errcode");
-            $light = false;
-            foreach ($errmsgs as $errmsg) {
-                $msg .= '<div style="padding:1px 5px;min-height:15px;';
-                $msg .= '">' . $errmsg . '</div>';
-            }
-            $msg .= '</div>';
+            $msg = '<pre>';
+            $msg .= "\n" . \escape($errraised) . "\n" . \escape($errmessage) . "\n" . \escape($errtrace) . "\nError tag: #$errcode";
+            $msg .= '</pre>';
         }
     }
     if (!headers_sent()) {
         header("HTTP/1.x 500 Internal Server Error");
         header("Status: 500 Internal Server Error");
     }
-    \nmvc\request\info($topic, $msg);
+    die("<h1>" . $topic . "</h1>" . $msg);
 }
 
 function error_handler($errno, $errstr, $errfile, $errline) {
     if ($errno == E_USER_ERROR) {
-        $e = new \Exception("E_USER_ERROR caught: ".$errstr, $errno);
-        exception_handler($e);
+        throw new \Exception("E_USER_ERROR caught: " . $errstr, $errno);
         exit;
     }
     // We can bypass this error, just notify in developer mode.
     if (!APP_IN_DEVELOPER_MODE)
         return true;
-    // Fetching undefined keys in arrays is valid.
+    // Fetching undefined keys in arrays is not exceptional.
     if (strpos($errstr, "Undefined offset") !== FALSE)
         return true;
     if (strpos($errstr, "Undefined index") !== FALSE)
@@ -126,8 +120,7 @@ function error_handler($errno, $errstr, $errfile, $errline) {
         E_USER_DEPRECATED => "E_USER_DEPRECATED",
     );
     $type = isset($error_map[$errno])? $error_map[$errno]: "E_UNKNOWN";
-    $e = new \Exception("$type caught: " . $errstr, $errno);
-    exception_handler($e);
+    throw new \Exception("$type caught: " . $errstr, $errno);
     exit;
 }
 
