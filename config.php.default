@@ -8,6 +8,9 @@
  */
 
 namespace nmvc\config {
+    /** Configure what non-core modules the application should use.  */
+    modules_using(
+    );
     /** IF SET: Treats users that set this developer key under /core/setkey as
      * site developers.
      * IF BLANK: Treats all users as site developers. Warning: Site developers
@@ -17,9 +20,9 @@ namespace nmvc\config {
      * unable to reach the site.
      * IF FALSE: Never display errors. */
     const MAINTENANCE = true;
-    /** The application host. nanoMVC needs to know where it is located. */
+    /** The remote URL where this application can reach itself.
+     * nanoMVC needs to know where it is located. */
     const ROOT_URL = "http://localhost/";
-
 }
 
 namespace nmvc\translate\config {
@@ -47,7 +50,7 @@ namespace nmvc\db\config {
     /** Trigger sequenceing is faster and safer as it allows other mysql
      * software to insert rows without corrupting tables with duplicate ids.
      * However, it requires special TRIGGER permissions. */
-    const USE_TRIGGER_SEQUENCING = false;
+    const USE_TRIGGER_SEQUENCING = true;
     /** Enable this to log the queries made and the time they take to
      * complete. This is logged to db_debug_query_benchmark.log in you
      * application directory. */
