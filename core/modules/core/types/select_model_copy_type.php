@@ -2,14 +2,22 @@
 
 namespace nmvc\core;
 
-/**
- * SelectType, the only built-in pointer type.
- */
-class SelectModelType extends PointerType {
+class SelectModelCopyType extends TextType {
     /** @var Where condition to filter targets. */
-    public $where = "";
-    /** @var Column in target to use for labeling objects. */
-    public $label_column = "";
+    private $where = "";
+    /** @var Targeting options. */
+    private $label_column;
+    private $target_model;
+
+    public function __construct($column_name, $target_model, $label_column, $where = "") {
+        $this->key = $column_name;
+        $target_model = 'nmvc\\' . $target_model;
+        if (!class_exists($target_model) || !is_subclass_of($target_model, 'nmvc\Model'))
+            trigger_error("Attempted to declare a pointer pointing to a non existing model '$target_model'.");
+        $this->target_model = $target_model;
+        $this->label_column = $label_column;
+        $this->where = $where;
+    }
 
     /**
     * @desc The id's set here will not be selectable and treated as invalid.
@@ -21,7 +29,7 @@ class SelectModelType extends PointerType {
     private $denied_ids = array();
 
     public function getInterface($name) {
-        $value = intval($this->value);
+        $value = strval($this->value);
         $html = "<select name=\"$name\" id=\"$name\">";
         $nothing = __("—");
         $html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
@@ -35,7 +43,7 @@ class SelectModelType extends PointerType {
             $id = $model->getID();
             if (in_array($id, $this->denied_ids))
                 continue;
-            $s = ($value == $id)? $selected: null;
+            $s = ($value == $label)? $selected: null;
             $html .= "<option$s value=\"$id\">$label</option>";
         }
         $html .= "</select>";
@@ -45,29 +53,18 @@ class SelectModelType extends PointerType {
     public function readInterface($name) {
         $value = intval(@$_POST[$name]);
         if ($value < 1) {
-            $this->value = 0;
+            // No change.
             return;
         }
         // If this is an invalid ID, set to null.
         $where = trim($this->where);
         if ($where != "")
             $where .= " AND ";
-        $where .= "id = $value";
-        $count = forward_static_call(array($this->target_model, 'count'), $where);
-        if ($count != 1)
-            $value = 0;
-        $this->value = $value;
-    }
-
-    public function __toString() {
-        $target = $this->get();
-        if (is_object($target))
-            if (in_array($target->getID(), $this->denied_ids))
-                $this->value = 0;
-            else
-                $label = empty($this->label_column)? $this->target_model: $target->{$this->label_column}->get();
-        else
-            $this->value = 0;
-        return ($this->value > 0)? $label . " (#" . intval($this->value) . ")": __("Not Set");
+        $selected = forward_static_call(array($this->target_model, 'selectById'), $value);
+        if ($selected === null) {
+            // No change
+            return;
+        }
+        $this->value = strval($selected->{$this->label_column});
     }
 }

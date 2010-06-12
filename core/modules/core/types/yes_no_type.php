@@ -29,7 +29,7 @@ class YesNoType extends \nmvc\AppType {
         $this->value = (@$_POST[$name] == true);
     }
     public function __toString() {
-        return $this->value? YES_STR: NO_STR;
+        return $this->value? STR_YES: STR_NO;
     }
 }
 
