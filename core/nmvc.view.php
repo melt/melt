@@ -59,7 +59,7 @@ final class View {
      * @param array $params Additional data to temporarily set when
      * rendering view.
      */
-    function view($view_path, $params = array()) {
+    function display($view_path, $params = array()) {
         $stack = array();
         $controller = $this->_controller;
         // Save to stack and set params.
@@ -89,7 +89,6 @@ final class View {
         // Restore from stack.
         foreach ($stack as $key => $val)
             $controller->$key = $val;
-
     }
 
     /**
