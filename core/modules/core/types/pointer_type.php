@@ -1,7 +1,7 @@
 <?php namespace nmvc\core;
 
 /** A very special type that abstracts a pointer. */
-abstract class PointerType extends \nmvc\AppType {
+class PointerType extends \nmvc\AppType {
     public $target_model;
 
     /** Returns the model target of this Pointer. */
@@ -27,6 +27,13 @@ abstract class PointerType extends \nmvc\AppType {
     public function getID() {
         return intval($this->value);;
     }
+
+    /** Base pointer does not have an interface. */
+    public function getInterface($name) {
+        return (string) $this;
+    }
+
+    public function readInterface($name) { }
 
     /** Resolves this pointer and returns the model it points to. */
     public function get() {

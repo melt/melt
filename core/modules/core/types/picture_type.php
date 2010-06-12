@@ -1,11 +1,19 @@
-<?php
+<?php namespace nmvc\core;
 
-namespace nmvc\core;
-
-class PictureType extends cache\BlobPointerType {
+class PictureType extends \nmvc\cache\BlobPointerType {
     public $thumb_width = 35;
     public $thumb_height = 35;
     public $image_upload_status = null;
+    private static $ready = false;
+
+    private static function initialize() {
+        $gd_info = gd_info();
+        define('GD_SUPPORTS_JPG', $gd_info['JPG Support'] === true || $gd_info['JPEG Support'] === true);
+        define('GD_SUPPORTS_PNG', $gd_info['PNG Support'] === true);
+        define('GD_SUPPORTS_GIF', $gd_info['GIF Create Support'] === true && $gd_info['GIF Read Support'] === true);
+        self::$ready = true;
+    }
+
     /**
      * Returns the image upload status.
      * loaded = Image was just successfully uploaded or previously uploaded.
@@ -20,6 +28,8 @@ class PictureType extends cache\BlobPointerType {
     }
 
     public function readInterface($name) {
+        if (!self::$ready)
+            self::initialize();
         if (isset($_FILES[$name]) && intval($_FILES[$name]['size']) > 0) {
             $path = $_FILES[$name]['tmp_name'];
             // Read image data and import.
@@ -92,7 +102,7 @@ class PictureType extends cache\BlobPointerType {
         }
     }
     
-    private function getUrl($max_width = 0, $max_height = 0, $file_name = null) {
+    public function getUrl($max_width = 0, $max_height = 0, $file_name = null) {
         // Cannot return image if not set.
         if ($this->value <= 0)
             return null;
@@ -111,8 +121,8 @@ class PictureType extends cache\BlobPointerType {
         // Generate thumbnail if it doesn't exist.
         if (!is_file($thumb_path)) {
             // Get blob from database.
-            $blob_model = BlobModel::selectByID($this->value);
-            $img = imagecreatefromstring($blob_model->data);
+            $blob_model = \nmvc\cache\BlobModel::selectByID($this->value);
+            $img = imagecreatefromstring($blob_model->dta);
             if (!$img)
                 return null;
             // Calculate sizing.
@@ -137,7 +147,6 @@ class PictureType extends cache\BlobPointerType {
                 $offset_y = floor($max_height / 2) - floor($new_height / 2);
             }
             // Create image with correct dimensions, copysample over and save.
-            $path = api_cache::get_cache_path($tag, $key);
             assert($thumb = imagecreatetruecolor($new_width, $new_height));
             imagealphablending($thumb, false); // No blending, just copy pixels.
             assert(imagecopyresampled($thumb, $img, 0, 0, 0, 0, $new_width, $new_height, $img_width, $img_height));
@@ -145,7 +154,7 @@ class PictureType extends cache\BlobPointerType {
             assert(imagepng($thumb, $thumb_path, 9));
         }
         // Convert local filesystem path to url.
-        $path = substr($thumb_path, strlen(\nmvc\config\APP_DIR));
+        $path = substr($thumb_path, strlen(APP_DIR));
         return url($path);
     }
 
@@ -157,30 +166,5 @@ class PictureType extends cache\BlobPointerType {
                          "\xff\xd8\xff" => "jpg");
         return isset($formats[$header])? $formats[$header]: false;
     }
-
-    /**
-    * @desc Returns a string of text describing what picture formats are supported.
-    * @return String "The x,y and z formats are supported or No image formats are supported."
-    */
-    private function getSupportedFormats() {
-        $sup = array();
-        if (GD_SUPPORTS_JPG)
-            array_push($sup, "JPG");
-        if (GD_SUPPORTS_PNG)
-            array_push($sup, "PNG");
-        if (GD_SUPPORTS_GIF)
-            array_push($sup, "GIF");
-        switch (count($sup)) {
-        case 0:
-            return __("No picture formats are supported!");
-        case 1:
-            return __("Only %s pictures is supported.", $sup[0]);
-        case 2:
-            return __("The picture formats %s and %s is supported.", $sup[0], $sup[1]);
-        case 3:
-            return __("The picture formats %s, %s and %s is supported.", $sup[0], $sup[1], $sup[2]);
-        }
-    }
-
 }
 

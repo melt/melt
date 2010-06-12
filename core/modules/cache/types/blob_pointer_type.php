@@ -8,26 +8,49 @@
  *
  * Be sure to understand how it works before you use it.
  */
-abstract class BlobPointerType extends PointerType {
-    // Always points to a blob model.
-    const STATIC_TARGET_MODEL = 'cache\blob';
+abstract class BlobPointerType extends \nmvc\core\PointerType {
+    /** Constructs this typed field with this column name. */
+    public function __construct($column_name) {
+        parent::__construct($column_name, 'cache\BlobModel');
+    }
     
-    /* Overloads get/set. This pointer should not be operated on directly.
+    /*
+     * Overloads get/set. This pointer should not be operated on directly.
      * Operating directly on this type would allow a non injective blob pointer
-     * setup which might be useful but would require garbage collection. */
+     * setup which might be useful but would require garbage collection.
+     * Also non injective pointing can be achived anyway by using a middle
+     * model with incomming pointers instead.
+     */
     public function set($value) { }
 
     public function get() {
-        return "#BLOBPTR#";
+        if ($this->value > 0 || is_object($this->change_to))
+            return "#BlobPointer#";
+        else
+            return null;
     }
 
     private $change_to = false;
+
+    /** Returns TRUE if this type has changed since the last syncronization. */
+    public final function hasChanged() {
+        return $this->change_to !== false;
+    }
 
     public function getSQLValue() {
         // At this point validation has already completed, so it's
         // safe to insert the data blob here.
         if ($this->change_to !== false) {
             if ($this->value > 0) {
+                // Delete everything in cache.
+                $meta = $this->getMeta();
+                if ($meta !== null) {
+                    list($tag, $extention) = $meta;
+                    $glob = $this->getCachePath("*");
+                    $glob = preg_replace("#\.[^\.]*$#", "", $glob);
+                    foreach (glob($glob) as $file_name)
+                        unlink($file_name);
+                }
                 // Need to delete the blob I'm pointing on.
                 // As unlink would require loading the blob into memory
                 // direct querying will be used instead.
@@ -56,17 +79,31 @@ abstract class BlobPointerType extends PointerType {
     public function setBinaryData($data = null, $extention = ".bin") {
         if (strlen($extention) == 0 || $extention[0] != ".")
             throw new \Exception("Extention MUST start with dot!");
-        if (!is_string($data) || strlen($data) == 0) {
+        if (is_string($data) && strlen($data) > 0) {
             // Prepare storing the binary data in a new blob model.
             $blob_model = BlobModel::insert();
             $blob_model->dta = $data;
             $blob_model->tag = \nmvc\string\random_alphanum_str(8);
             $blob_model->ext = $extention;
+            $blob_model->one_way_key = \nmvc\string\random_alphanum_str(8);
             $this->change_to = $blob_model;
         } else {
             // Prepare clearing the binary data.
             $this->change_to = null;
         }
+    }
+
+    /**
+     * Returns the binary data.
+     */
+    public function getBinaryData() {
+        if (is_object($this->change_to))
+            return $this->change_to->dta;
+        $blob_model = BlobModel::selectByID($this->value);
+        if ($blob_model === null)
+            return null;
+        else
+            return $blob_model->dta;
     }
 
     /**
@@ -78,39 +115,38 @@ abstract class BlobPointerType extends PointerType {
             return null;
         // Returns the tag for the blob I'm pointing to.
         // Uses SQL querying to prevent loading BLOB into memory.
-        $result = \nmvc\db\query("SELECT tag,ext FROM " . table('cache\blob') . " WHERE id = " . intval($this->value));
-        $res = db\next_array($result);
+        $result = \nmvc\db\query("SELECT tag,ext,one_way_key FROM " . table('cache\blob') . " WHERE id = " . intval($this->value));
+        $result = \nmvc\db\next_array($result);
         if (!is_array($result))
             return null;
-        return array($result[0], $result[1]);
+        return array($result[0], $result[1], $result[2]);
     }
 
     /**
      * Returns a local cache location for the requested filename of this blob.
      */
-    protected function getCachePath($file_name, $custom_extention = null) {
+    protected function getCachePath($req_file_name, $custom_extention = null) {
         static $path = null;
         if ($path === null) {
-            $path = \nmvc\config\APP_DIR . "/static/cache";
+            $path = APP_DIR . "/static/cache";
             if (!file_exists($path))
-                mkdir($path, 0660, true);
+                mkdir($path, 0775, true);
         }
         $meta = $this->getMeta();
         if ($meta === null)
             return null;
-        list($tag, $extention) = $meta;
+        list($tag, $extention, $one_way_key) = $meta;
         // Allow custom extentions.
         if ($custom_extention !== null)
             $extention = $custom_extention;
-        if ($file_name != null && strlen($file_name) > 0) {
-            $filename = strtolower($file_name);
-            $filename = preg_replace('#\s#', "_", $filename);
-            if ($file_name[0] == ".")
-                throw new \Exception("File name may not start with dot (.)!");
+        if ($req_file_name != null && strlen($req_file_name) > 0) {
+            $assigned_filename = strtolower($req_file_name);
+            $assigned_filename = preg_replace('#\s#', "_", $assigned_filename) . "_";
         } else
-            $filename = "_";
-        $path = "$path/$tag$file_name$extention";
-        return $path;
+            $assigned_filename = "_";
+        $one_way_key = substr(sha1($one_way_key . $assigned_filename), 0, 8);
+        $ret_path = "$path/$tag" . "_$assigned_filename$one_way_key$extention";
+        return $ret_path;
     }
 
     /**
@@ -125,13 +161,14 @@ abstract class BlobPointerType extends PointerType {
        if (!is_file($cache_path)) {
             // Dump blob to disk.
             $blob_model = BlobModel::selectByID($this->value);
-            file_put_contents($file_path, $blob_model->dta);
-            // Also write tag to disk if it should.
+            $cache_dir_path = dirname($cache_path);
+            file_put_contents($cache_path, $blob_model->dta);
+            /*// Also write tag to disk if it should.
             if ($file_tag_path !== null)
-                file_put_contents($file_tag_path, $blob_model->tag);
+                file_put_contents($file_tag_path, $blob_model->tag);*/
         }
         // Convert local filesystem path to url.
-        $path = substr($file_path, strlen(\nmvc\config\APP_DIR));
+        $path = substr($cache_path, strlen(APP_DIR));
         return url($path);
     }
 }
