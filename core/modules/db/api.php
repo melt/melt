@@ -62,10 +62,13 @@ function query($query, $errmsg = "") {
     $result = run($query);
     if ($result === FALSE) {
         $err = mysql_error();
+        if (strlen($query) > 512)
+            $query = substr($query, 0, 512);
+        $query = var_export($query, true);
         if ($errmsg == "")
-            $errmsg = "A SQL query { '".$query."' } to the database failed;\nSQL error: ".$err;
+            $errmsg = "A SQL query { ".$query." } to the database failed;\nSQL error: ".$err;
         else
-            $errmsg = "A SQL query { '".$query."' } to the database failed;\nOperation information:\n".$errmsg."\nSQL error: ".$err;
+            $errmsg = "A SQL query { ".$query." } to the database failed;\nOperation information:\n".$errmsg."\nSQL error: ".$err;
         if (!defined("OUTPUT_MYSQL_QUERIES"))
             trigger_error($errmsg, \E_USER_ERROR);
         else
@@ -83,6 +86,14 @@ function query($query, $errmsg = "") {
 function run($query) {
     static $initialized = false;
     if (!$initialized) {
+        // Make sure mysql extention is loaded.
+        if (!extension_loaded("mysql"))
+            trigger_error("Error: The MySQL extention is not loaded. Your PHP installation is not compatible with nanoMVC!", \E_USER_ERROR);
+        // Can spend 10 seconds max connecting or half the request time limit.
+        $max_mysql_timeout = intval(ini_get("max_execution_time"))  / 2;
+        if ($max_mysql_timeout > 10)
+            $max_mysql_timeout = 10;
+        ini_set("mysql.connect_timeout", $max_mysql_timeout);
         // Connect to the database.
         $link = mysql_connect(config\HOST, config\USER, config\PASSWORD);
         if ($link === false)
@@ -222,7 +233,7 @@ function get_all_tables() {
 */
 function sync_table_layout_with_columns($table_name, $columns) {
     $all_tables = get_all_tables();
-    if (in_array(config\PREFIX . $table_name, $all_tables)) {
+    if (in_array(substr(table($table_name), 1, -1), $all_tables)) {
         // Altering existing table.
         $current_columns = query("DESCRIBE " . table($table_name));
         while (false !== ($column = next_array($current_columns))) {
@@ -235,11 +246,7 @@ function sync_table_layout_with_columns($table_name, $columns) {
                     trigger_error("ID column found in table '$table_name', but with unexpected type ($current_type). Has it been tampered with? nanoMVC not written to handle this condition.", \E_USER_ERROR);
                 continue;
             }
-            if (!isset($columns[$current_name])) {
-                // Unknown column, drop it.
-                query("ALTER TABLE " . table($table_name) . " DROP COLUMN $current_name");
-                continue;
-            } else if (sql_column_need_update($expected_type, $current_type)) {
+            if (isset($columns[$current_name]) && sql_column_need_update($expected_type, $current_type)) {
                 // Invalid datatype, alter it.
                 query("ALTER TABLE " . table($table_name) . " MODIFY COLUMN $current_name $expected_type");
             }
@@ -302,9 +309,14 @@ function unlock() {
     run("UNLOCK TABLES");
 }
 
-/** Convenience function for prefixing tables. */
+/** Translating a string to a mysql packed nanomvc database table name. */
 function table($table_name) {
-    return '`' . config\PREFIX . $table_name . '`';
+    static $cache = array();
+    if (isset($cache[$table_name]))
+        return $cache[$table_name];
+    // Convert backslashes to forwardslashes as backslashes can mess up queries.
+    $escaped_table_name = str_replace("\\", "/", $table_name);
+    return $cache[$table_name] = '`' . config\PREFIX . $escaped_table_name . '`';
 }
 
 // Import some functions to the global namespace.
