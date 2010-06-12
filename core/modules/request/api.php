@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\request;
+<?php namespace nmvc\request;
 
 /**
 * @desc Attempts to reset the output buffer to the default state
@@ -148,13 +146,8 @@ function show_invalid($reason = null) {
 * @return Does not return, exits the request when done.
 */
 function info($topic, $body) {
-    $try_styled = false;
     reset();
-    $controller = new \nmvc\core\StdController();
-    $controller->layout = "/html/xhtml1.1";
-    $controller->topic = $topic;
-    $controller->body = $body;
-    \nmvc\View::render("/request/info", $controller, false, true);
+    \nmvc\Controller::invoke("/request/info/_show", true, $topic, $body);
     exit;
 }
 
@@ -308,6 +301,17 @@ function send_file($filepath, $mime = 'application/octet-stream', $filename = nu
     if ($r === FALSE)
         throw new \Exception("Could not access cached file '$path'.");
     exit;
+}
+
+/**
+ * Finalizes this request and sends the specified data in json format
+ * with correct headers.
+ * @param mixed $json_data Data to encode and transmit.
+ */
+function send_json_data($data) {
+    \nmvc\request\reset();
+    header("Content-Type: application/json");
+    die(json_encode($data));
 }
 
 // Import some functions to the global namespace.
