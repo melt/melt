@@ -70,11 +70,11 @@ abstract class Controller {
      * Attempts to find the controller specified by the given path.
      * @param mixed $path Invoke path. Either an array of path tokens or
      * otherwise an unsplit string path.
-     * @param boolean $standard_invoke When set to true
+     * @param boolean $ignore_internal_declarations When set to true
      * controllers, actions or modules with a starting "_" is ignored.
      * @returns mixed FALSE if path not found, otherwise array(controller_class_name, controller_name, action_name, arguments)
      */
-    public static function pathToController($path, $standard_invoke = false) {
+    public static function pathToController($path, $ignore_internal_declarations = false) {
         if ($path[0] == "/")
             $path = substr($path, 1);
         $path_parts = is_array($path)? $path: explode("/", $path);
@@ -87,7 +87,7 @@ abstract class Controller {
                 $controller_name = "index";
             else if ($controller_name == "index") // "index" is reserved.
                 return false;
-            else if ($standard_invoke && $controller_name[0] == "_")
+            else if ($ignore_internal_declarations && $controller_name[0] == "_")
                 return false;
             $controller_name = ucfirst(string\underline_to_cased($controller_name));
             if ($i == 0)
@@ -99,7 +99,7 @@ abstract class Controller {
                 $action_name = "index";
             else if ($action_name == "index") // "index" is reserved.
                 return false;
-            else if ($standard_invoke && $action_name[0] == "_")
+            else if ($ignore_internal_declarations && $action_name[0] == "_")
                 return false;
             // Check if controller exists (actually loads it if it does).
             if (class_exists($controller_class_name))
@@ -111,23 +111,35 @@ abstract class Controller {
         return array($controller_class_name, $controller_name, $action_name, array_slice($path_parts, $i + 2));
     }
 
-
     /**
      * Attempts to run the specified controller by given path.
-     * nanoMVC mapping determines if controller exists.
+     * This function also takes any number of extra arguments that will be
+     * passed to the controller action.
      * @param mixed $path Path to invoke. Either an array of path tokens or
      * otherwise an unsplit string path.
-     * @param boolean $standard_invoke When set to true behaviour will change:
-     * - controllers, actions or modules with a starting "_" is ignored,
-     * - controller defined layout not ignored,
-     * - passing incorrect number of argument will safely return false.
-     * @returns boolean FALSE if path not found, otherwise TRUE.
+     * @param boolean $use_controller_layout Set to true to render in the controller
+     * specifyed layout.
      */
-    public static function invoke($path, $standard_invoke = false) {
+    public static function invoke($path, $use_controller_layout = false) {
+        $extra_arguments = func_num_args() > 2? array_slice(func_get_args(), 2): array();
+        $ret = self::invoke_internal($path, $extra_arguments, false, !$use_controller_layout);
+        if ($ret === false)
+            trigger_error("Could not invoke '$path'. Not found!", \E_USER_WARNING);
+    }
+
+    /**
+     * Used by nanoMVC to invoke from an external request.
+     * This invoke has less privligies, why the separate function.
+     */
+    public static function invoke_from_external_request($path) {
+        return self::invoke_internal($path, array(), true, false);
+    }
+
+    private static function invoke_internal($path, $extra_arguments, $ignore_internal_declarations, $ignore_controller_layout) {
         if ($path[0] == "/")
             $path = substr($path, 1);
         $path_parts = is_array($path)? $path: explode("/", $path);
-        $controller_param = self::pathToController($path_parts, $standard_invoke);
+        $controller_param = self::pathToController($path_parts, $ignore_internal_declarations);
         if ($controller_param === false)
             return false;
         // Class found.
@@ -150,22 +162,22 @@ abstract class Controller {
             if (!isset($controller->layout) || $controller->layout == "")
                 $controller->layout = '/html/xhtml1.1';
         }*/
-        if ($standard_invoke) {
-            $method_reflector = new \ReflectionMethod($controller_class_name, $action_name);
-            $total_req_parameters = $method_reflector->getNumberOfRequiredParameters();
-            if (count($arguments) < $total_req_parameters)
-                return false;
-            $max_parameters = $method_reflector->getNumberOfParameters();
-            if (count($arguments) > $max_parameters)
-                return false;
-        }
+        $arguments = array_merge($arguments, $extra_arguments);
+        // Make sure right number of arguments are passed.
+        $method_reflector = new \ReflectionMethod($controller_class_name, $action_name);
+        $total_req_parameters = $method_reflector->getNumberOfRequiredParameters();
+        if (count($arguments) < $total_req_parameters)
+            return false;
+        $max_parameters = $method_reflector->getNumberOfParameters();
+        if (count($arguments) > $max_parameters)
+            return false;
         // Before filter.
         call_user_func_array(array($controller, "beforeFilter"), array_merge(array($action_name), $arguments));
         // Call the action now.
         $ret_view = call_user_func_array(array($controller, $action_name), $arguments);
         // Invoke before render callbacks.
         static $first_render = true;
-        if (!$first_render) {
+        if ($first_render) {
             $first_render = false;
             foreach (internal\get_all_modules() as $module_parameters) {
                 $module_clsname = $module_parameters[0];
@@ -173,13 +185,12 @@ abstract class Controller {
             }
         }
         $controller->beforeRender();
-        // Non standard invokes ignore layouts.
-        if (!$standard_invoke)
-            $controller->layout = null;
         // NULL = Display default view if it exists,
         // FALSE = Display nothing,
         // STRING = Force display of this view or crash,
         // ELSE crash.
+        if ($ignore_controller_layout)
+            $controller->layout = null;
         if ($ret_view === false)
             return true;
         else if ($ret_view === null) {
@@ -188,12 +199,13 @@ abstract class Controller {
                 $path_parts[] = "index";
             } else if (strtolower($action_name) == "index")
                 $path_parts[] = "index";
-            if (count($arguments) > 0)
-                $path_parts = array_slice($path_parts, 0, -count($arguments));
+            $path_part_cnt = -count($arguments) + count($extra_arguments);
+            if ($path_part_cnt < 0)
+                $path_parts = array_slice($path_parts, 0, $path_part_cnt);
             $found_view = View::render(implode("/", $path_parts), $controller, false, true, true);
-        } else if (is_string($ret_view))
+        } else if (is_string($ret_view)) {
             $found_view = View::render($ret_view, $controller, false, true, true);
-        else
+        }else
             trigger_error("Did not understand what controller action returned (" . var_dump($ret_view) . ").", \E_USER_ERROR);
         // Rendering complete.
         $controller->afterRender();

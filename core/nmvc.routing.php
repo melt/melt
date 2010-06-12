@@ -98,7 +98,7 @@ if ($config_file_data !== null)
         }
     }
     // If there is a controller with this name, run it.
-    if (!Controller::invoke($url_tokens, true)) {
+    if (!Controller::invoke_from_external_request($url_tokens)) {
         // See if any module is interested in catching the request instead.
         foreach (internal\get_all_modules() as $module_name => $module_parameters) {
             $class_name = $module_parameters[0];
