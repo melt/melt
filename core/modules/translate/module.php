@@ -6,14 +6,13 @@ class TranslateModule extends \nmvc\CoreModule {
         // See if the language exists.
         \nmvc\db\enable_display();
         $language = strtolower($_GET["lang"]);
-        $lang_table = \nmvc\db\query("DESCRIBE " . config\TRANSLATION_TABLE);
-        while (false !== ($column = api_database::next_array($lang_table))) {
+        $lang_table = \nmvc\db\query("DESCRIBE " . \nmvc\db\table(config\TRANSLATION_TABLE));
+        while (false !== ($column = \nmvc\db\next_array($lang_table))) {
             $column_name = strtolower($column[0]);
             if ($column_name == $language) {
                 $out_buffer = "<?php\nglobal \$_lang_translation;\n\$_lang_translation = array(\n";
-                $translations = api_database::query("SELECT original,$column_name FROM "
-                . config\DB_HOST . "." . config\TRANSLATION_TABLE);
-                while (false !== ($row = api_database::next_array($translations))) {
+                $translations = \nmvc\db\query("SELECT original,$column_name FROM " . \nmvc\db\table(config\TRANSLATION_TABLE));
+                while (false !== ($row = \nmvc\db\next_array($translations))) {
                     $original = var_export($row[0], true);
                     $translate = var_export($row[1], true);
                     $out_buffer .= "\t$original =>\n\t\t$translate,\n\n";
@@ -35,7 +34,8 @@ class TranslateModule extends \nmvc\CoreModule {
             define("LANGUAGE_FILE", APP_DIR . "/lang.$set_to.php");
             require LANGUAGE_FILE;
             // Since not using default language, we can append a content-language header.
-            header("Content-Language: " . LANGUAGE_SET);
+            if (!headers_sent())
+                header("Content-Language: " . LANGUAGE_SET);
             return true;
         } else
             return false;
@@ -85,7 +85,7 @@ class TranslateModule extends \nmvc\CoreModule {
                 return;
         }
         // 4. Set to one of the supported.
-        try_set_language($languages[0], $languages);
+        self::trySetLanguage($languages[0], $languages);
     }
 }
 

@@ -13,8 +13,8 @@ function __($str) {
     }
     // Using translation!
     global $_lang_translation;
-    if (config\ENABLE && TRANSLATION_AVAILIBLE) {
-        if (isset($_lang_translation[$str])) {
+    if (config\ENABLE) {
+        if (TRANSLATION_AVAILIBLE && isset($_lang_translation[$str])) {
             // Translate if translation defined.
             $translate = $_lang_translation[$str];
             if (strlen($translate) > 0)
@@ -22,7 +22,7 @@ function __($str) {
         } else if (config\TRANSLATION_CAPTURE) {
             // Capture.
             $count = \nmvc\db\query("SELECT COUNT(*) FROM " . \nmvc\db\table(config\TRANSLATION_TABLE) . " WHERE original = " . \nmvc\db\strfy($str));
-            $count = api_database::next_array($count);
+            $count = \nmvc\db\next_array($count);
             $count = intval($count[0]);
             if ($count == 0) {
                 // Insert.
