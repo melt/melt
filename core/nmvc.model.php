@@ -109,7 +109,7 @@ abstract class Model implements \Iterator {
                 trigger_error("Invalid model column: $model_name.\$$column_name - The specified type '$type_class_name' is not a nmvc\\Type.", \E_USER_ERROR);
             // Core pointer name convention check.
             $ends_with_id = string\ends_with($column_name, "_id");
-            if (is_subclass_of($type_class_name, 'nmvc\core\PointerType')) {
+            if (is($type_class_name, 'nmvc\core\PointerType')) {
                 if (!$ends_with_id)
                     trigger_error("Invalid model column: $model_name.\$$column_name. nanoMVC name convention demands that all pointer type columns ends with '_id'!", \E_USER_ERROR);
             } else if ($ends_with_id)
@@ -194,6 +194,8 @@ abstract class Model implements \Iterator {
 
     /** Helper function to view a column. */
     public function view($name) {
+        if ($name == "id")
+            return (string) $this->getID();
         $subresolve = self::doSubResolve($name);
         if (!isset($this->_cols[$name])) {
             trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_WARNING);
@@ -214,6 +216,8 @@ abstract class Model implements \Iterator {
 
     /** Assignment overloading. Returns value. */
     public function __get($name) {
+        if ($name == "id")
+            return $this->getID();
         $subresolve = self::doSubResolve($name);
         if (!isset($this->_cols[$name])) {
             trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_NOTICE);
@@ -247,9 +251,12 @@ abstract class Model implements \Iterator {
 
     /** Overloading isset due to assignment overloading. */
     public function __isset($name) {
+        if ($name == "id")
+            return true;
         $subresolve = self::doSubResolve($name);
-        if ($subresolve === null)
-            return isset($this->_cols[$name]);
+        $isset = isset($this->_cols[$name]);
+        if ($subresolve === null || !$isset)
+            return $isset;
         else
             return isset($this->_cols[$name]->get()->$subresolve);
     }
@@ -427,7 +434,7 @@ abstract class Model implements \Iterator {
         if (!isset($columns_array[$pointer_name]))
             trigger_error("'$pointer_name' is not a column of '$model_name'.", \E_USER_ERROR);
         $column = $columns_array[$pointer_name];
-        if (!is_subclass_of($column, 'nmvc\core\PointerType'))
+        if (!is($column, 'nmvc\core\PointerType'))
             trigger_error("'$model_name.$pointer_name' is not a pointer column.", \E_USER_ERROR);
         return $column->getTargetModel();
     }
@@ -641,7 +648,7 @@ abstract class Model implements \Iterator {
         else $limit = "";
         if ($order != "")
             $order = " ORDER BY " . $order;
-        return static::selectFreely($where . $order . $limit);
+        return self::selectFreely($where . $order . $limit);
     }
 
 
@@ -694,7 +701,7 @@ abstract class Model implements \Iterator {
         else if ($offset != 0)
             $limit_query = " OFFSET " . $offset;
         else
-            $limit = "";
+            $limit_query = "";
         return static::findDataFreely($columns_to_select, $filter_query . " " . $limit_query);
     }
 
@@ -791,10 +798,9 @@ EOP;
             }
             preg_match_all($column_extract_pattern, $other_blob, $tokens, PREG_SET_ORDER);
             foreach ($tokens as $token) {
-                $other_token = $token[2];
-                if (strlen($other_token) > 0) {
+                if (isset($token[2]) && strlen($token[2]) > 0) {
                     // Just pass non-semantic column reference tokens on.
-                    $translated_query .= $other_token;
+                    $translated_query .= $token[2];
                     continue;
                 }
                 // Replace the semantic column reference with a sql reference.
@@ -823,7 +829,13 @@ EOP;
         // Contains pointers mapped to (col_sql_ref, target_model, table_join_alias, left_join).
         $columns_data = array();
         // Register all semantic columns.
-        $sql_select_columns = ($supress_id? "": string\from_index(0) . ".id,") . implode(", ", $columns_to_select);
+        foreach ($columns_to_select as &$column) {
+            if ($column[0] != '$' && strpos($column, '(') === false) {
+                $column_data = static::registerSemanticColumn($column, $columns_data);
+                $column = $column_data[0];
+            }
+        }
+        $sql_select_columns = ($supress_id? "": string\from_index(0) . ".id,") . implode(",", $columns_to_select);
         $sql_select_columns = static::transformSemanticColumnQuery($sql_select_columns, $columns_data);
         // Transform any semantic column references to hard SQL ones.
         $sql_select_params = static::transformSemanticColumnQuery($sql_select_params, $columns_data);
@@ -950,6 +962,12 @@ EOP;
      * Useful when doing critical operations.
      * @see \nmvc\db\unlock() for unlocking all locks.  */
     public static function lock($read = true, $write = true) {
+        return;
+
+        // TODO: Redesign model locking.
+        // mySQL locking and reading is not this simple.
+
+        /*
         $family_tree = self::getMetaData("family_tree");
         $name = get_called_class();
         if (!isset($family_tree[$name]))
@@ -961,7 +979,7 @@ EOP;
                 db\run("LOCK TABLES " . table($table_name) . " WRITE");
             if ($read)
                 db\run("LOCK TABLES " . table($table_name) . " READ");
-        }
+        }*/
     }
 
     protected static function tableNameToClassName($table_name) {
@@ -1017,18 +1035,21 @@ EOP;
         db\run("DROP TABLE " . table('core\metadata'));
         db\run("CREATE TABLE " . table('core\metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
         $creating_sequence = !in_array(db\config\PREFIX . 'core\seq', db\get_all_tables());
-        // Locate and sync all models.
-        $model_paths = array(
-            APP_DIR . "/models/",
-            APP_DIR . "/modules/*/models/",
-            APP_CORE_DIR . "/modules/*/models/",
-        );
+        // Locate and sync all models in all enabled modules.
+        $model_paths = array(APP_DIR . "/models");
+        foreach (\nmvc\internal\get_all_modules() as $module_params) {
+            list($class, $path) = $module_params;
+            $model_paths[] = $path . "/models";
+        }
         // Array that keeps track of all incomming pointers to tables.
         $pointer_map = array();
         $model_classes = array();
         $sequence_max = 1;
         foreach ($model_paths as $model_path) {
-            $model_filenames = glob($model_path . "*_model.php");
+            $model_filenames = glob($model_path . "/*_model.php");
+            // In some conditions glob returns non arrays instead of empty array on no results. See glob() in manual.
+            if (!is_array($model_filenames))
+                continue;
             $has_module = $model_path != $model_paths[0];
             foreach ($model_filenames as $model_filename) {
                 if (!is_file($model_filename))
