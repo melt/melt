@@ -43,6 +43,6 @@ RewriteBase /
 RewriteRule ^static/cmod/([^/]+)/(.*)$ core/modules/$1/static/$2 [L]
 RewriteRule ^static/mod/([^/]+)/(.*)$ modules/$1/static/$2 [L]
 
-# Rewrite everything non-static to nanoMVC bootstrap.
+# Rewrite everything non-static to nanoMVC core.
 RewriteCond %{REQUEST_URI} !/static
-RewriteRule .* bootstrap.php [L]
+RewriteRule .* core/core.php [L]
