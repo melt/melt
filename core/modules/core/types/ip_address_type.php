@@ -16,7 +16,7 @@ class IpAddressType extends \nmvc\AppType {
     }
 
     public function getInterface($name) {
-        $value = inet_ntop($this->value);
+        $value = (string) $this;
         return "<input type=\"text\" name=\"$name\" value=\"$value\" />";
     }
 
@@ -40,7 +40,7 @@ class IpAddressType extends \nmvc\AppType {
     }
 
     public function __toString() {
-        return strval(inet_ntop($this->value));
+        return ($this->value != "")? inet_ntop($this->value): "";
     }
 }
 
