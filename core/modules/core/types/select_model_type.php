@@ -58,16 +58,4 @@ class SelectModelType extends PointerType {
             $value = 0;
         $this->value = $value;
     }
-
-    public function __toString() {
-        $target = $this->get();
-        if (is_object($target))
-            if (in_array($target->getID(), $this->denied_ids))
-                $this->value = 0;
-            else
-                $label = empty($this->label_column)? $this->target_model: $target->{$this->label_column}->get();
-        else
-            $this->value = 0;
-        return ($this->value > 0)? $label . " (#" . intval($this->value) . ")": __("Not Set");
-    }
 }

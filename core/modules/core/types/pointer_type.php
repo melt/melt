@@ -9,9 +9,16 @@ class PointerType extends \nmvc\AppType {
         return $this->target_model;
     }
 
+    /** Returns a HTML representation of this pointer.
+     * It will try to generate a link for the model if it can. */
     public function __toString() {
         $target = $this->get();
-        return ($target !== null)? (string) $target: "—";
+        if (!is_object($target))
+            return "—";
+        $html = __((string) $target);
+        if (method_exists($target, "getUrl"))
+            $html = "<a href=\"" . $target->getUrl() . "\">$html</a>";
+        return $html;
     }
 
     /** Constructs this typed field with this column name. */

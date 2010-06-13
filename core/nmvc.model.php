@@ -272,6 +272,14 @@ abstract class Model implements \Iterator {
         }
     }
 
+    /** Displays this model. Should be overriden. */
+    public function __toString() {
+        if ($this->isLinked())
+            return __("Not Set");
+        else
+            return get_class($this) . " #" . $this->id;
+    }
+
     /** Allows foreach iteration on models. */
     public function rewind() {
         return reset($this->_cols);
