@@ -2,7 +2,7 @@
 
 namespace nmvc {
     // Core constants.
-    const VERSION = "1.5.0";
+    const VERSION = "1.5.1";
     define("APP_CORE_DIR", dirname(__FILE__));
     // Standard function to restore the working dir to the core directory.
     function restore_workdir() {
@@ -38,9 +38,13 @@ namespace nmvc\config {
         else
             return $use_modules;
     }
-    // Read configuration.
+    // Read configuration, local configuration first if it exist.
     define("APP_DIR", $app_dir);
-    require APP_DIR . "/config.php";
+    $local_config = APP_DIR . "/config.local.php";
+    if (is_file($local_config))
+        require $local_config;
+    else
+        require APP_DIR . "/config.php";
     if (modules_using() === null)
         trigger_error("nanoMVC: config.php did not set what modules the application is using.", \E_USER_ERROR);
     // Evaluate developer mode based on configuration and cookies.
