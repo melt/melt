@@ -85,7 +85,7 @@ function exception_handler(\Exception $exception) {
 
 function error_handler($errno, $errstr, $errfile, $errline) {
     if ($errno == E_USER_ERROR) {
-        throw new \Exception("E_USER_ERROR caught: " . $errstr, $errno);
+        exception_handler(new \Exception("E_USER_ERROR caught: " . $errstr, $errno));
         exit;
     }
     // We can bypass this error, just notify in developer mode.
@@ -120,7 +120,7 @@ function error_handler($errno, $errstr, $errfile, $errline) {
         E_USER_DEPRECATED => "E_USER_DEPRECATED",
     );
     $type = isset($error_map[$errno])? $error_map[$errno]: "E_UNKNOWN";
-    throw new \Exception("$type caught: " . $errstr, $errno);
+    exception_handler(new \Exception("$type caught: " . $errstr, $errno));
     exit;
 }
 
