@@ -78,13 +78,15 @@ function crash($message, $file, $line, $trace) {
     $errcode = \nmvc\string\random_alphanum_str(6);
     $errraised = "__File: $file; line #$line\n";
     $errmessage = "__Messsage: $message\n";
+    // Log the error.
     $errtrace = "__Stack:\n";
+    $html_errtrace = "__Stack:\n";
     foreach ($trace as $key => $call) {
         if (!isset($call['file']) || $call['file'] == '') {
             $call['file'] = '~Internal Location~';
             $call['line'] = 'N/A';
         }
-        $errtrace .= '#' . (count($trace) - $key) . ' ' . basename($call['file']) . "(" . $call['line'] . ") " . $call['function'] . '(';
+        $trace_line = '#' . (count($trace) - $key) . ' ' . basename($call['file']) . "(" . $call['line'] . ") " . $call['function'] . '(';
         $first = false;
         if (isset($call['args'])) {
             foreach ($call['args'] as $arg) {
@@ -96,12 +98,19 @@ function crash($message, $file, $line, $trace) {
                     $arg = strval($arg);
                 if (empty($arg)) $arg = 'null';
                 if (!$first) $first = true; else $arg = ', ' . $arg;
-                $errtrace .= $arg;
+                $trace_line .= $arg;
             }
         }
-        $errtrace .= ")\n";
+        $trace_line .= ")";
+        $errtrace .= "$trace_line\n";
+        if (\preg_match("#[/\\\\]core[/\\\\]#", $call['file']))
+            $html_errtrace .= "$trace_line\n";
+        else if (\preg_match("#[/\\\\]modules[/\\\\]#", $call['file']))
+            $html_errtrace .= "<span style=\"color: green;\">$trace_line</span>\n";
+        else
+            $html_errtrace .= "<span style=\"color: blue;\">$trace_line</span>\n";
+            
     }
-    // Log the error.
     error_log(str_replace("\n", ";", "Exception caught: " . $errraised . $errmessage . $errtrace));
     if (!APP_IN_DEVELOPER_MODE) {
         // Do not unsafly print error information for non developers.
@@ -135,11 +144,13 @@ function crash($message, $file, $line, $trace) {
                 end($file_lines);
                 $pad_len = strlen(key($file_lines) + 1);
                 foreach ($file_lines as $line => &$file_line)
-                    $file_line = " " . str_pad($line + 1, $pad_len, "0", STR_PAD_LEFT) . ": " . str_replace("\t", "    ", rtrim($file_line));
+                    $file_line = " " . \htmlentities(str_pad($line + 1, $pad_len, "0", STR_PAD_LEFT) . ": " . str_replace("\t", "    ", rtrim($file_line)), null, "UTF-8");
                 $file_lines[$zero_offseted_line] = "<b style=\"color:red;\">" . $file_lines[$zero_offseted_line] . "</b>";
                 $errsample = "__Sample:\n" . implode("\n", $file_lines) . "\n\n";
             }
         }
+        if (!$use_texterror)
+            $errtrace = $html_errtrace;
         $msg = "$errraised\n$errmessage\n$errsample$errtrace\nError tag: #$errcode";
         if ($use_texterror)
             die("\n\n$topic\n\n" . $msg);
