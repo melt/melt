@@ -11,30 +11,30 @@ Options +FollowSymLinks
 RewriteEngine On
 
 # Use nanoMVC to display error documents.
-ErrorDocument 400 /bootstrap.php
-ErrorDocument 401 /bootstrap.php
-ErrorDocument 402 /bootstrap.php
-ErrorDocument 403 /bootstrap.php
-ErrorDocument 404 /bootstrap.php
-ErrorDocument 405 /bootstrap.php
-ErrorDocument 406 /bootstrap.php
-ErrorDocument 407 /bootstrap.php
-ErrorDocument 408 /bootstrap.php
-ErrorDocument 409 /bootstrap.php
-ErrorDocument 410 /bootstrap.php
-ErrorDocument 411 /bootstrap.php
-ErrorDocument 412 /bootstrap.php
-ErrorDocument 413 /bootstrap.php
-ErrorDocument 414 /bootstrap.php
-ErrorDocument 415 /bootstrap.php
-ErrorDocument 416 /bootstrap.php
-ErrorDocument 417 /bootstrap.php
-ErrorDocument 500 /bootstrap.php
-ErrorDocument 501 /bootstrap.php
-ErrorDocument 502 /bootstrap.php
-ErrorDocument 503 /bootstrap.php
-ErrorDocument 504 /bootstrap.php
-ErrorDocument 505 /bootstrap.php
+ErrorDocument 400 /core/core.php
+ErrorDocument 401 /core/core.php
+ErrorDocument 402 /core/core.php
+ErrorDocument 403 /core/core.php
+ErrorDocument 404 /core/core.php
+ErrorDocument 405 /core/core.php
+ErrorDocument 406 /core/core.php
+ErrorDocument 407 /core/core.php
+ErrorDocument 408 /core/core.php
+ErrorDocument 409 /core/core.php
+ErrorDocument 410 /core/core.php
+ErrorDocument 411 /core/core.php
+ErrorDocument 412 /core/core.php
+ErrorDocument 413 /core/core.php
+ErrorDocument 414 /core/core.php
+ErrorDocument 415 /core/core.php
+ErrorDocument 416 /core/core.php
+ErrorDocument 417 /core/core.php
+ErrorDocument 500 /core/core.php
+ErrorDocument 501 /core/core.php
+ErrorDocument 502 /core/core.php
+ErrorDocument 503 /core/core.php
+ErrorDocument 504 /core/core.php
+ErrorDocument 505 /core/core.php
 
 # Set this to the directory this application is installed in.
 RewriteBase /
