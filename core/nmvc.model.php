@@ -1025,7 +1025,7 @@ EOP;
     protected static function getMetaData($key) {
         if (isset(self::$_metadata_cache[$key]))
             return self::$_metadata_cache[$key];
-        $result = db\query("SELECT v FROM " . table('core\metadata') . " WHERE k = " . strfy($key));
+        $result = db\query("SELECT v FROM " . table('core/metadata') . " WHERE k = " . strfy($key));
         $result = db\next_array($result);
         if ($result !== false)
             $result = unserialize($result[0]);
@@ -1035,14 +1035,14 @@ EOP;
 
     protected static function setMetaData($key, $value) {
         self::$_metadata_cache[$key] = $value;
-        db\run("REPLACE INTO " . table('core\metadata') . " (k,v) VALUES (" . strfy($key) . "," . strfy(serialize($value)) . ")");
+        db\run("REPLACE INTO " . table('core/metadata') . " (k,v) VALUES (" . strfy($key) . "," . strfy(serialize($value)) . ")");
     }
 
     public static final function syncronize_all_models() {
         // Clear metadata.
-        db\run("DROP TABLE " . table('core\metadata'));
-        db\run("CREATE TABLE " . table('core\metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
-        $creating_sequence = !in_array(db\config\PREFIX . 'core\seq', db\get_all_tables());
+        db\run("DROP TABLE " . table('core/metadata'));
+        db\run("CREATE TABLE " . table('core/metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
+        $creating_sequence = !in_array(db\config\PREFIX . 'core/seq', db\get_all_tables());
         // Locate and sync all models in all enabled modules.
         $model_paths = array(APP_DIR . "/models");
         foreach (\nmvc\internal\get_all_modules() as $module_params) {
@@ -1114,8 +1114,8 @@ EOP;
         self::setMetaData("family_tree", $family_tree);
         if ($creating_sequence) {
             // Need to create the sequence.
-            db\run("CREATE TABLE " . table('core\seq') . " (id INT PRIMARY KEY NOT NULL)");
-            db\run("INSERT INTO " . table('core\seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
+            db\run("CREATE TABLE " . table('core/seq') . " (id INT PRIMARY KEY NOT NULL)");
+            db\run("INSERT INTO " . table('core/seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
         }
     }
 }
