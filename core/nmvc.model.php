@@ -515,6 +515,9 @@ abstract class Model implements \Iterator {
         if ($id <= 0)
             return null;
         $base_name = get_called_class();
+        $model = self::$_instance_cache[$id];
+        if ($model !== null)
+            return is($model, $base_name)? $model: null;
         static $family_tree = null;
         if ($family_tree === null)
             $family_tree = self::getMetaData("family_tree");
@@ -522,9 +525,6 @@ abstract class Model implements \Iterator {
             trigger_error("Model '$base_name' is out of sync with database.", \E_USER_ERROR);
         foreach ($family_tree[$base_name] as $table_name) {
             $model_class_name = self::tableNameToClassName($table_name);
-            $model = $model_class_name::instanceFromData($id);
-            if ($model !== null)
-                return $model;
             $return_data = $model_class_name::findDataForSelf($model_class_name::getColumnNames(), "WHERE id = $id");
             if (count($return_data) > 0)
                 return $model_class_name::instanceFromData($id, reset($return_data));
@@ -534,14 +534,11 @@ abstract class Model implements \Iterator {
 
     /**
      * Passing all sql result model instancing through this function to enable caching.
-     * @param Mixed $data_row Either a data result or null if function should
-     * return null instead of instancing model (probing cache).
+     * @return Model The cached model.
      */
-    private static function instanceFromData($id, $data_row = null) {
+    private static function instanceFromData($id, $data_row) {
         if (isset(self::$_instance_cache[$id]))
             return self::$_instance_cache[$id];
-        if ($data_row === null)
-            return null;
         $model_class_name = get_called_class();
         $model = new $model_class_name($id);
         $value = reset($data_row);
