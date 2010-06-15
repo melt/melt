@@ -33,7 +33,7 @@ foreach (internal\get_all_modules() as $module_name => $module_parameters) {
                 define($const, $default);
                 // Add constant to application configuration.
                 if ($config_file_data === null)
-                    $config_file_data = file_get_contents(APP_DIR . "/config.php");
+                    $config_file_data = file_get_contents(APP_CONFIG);
                 $default = var_export($default, true);
                 if (preg_match('#namespace\s+nmvc\\\\' . $module_name . '\\\\config\s*{#si', $config_file_data, $match, \PREG_OFFSET_CAPTURE)) {
                     // Insert.
@@ -54,7 +54,7 @@ foreach (internal\get_all_modules() as $module_name => $module_parameters) {
 
 // Save the new configuration file if it was modified.
 if ($config_file_data !== null)
-    file_put_contents(APP_DIR . "/config.php", $config_file_data);
+    file_put_contents(APP_CONFIG, $config_file_data);
 
 // Special request handling.
 {

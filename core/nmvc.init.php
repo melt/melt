@@ -41,10 +41,8 @@ namespace nmvc\config {
     // Read configuration, local configuration first if it exist.
     define("APP_DIR", $app_dir);
     $local_config = APP_DIR . "/config.local.php";
-    if (is_file($local_config))
-        require $local_config;
-    else
-        require APP_DIR . "/config.php";
+    define("APP_CONFIG", is_file($local_config)? $local_config: APP_DIR . "/config.php");
+    require APP_CONFIG;
     if (modules_using() === null)
         trigger_error("nanoMVC: config.php did not set what modules the application is using.", \E_USER_ERROR);
     // Evaluate developer mode based on configuration and cookies.
