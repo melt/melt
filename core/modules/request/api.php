@@ -322,7 +322,7 @@ function current_url_in($local_url) {
         return $local_url == REQ_URL;
     $slash_cnt_cur = substr_count(REQ_URL, "/");
     $slash_cnt = substr_count($local_url, "/");
-    if ($slash_cnt_cur > $slash_cnt)
+    if ($slash_cnt >= 2 && $slash_cnt_cur > $slash_cnt)
         return \nmvc\string\starts_with(REQ_URL, $local_url);
     else if ($slash_cnt_cur == $slash_cnt)
         return $local_url == REQ_URL;
