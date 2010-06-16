@@ -860,8 +860,7 @@ EOP;
         $result = db\query($query);
         if (self::$_have_pending_row_count) {
             $found_rows_result = db\next_array(db\query("SELECT FOUND_ROWS()"));
-            self::$_found_row_count = intval($found_rows_result[0][0]);
-            self::$_have_pending_row_count = false;
+            self::$_found_row_count += intval($found_rows_result[0]);
         }
         $return_data = array();
         while (false !== ($row = db\next_array($result))) {
@@ -877,16 +876,23 @@ EOP;
     private static $_found_row_count;
 
     /**
-     * This function prepares the next select statement so that the total
-     * number of rows that would have been selected, would the offset/limit
-     * not have been set, is calculated
+     * Will start counting how many results would have been returned
+     * without limit statements. This can decreese the performance of
+     * queries greatly so make sure you call stopCountNolimit() when
+     * you are done counting.
      */
-    public static function prepareCalcFoundRows() {
+    public static function startCountNolimit() {
         self::$_have_pending_row_count = true;
         self::$_found_row_count = 0;
     }
 
-    public static function getCalcFoundRowsResult() {
+    /**
+     * Returns the number of results that would have been returned
+     * without limit statements, and stops counting.
+     * @return integer
+     */
+    public static function stopCountNolimit() {
+        self::$_have_pending_row_count = false;
         return self::$_found_row_count;
     }
 
