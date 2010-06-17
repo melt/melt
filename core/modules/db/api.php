@@ -239,13 +239,16 @@ function sync_table_layout_with_columns($table_name, $columns) {
         while (false !== ($column = next_array($current_columns))) {
             $current_name = strtolower($column[0]);
             $current_type = strtolower($column[1]);
-            $expected_type = $columns[$current_name];
             // ID column is special case.
             if ($current_name == 'id') {
                 if (!\nmvc\string\starts_with($current_type, "int"))
                     trigger_error("ID column found in table '$table_name', but with unexpected type ($current_type). Has it been tampered with? nanoMVC not written to handle this condition.", \E_USER_ERROR);
                 continue;
             }
+            // Skip unknown columns.
+            if (!isset($columns[$current_name]))
+                continue;
+            $expected_type = $columns[$current_name];
             if (isset($columns[$current_name]) && sql_column_need_update($expected_type, $current_type)) {
                 // Invalid datatype, alter it.
                 query("ALTER TABLE " . table($table_name) . " MODIFY COLUMN $current_name $expected_type");
