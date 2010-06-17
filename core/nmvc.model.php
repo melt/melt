@@ -515,7 +515,7 @@ abstract class Model implements \Iterator {
         if ($id <= 0)
             return null;
         $base_name = get_called_class();
-        $model = self::$_instance_cache[$id];
+        $model = @self::$_instance_cache[$id];
         if ($model !== null)
             return is($model, $base_name)? $model: null;
         static $family_tree = null;
