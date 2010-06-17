@@ -20,15 +20,15 @@ function exception_handler(\Exception $exception) {
 }
 
 function error_handler($errno, $errstr, $errfile, $errline) {
+    // Bypass this error if it should not report it.
+    if ((error_reporting() & $errno) == 0)
+        return true;
     $backtrace = debug_backtrace();
     unset($backtrace[0]);
     if ($errno == E_USER_ERROR) {
         crash("E_USER_ERROR caught: " . $errstr, $errfile, $errline, $backtrace);
         exit;
     }
-    // We can bypass this error, just notify in developer mode.
-    if (!APP_IN_DEVELOPER_MODE)
-        return true;
     // The developer is not interested in bad vendor code.
     $vendor_path = APP_DIR . "/vendors/";
     foreach (array(array(array('file' => $errfile)), $backtrace) as $backtraces)
@@ -39,6 +39,7 @@ function error_handler($errno, $errstr, $errfile, $errline) {
         if (\nmvc\string\starts_with($file, $vendor_path))
             return true;
     }
+    /*
     // Fetching undefined keys in arrays is not exceptional.
     if (strpos($errstr, "Undefined offset") !== FALSE)
         return true;
@@ -56,6 +57,7 @@ function error_handler($errno, $errstr, $errfile, $errline) {
     if (strpos($errstr, "Static function ") !== FALSE
     && strpos($errstr, " should not be abstract") !== FALSE)
         return true;
+    */
     $error_map = array(
         E_WARNING => "E_WARNING",
         E_NOTICE => "E_NOTICE ",
