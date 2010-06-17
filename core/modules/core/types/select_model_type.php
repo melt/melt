@@ -9,7 +9,12 @@ class SelectModelType extends PointerType {
     /** @var Where condition to filter targets. */
     public $where = "";
     /** @var Column in target to use for labeling objects. */
-    public $label_column = "";
+    public $label_column;
+
+    public function __construct($column_name, $target_model, $label_column = "name") {
+        parent::__construct($column_name, $target_model);
+        $this->label_column = $label_column;
+    }
 
     /**
     * @desc The id's set here will not be selectable and treated as invalid.
@@ -27,17 +32,20 @@ class SelectModelType extends PointerType {
         $html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
         $results = forward_static_call(array($this->target_model, 'selectWhere'), $this->where);
         $selected = ' selected="selected"';
+        $out_list = array();
         foreach ($results as $model) {
             if (isset($model->{$this->label_column}))
                 $label = escape($model->{$this->label_column});
             else
-                $label = escape((string) $model);
+                $label = strip_tags((string) $model);
             $id = $model->getID();
             if (in_array($id, $this->denied_ids))
                 continue;
             $s = ($value == $id)? $selected: null;
-            $html .= "<option$s value=\"$id\">$label</option>";
+            $out_list[$label] = "<option$s value=\"$id\">$label</option>";
         }
+        ksort($out_list);
+        $html .= implode("", $out_list);
         $html .= "</select>";
         return $html;
     }
