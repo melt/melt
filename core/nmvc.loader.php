@@ -154,6 +154,11 @@ function autoload($name) {
             if ($trigger_error)
                 trigger_error("nanoMVC: '$path' did not declare a class named '$class_name' as expected!", \E_USER_ERROR);
         }
+        if (\nmvc\config\MAINTENANCE) {
+            // Also check case sensitivity.
+            if (!in_array($class_name, get_declared_classes()) && !in_array($class_name, get_declared_interfaces()))
+                trigger_error("nanoMVC: '$path' did not declare '$class_name' with a correct letter case! This is against convention and could breaks some logic!", \E_USER_ERROR);
+        }
         if ($must_extend !== null && !is_subclass_of($class_name, $must_extend))
             trigger_error("nanoMVC: '$class_name' must extend '$must_extend'! (Declared in '$path')", \E_USER_ERROR);
         if ($pending_app_override)
