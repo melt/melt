@@ -11,20 +11,19 @@ abstract class SingletonModel extends \nmvc\AppModel {
      * This function ensures that exactly one exists.
      */
     public static function get() {
-        static $singleton_model = null;
-        if ($singleton_model === null) {
-            // Fetching singleton model is done in an atomic operations to ensure no duplicates.
-            static::lock();
-            $singleton_model = parent::selectFirst("");
-            if ($singleton_model === null) {
-                // Forwarding static call to model enables bypassing of static override.
-                $singleton_model = forward_static_call(array('nmvc\Model', 'insert'));
-            }
-            $singleton_model->store();
-            // Exiting critical section.
-            \nmvc\db\unlock();
-        }
-        return $singleton_model;
+        static $singleton_model_cache = array();
+        $class_name = get_called_class();
+        if (isset($singleton_model_cache[$class_name]))
+            return $singleton_model_cache[$class_name];
+        // Fetching singleton model is done in an atomic operations to ensure no duplicates.
+        static::lock();
+        $singleton_model = parent::selectFirst("");
+        if ($singleton_model === null)
+            $singleton_model = self::insert();
+        $singleton_model->store();
+        // Exiting critical section.
+        \nmvc\db\unlock();
+        return $singleton_model_cache[$class_name] = $singleton_model;
     }
 
     private static function noSupport($function) {
