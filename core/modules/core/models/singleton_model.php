@@ -17,7 +17,11 @@ abstract class SingletonModel extends \nmvc\AppModel {
             return $singleton_model_cache[$class_name];
         // Fetching singleton model is done in an atomic operations to ensure no duplicates.
         static::lock();
-        $singleton_model = parent::selectFirst("");
+        $result = parent::selectWhere();
+        $singleton_model = \reset($result);
+        // If there are more than one model instance, unlink the rest.
+        while (false !== ($instance = \next($result)))
+            $instance->unlink();
         if ($singleton_model === null)
             $singleton_model = self::insert();
         $singleton_model->store();
@@ -26,16 +30,7 @@ abstract class SingletonModel extends \nmvc\AppModel {
         return $singleton_model_cache[$class_name] = $singleton_model;
     }
 
-    private static function noSupport($function) {
-        throw new \Exception("SingletonModels does not support $function().", \E_USER_ERROR);
-    }
-
-
     public static function selectByID($id) {
-        return self::get();
-    }
-
-    public static function selectFirst($where, $order = "") {
         return self::get();
     }
 
@@ -43,13 +38,23 @@ abstract class SingletonModel extends \nmvc\AppModel {
         return self::get();
     }
 
-    // Functions not supported by SingletonModels.
-    public static function selectFreely($sqldata) { self::noSupport(__FUNCTION__);}
-    public static function selectWhere($where = "", $offset = 0, $limit = 0, $order = "") { self::noSupport(__FUNCTION__);}
-    public static function unlinkByID($id) { self::noSupport(__FUNCTION__);}
-    public static function unlinkFreely($sqldata) { self::noSupport(__FUNCTION__);}
-    public static function unlinkWhere($where = "", $offset = 0, $limit = 0) { self::noSupport(__FUNCTION__);}
-    public function unlink() { self::noSupport(__FUNCTION__);}
-    public static function count($where = "") { self::noSupport(__FUNCTION__);}
-    public function __clone() { self::noSupport(__FUNCTION__);}
+    
+
+    // This functions is meaningless when used directly but still
+    // useful for automated operations that don't care if this is a singelton
+    // or not. Enforce single instance behaviour by never
+    // returning more than one result.
+    public static function selectFreely($sqldata) {
+        $results = parent::selectFreely($sqldata);
+        if (count($results) > 1)
+            $results = array(reset($results));
+        return $results;
+    }
+
+    public static function count($where = "") {
+        $count = parent::count($where);
+        if ($count > 1)
+            $count = 1;
+        return $count;
+    }
 }
