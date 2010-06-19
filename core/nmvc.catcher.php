@@ -78,6 +78,7 @@ function crash($message, $file, $line, $trace) {
     // Restore output buffer.
     \nmvc\request\reset();
     $errcode = \nmvc\string\random_alphanum_str(6);
+    $errlocation = "__Path: " . REQ_URL . "\n";
     $errraised = "__File: $file; line #$line\n";
     $errmessage = "__Messsage: $message\n";
     // Log the error.
@@ -153,7 +154,7 @@ function crash($message, $file, $line, $trace) {
         }
         if (!$use_texterror)
             $errtrace = $html_errtrace;
-        $msg = "$errraised\n$errmessage\n$errsample$errtrace\nError tag: #$errcode";
+        $msg = "$errlocation\n$errraised\n$errmessage\n$errsample$errtrace\nError tag: #$errcode";
         if ($use_texterror)
             die("\n\n$topic\n\n" . $msg);
         $msg = "<pre>$msg</pre>";
