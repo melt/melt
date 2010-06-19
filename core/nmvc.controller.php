@@ -39,11 +39,9 @@ abstract class Controller {
     public static function rewriteRequestUrl(&$path_tokens) {}*/
 
 
-    /**
-     * Generates a path to this controller action and parameters.
-     */
-    public function getPath($action = null, $parameters = array()) {
-        return self::controllerToPath(get_class($this), $action, $parameters);
+    /** Generates a path to this controller action and parameters. */
+    public static function getPath($action = null, $parameters = array()) {
+        return self::controllerToPath(get_called_class(), $action, $parameters);
     }
 
     /**
