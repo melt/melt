@@ -17,7 +17,7 @@ class PointerType extends \nmvc\AppType {
             return "—";
         $html =(string) $target;
         if (method_exists($target, "getUrl"))
-            $html = "<a href=\"" . $target->getUrl() . "\">$html</a>";
+            $html = "<a class=\"model_pointer\" href=\"" . $target->getUrl() . "\">$html</a>";
         return $html;
     }
 
