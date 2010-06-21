@@ -13,12 +13,14 @@ function show_message($message, $status = "bad") {
 
 /**
  * Redirects and then displays a message.
- * @param string $local_url Local url to redirect too.
+ * @param string $url Local or full url to redirect too.
  * @param string $message Message to display.
  * @param string $status Determines how the message is rendered.
  * Application should at least support good|bad.
  */
-function redirect_message($local_url, $message, $status = "bad") {
+function redirect_message($url, $message, $status = "bad") {
+    if (!\nmvc\string\starts_with($url, "http"))
+        $url = url($url);
     $_SESSION['next_flash'] = array($message, $status);
-    \nmvc\request\redirect(url($local_url));
+    \nmvc\request\redirect($url);
 }
