@@ -225,7 +225,7 @@ abstract class Model implements \Iterator {
         }
         $ret = $this->_cols[$name]->get();
         if ($subresolve !== null)
-            $ret = $name->$subresolve;
+            $ret = $ret->$subresolve;
         return $ret;
     }
 
