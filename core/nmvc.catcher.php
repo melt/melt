@@ -107,11 +107,11 @@ function crash($message, $file, $line, $trace) {
         $trace_line .= ")";
         $errtrace .= "$trace_line\n";
         if (\preg_match("#[/\\\\]core[/\\\\]#", $call['file']))
-            $html_errtrace .= "$trace_line\n";
+            $html_errtrace .= escape($trace_line) . "\n";
         else if (\preg_match("#[/\\\\]modules[/\\\\]#", $call['file']))
-            $html_errtrace .= "<span style=\"color: green;\">$trace_line</span>\n";
+            $html_errtrace .= "<span style=\"color: green;\">" . escape($trace_line) . "</span>\n";
         else
-            $html_errtrace .= "<span style=\"color: blue;\">$trace_line</span>\n";
+            $html_errtrace .= "<span style=\"color: blue;\">" . escape($trace_line) . "</span>\n";
             
     }
     error_log(str_replace("\n", ";", "Exception caught: " . $errraised . $errmessage . $errtrace));
@@ -152,8 +152,10 @@ function crash($message, $file, $line, $trace) {
                 $errsample = "__Sample:\n" . implode("\n", $file_lines) . "\n\n";
             }
         }
-        if (!$use_texterror)
+        if (!$use_texterror) {
             $errtrace = $html_errtrace;
+            $errmessage = escape($errmessage);
+        }
         $msg = "$errlocation\n$errraised\n$errmessage\n$errsample$errtrace\nError tag: #$errcode";
         if ($use_texterror)
             die("\n\n$topic\n\n" . $msg);
