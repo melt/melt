@@ -12,6 +12,16 @@ function show_message($message, $status = "bad") {
 }
 
 /**
+ * Pushes message to be displayed on the next render.
+ * @param string $message Message to display.
+ * @param string $status Determines how the message is rendered.
+ * Application should at least support good|bad.
+ */
+function push_message($message, $status = "bad") {
+    $_SESSION['next_flash'] = array($message, $status);
+}
+
+/**
  * Redirects and then displays a message.
  * @param string $url Local or full url to redirect too.
  * @param string $message Message to display.
@@ -21,6 +31,6 @@ function show_message($message, $status = "bad") {
 function redirect_message($url, $message, $status = "bad") {
     if (!\nmvc\string\starts_with($url, "http"))
         $url = url($url);
-    $_SESSION['next_flash'] = array($message, $status);
+    push_message($message, $status);
     \nmvc\request\redirect($url);
 }
