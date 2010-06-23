@@ -22,9 +22,10 @@ abstract class SingletonModel extends \nmvc\AppModel {
         // If there are more than one model instance, unlink the rest.
         while (false !== ($instance = \next($result)))
             $instance->unlink();
-        if ($singleton_model === null)
+        if ($singleton_model === null) {
             $singleton_model = self::insert();
-        $singleton_model->store();
+            $singleton_model->store();
+        }
         // Exiting critical section.
         \nmvc\db\unlock();
         return $singleton_model_cache[$class_name] = $singleton_model;
