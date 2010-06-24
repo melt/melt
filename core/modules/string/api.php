@@ -166,7 +166,7 @@ function simple_crypt($cleartext, $password = null) {
  */
 function simple_decrypt($crypttext, $password = null) {
     if ($password === null)
-        $password = $_SESSION['simple_crypt_key'];
+        $password = @$_SESSION['simple_crypt_key'];
     // Decode.
     $crypttext = base64_alphanum_decode($crypttext);
     // Need to contain at least 3 blocks.
