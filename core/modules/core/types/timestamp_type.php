@@ -61,7 +61,7 @@ class TimestampType extends \nmvc\AppType {
         if ($value == 0)
             return "";
         $dateonly = $this->only_date == "true";
-        return date(!$dateonly? 'Y-m-d, H:i:s': 'Y-m-d', $value);
+        return date(!$dateonly? 'Y-m-d, H:i:s e': 'Y-m-d', $value);
     }
 
 }
