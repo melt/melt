@@ -145,8 +145,10 @@ class Mailer {
         $plain_text = preg_replace("#<style[^>]*>[^<]*#", "", $plain_text);
         // Escape anchors from html.
         $plain_text = preg_replace('#href[ ]*="[ ]*(https?://[^"]+)"#', ">$1 <foo", $plain_text);
-        // Escape markup from html.
+        // Strip markup from html.
         $plain_text = trim(strip_tags($plain_text));
+        // Escape entities from html.
+        $plain_text = html_entity_decode($plain_text, \ENT_QUOTES, "UTF-8");
         // Remove unnecessary number of newlines.
         $plain_text = preg_replace("#\n$wnn+\n[\s]+#", "\n\n", $plain_text);
         // Remove traling and prefixing space.
