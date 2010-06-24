@@ -51,12 +51,14 @@ class Mailer {
         return $headers;
     }
 
-    /**
-    * @desc Sends this mail as plain text.
-    */
+    /** Sends this mail as plain text. */
     public function mailPlain($body, $subject = null) {
         $headers = $this->addressEmail();
         $headers .= 'Content-Type: text/plain; charset=UTF-8' . PHP_EOL;
+
+        // Base 64 encode content and put it in a single blob.
+        $headers .= 'Content-transfer-encoding: base64' . PHP_EOL;
+        $content = base64_encode($content);
 
         // Remove whitespace from start and end of rows, and cut rows to a length of 998.
         $rows_out = array();
@@ -78,17 +80,17 @@ class Mailer {
         $this->doMail($subject, $body, $headers);
     }
 
-    /**
-    * @desc Sends this mail as XHTML valid content.
-    */
-    public function mailXHTML($body, $subject = null) {
+    /** Sends this mail with HTML content. */
+    public function mailHTML($body, $subject = null) {
         $headers = $this->addressEmail();
-        $headers .= 'Content-Type: text/html; charset=UTF-8' . PHP_EOL;
 
         // Assemble the content.
         $html_subject = ($subject == null)? 'Untitled': escape($subject);
         $content = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\"\r\n \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\r\n";
         $content = "<html>\r\n\t<head>\r\n\t\t<title>$html_subject\r\n\t</title>\r\n\t</head>\r\n\t<body>\r$body\r\n\t</body>\r\n</html>\r\n";
+        
+        // Create a plain text fallback for the HTML content.
+        $content = $this->createPlainTextFallback($content, $headers);
 
         // Send the mail.
         $this->doMail($subject, $content, $headers);
@@ -106,18 +108,13 @@ class Mailer {
         $trg = strtolower(config\SMTP_HOST);
         if ($smtp != $trg)
             if (false === ini_set('SMTP', $trg))
-                trigger_error("VMAIL: The SMTP server '".$trg."' could not be set into configuration!", \E_USER_ERROR);
+                trigger_error("The SMTP server '".$trg."' could not be set into configuration!", \E_USER_ERROR);
         // add_x_header is a potential security risk, disable.
         ini_set('mail.add_x_header', 'Off');
 
         // Use MIME encoded-word syntax to transmit UTF-8 subject.
         $subject = "=?UTF-8?B?" . base64_encode($subject) . "?=";
 
-        // Base 64 encode content and put it in a single blob.
-        $content = base64_encode($content);
-        $headers .= 'Content-transfer-encoding: base64' . PHP_EOL;
-
-        
         if (strpos(PHP_OS, "WIN") !== false) {
             // Windows implementation uses >to< argument to speak directly with SMTP servers.
             $to = $this->to->getPlainList();
@@ -127,10 +124,48 @@ class Mailer {
         } else
             // UNIX implementation constructs it's own "to" headers.
             $to = $this->to->getList();
-
         // Finaly mail it.
         if (FALSE === mail($to, $subject, $content, $headers))
             trigger_error("Mailer: The mail could not be sent, mail() returned error.");
+    }
+
+    /**
+     * Escapes a HTML message and sends it as both plain text and HTML,
+     * using a heuristic algoritm to convert the message.
+     * The plain-text variant is just a safe fallback for clients that doesn't
+     * support HTML.
+     */
+    private function createPlainTextFallback($html, &$headers) {
+        $boundary = "------=_NextPart_" . \nmvc\string\random_alphanum_str(16);
+        $headers .= "Content-Type: multipart/alternative; boundary=\"$boundary\"" . PHP_EOL;
+        // Set of regex whitespace not including newline.
+        $wnn = '[\x00-\x09\x0B-\x20]';
+        $plain_text = $html;
+        // Escape styles from html.
+        $plain_text = preg_replace("#<style[^>]*>[^<]*#", "", $plain_text);
+        // Escape anchors from html.
+        $plain_text = preg_replace('#href[ ]*="[ ]*(https?://[^"]+)"#', ">$1 <foo", $plain_text);
+        // Escape markup from html.
+        $plain_text = trim(strip_tags($plain_text));
+        // Remove unnecessary number of newlines.
+        $plain_text = preg_replace("#\n$wnn+\n[\s]+#", "\n\n", $plain_text);
+        // Remove traling and prefixing space.
+        $plain_text = preg_replace("#\n$wnn+|$wnn+\n#", "\n", $plain_text);
+        // Remove unnecessary blank spaces.
+        $plain_text = preg_replace("#[ ][ ]+#", " ", $plain_text);
+        // Compile plain text part.
+        $plain_text_part = "--$boundary\n"
+        . "Content-Type: text/plain; charset=UTF-8\n"
+        . "Content-Transfer-Encoding: base64\n\n"
+        . base64_encode($plain_text);
+        // Compile HTML part.
+        $html_part = "--$boundary\n"
+        . "Content-Type: text/html; charset=UTF-8\n"
+        . "Content-Transfer-Encoding: base64\n\n"
+        . base64_encode($html);
+        // Forge content.
+        $content = "$plain_text_part\n\n$html_part\n\n--$boundary--";
+        return $content;
     }
 
 }
