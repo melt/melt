@@ -23,6 +23,9 @@ function error_handler($errno, $errstr, $errfile, $errline) {
     // Bypass this error if it should not report it.
     if ((error_reporting() & $errno) == 0)
         return true;
+    // Bypass static function should not be abstract, because it's a useful design pattern.
+    if ($errno == \E_STRICT && substr($errstr, -22) == "should not be abstract")
+        return true;
     $backtrace = debug_backtrace();
     unset($backtrace[0]);
     if ($errno == E_USER_ERROR) {
