@@ -33,38 +33,48 @@ final class View {
         return call_user_func_array(array($ctrl_clsname, $name), $arguments);
     }
 
-    public function __set ($name,  $value) {
+    public function __set($name,  $value) {
+        if (strtolower($name) == "layout")
+            trigger_error("May not overwrite layout!", \E_USER_ERROR);
         $this->_controller->$name = $value;
     }
 
-    public function __get ($name) {
-        return isset($this->_controller->$name)? $this->_controller->$name: null;
+    public function __get($name) {
+        // Firstly try return a controller variable.
+        if (isset($this->_controller->$name))
+            return $this->_controller->$name;
+        // Secondly, try return a layout section.
+        return $this->_controller->layout->readSection($name);
     }
 
-    public function __isset ($name) {
+    public function __isset($name) {
         return isset($this->_controller->$name);
     }
 
-    public function __unset ($name) {
+    public function __unset($name) {
         unset($this->_controller->$name);
     }
 
-    /* Extends a view as they are defined by cake. */
 
     /**
-     * @desc Renders a view in the same controller.
+     * Renders a view in the same context (controller) as the current render.
+     * If you specify a relative view path (relative to the current module
+     * elements path) the module context will also be preserved.
+     * However, you can also specify an absolute path, in which case
+     * module context is lost.
      * @param string $view_path Path to the view to render.
-     * This path can be relative to the elements folder of the current
-     * module, or a FQN view path depending if it starts with "/" or not.
-     * @param array $params Additional data to temporarily set when
+     * This path is relative to the elements folder of the current
+     * module, if it doesn't start with a "/".
+     * @param array $data Additional data to temporarily set when
      * rendering view.
+     * @param boolean $return Set to true to return render result instead.
+     * @return string
      */
-    function display($view_path, $params = array()) {
+    function display($view_path, $data = array(), $return = false) {
         $stack = array();
         $controller = $this->_controller;
         // Save to stack and set params.
-        $layout = $controller->layout;
-        foreach ($params as $key => $val) {
+        foreach ($data as $key => $val) {
             $stack[$key] = isset($controller->$key)? $controller->$key: null;
             $controller->$key = $val;
         }
@@ -82,13 +92,14 @@ final class View {
         } else {
             $view_path = $this->_module_context . "/elements/$view_path";
         }
-        self::render($view_path, $this->_controller, false, false, false);
+        $ret = self::render($view_path, $this->_controller, $return, false, false);
         // Restore module context.
         if ($fqn_call)
             $this->_module_context = $module_context;
         // Restore from stack.
         foreach ($stack as $key => $val)
             $controller->$key = $val;
+        return $ret;
     }
 
     /**
@@ -281,6 +292,17 @@ class Layout {
     }
 
     /**
+     * Compiles and returns the content that has been entered into a section so far.
+     * @param string $name Name of section to return.
+     * @return string
+     */
+    public function readSection($name) {
+        if (!array_key_exists($name, $this->section_buffers))
+            return null;
+        return $this->section_buffers[$name]->output();
+    }
+
+    /**
      * Inserts data directly into a section.
      * @param string $name Name of section to insert data into.
      * @param string $data Data to insert.
@@ -325,47 +347,6 @@ class VoidLayout extends Layout {
         }
     }
 }
-
-/*
- * This is a placeholder for null references in Views.
- * It prevents exceptions from beeing thrown when accessing unset variables.
-
-class NullObject {
-    // Singleton.
-    private function  __construct() { }
-
-    function __get($name) {
-        return $this;
-    }
-
-    function __set($name, $value) {
-        trigger_error("Setting variable on NullObject!", \E_USER_ERROR);
-    }
-
-    function __isset($name) {
-        return false;
-    }
-
-    function __unset($name) {
-        return;
-    }
-
-    function __toString() {
-        return "";
-    }
-
-    public function __call($name,  $arguments) {
-        return $this;
-    }
-
-    public static function getInstance() {
-        static $instance = null;
-        if ($instance == null)
-            $instance = new NullObject();
-        return new NullObject();
-    }
-} */
-
 
 class SectionBuffer {
     private $final_chunks = array();
