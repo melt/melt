@@ -199,6 +199,13 @@ function is_abstract($class) {
     return $cache[$class] = $rc->isAbstract();
 }
 
+function on_windows() {
+    static $cache = null;
+    if ($cache === null)
+        $cache = strtoupper(substr(PHP_OS, 0, 3)) == "WIN";
+    return $cache;
+}
+
 namespace nmvc;
 
 /**
