@@ -99,7 +99,8 @@ final class View {
         // Restore from stack.
         foreach ($stack as $key => $val)
             $controller->$key = $val;
-        return $ret;
+        if ($return)
+            return $ret;
     }
 
     /**
