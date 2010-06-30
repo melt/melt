@@ -11,7 +11,7 @@ class SelectModelType extends PointerType {
     /** @var Column in target to use for labeling objects. */
     public $label_column;
 
-    public function __construct($column_name, $target_model, $label_column = "name") {
+    public function __construct($column_name, $target_model, $label_column = null) {
         parent::__construct($column_name, $target_model);
         $this->label_column = $label_column;
     }
