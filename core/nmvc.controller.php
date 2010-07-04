@@ -128,9 +128,11 @@ abstract class Controller {
     /**
      * Used by nanoMVC to invoke from an external request.
      * This invoke has less privligies, why the separate function.
+     * You can override this function if you want to rewrite the request somehow.
+     * @param array $path_tokens Array of path tokens (/token1/token2/...)
      */
-    public static function invoke_from_external_request($path) {
-        return self::invoke_internal($path, array(), true, false);
+    public static function invoke_from_external_request($path_tokens) {
+        return self::invoke_internal($path_tokens, array(), true, false);
     }
 
     private static function invoke_internal($path, $extra_arguments, $ignore_internal_declarations, $ignore_controller_layout) {
