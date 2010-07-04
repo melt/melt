@@ -126,7 +126,7 @@ abstract class Controller {
     }
 
     /**
-     * Used by nanoMVC to invoke from an external request.
+     * Used once by nanoMVC to invoke from the external request.
      * This invoke has less privligies, why the separate function.
      * You can override this function if you want to rewrite the request somehow.
      * @param array $path_tokens Array of path tokens (/token1/token2/...)
