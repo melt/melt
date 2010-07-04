@@ -255,8 +255,8 @@ class Layout {
     }
 
     /**
-    * @desc Displays the layout with it's buffered sections.
-    */
+     * Displays the layout with it's buffered sections.
+     */
     public function render($path, $layout_controller) {
         if (count($this->buffer_stack) > 0)
             trigger_error("Rendering layout without exiting all sections!", \E_USER_ERROR);
@@ -269,9 +269,13 @@ class Layout {
     }
 
     /**
-    * @desc Buffer to a diffrent section in the layout.
-    * @param string $name Identifier of the section. If the section name ends in _foot, it will be written in reverse chunks.
-    */
+     * Buffer to a diffrent section in the layout.
+     * The section names *_head and *_foot are two special sections every
+     * section has that allows writing before and after section content.
+     * If the section name ends in _foot, it will also be written in
+     * reverse chunks to prevent double XML wrapping to be malformed.
+     * @param string $name Identifier of the section.
+     */
     public function enterSection($name) {
         $foot_section = substr($name, -5) == '_foot';
         if (!array_key_exists($name, $this->section_buffers))
@@ -283,8 +287,8 @@ class Layout {
     }
 
     /**
-    * @desc Exits the section in the layout.
-    */
+     * Exits the section in the layout.
+     */
     public function exitSection() {
         $section = array_pop($this->buffer_stack);
         if (!is_a($section, "nmvc\\SectionBuffer"))
@@ -293,14 +297,25 @@ class Layout {
     }
 
     /**
-     * Compiles and returns the content that has been entered into a section so far.
+     * Compiles and returns the content that has been entered into a section
+     * so far - including any headers and footers wrapping it.
+     * If requesting a header or footer (_head/_foot) only that header or
+     * footer will be returned.
+     * Will return NULL for unknown/empty sections.
      * @param string $name Name of section to return.
      * @return string
      */
     public function readSection($name) {
-        if (!array_key_exists($name, $this->section_buffers))
-            return null;
-        return $this->section_buffers[$name]->output();
+        $content = null;
+        $end = substr($name, -5);
+        if ($end == "_head" || $end == "_foot")
+            $parts = array($name);
+        else
+            $parts = array($name . "_head", $name, $name . "_foot");
+        foreach ($parts as $part_name)
+        if (array_key_exists($part_name, $this->section_buffers))
+            $content .= $this->section_buffers[$part_name]->output();
+        return $content;
     }
 
     /**
@@ -324,12 +339,12 @@ class VoidLayout extends Layout {
     }
 
     /**
-    * @desc Does nothing.
+    * Does nothing.
     */
     public function _finalize() {  }
 
     /**
-    * @desc Throws away all data on this level.
+    * Throws away all data on this level.
     */
     public function enterSection($name) {
         $this->buffer_level += 1;
@@ -338,7 +353,7 @@ class VoidLayout extends Layout {
     }
 
     /**
-    * @desc Exits the section in the layout.
+    * Exits the section in the layout.
     */
     public function exitSection() {
         $this->buffer_level -= 1;
