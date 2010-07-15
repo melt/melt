@@ -120,7 +120,7 @@ abstract class Controller {
      */
     public static function invoke($path, $use_controller_layout = false) {
         $extra_arguments = func_num_args() > 2? array_slice(func_get_args(), 2): array();
-        $ret = self::invoke_internal($path, $extra_arguments, false, !$use_controller_layout);
+        $ret = self::invokeInternal($path, $extra_arguments, false, !$use_controller_layout);
         if ($ret === false)
             trigger_error("Could not invoke '$path'. Not found!", \E_USER_WARNING);
     }
@@ -131,11 +131,25 @@ abstract class Controller {
      * You can override this function if you want to rewrite the request somehow.
      * @param array $path_tokens Array of path tokens (/token1/token2/...)
      */
-    public static function invoke_from_external_request($path_tokens) {
-        return self::invoke_internal($path_tokens, array(), true, false);
+    public static function invokeFromExternalRequest($path_tokens) {
+        return self::invokeInternal($path_tokens, array(), true, false);
     }
 
-    private static function invoke_internal($path, $extra_arguments, $ignore_internal_declarations, $ignore_controller_layout) {
+    private static $invoke_stack = array();
+
+    /**
+     * Returns the controller that are currently beeing invoked, or NULL
+     * if no controller is currently beeing invoked.
+     * @return Controller
+     */
+    public static function getCurrentlyInvoked() {
+        $ret = end(self::$invoke_stack);
+        if ($ret === false)
+            $ret = null;
+        return $ret;
+    }
+
+    private static function invokeInternal($path, $extra_arguments, $ignore_internal_declarations, $ignore_controller_layout) {
         if ($path[0] == "/")
             $path = substr($path, 1);
         $path_parts = is_array($path)? $path: explode("/", $path);
@@ -175,6 +189,8 @@ abstract class Controller {
         call_user_func_array(array($controller, "beforeFilter"), array_merge(array($action_name), $arguments));
         // Call the action now.
         $ret_view = call_user_func_array(array($controller, $action_name), $arguments);
+        // Put this invoke on stack.
+        array_push(self::$invoke_stack, $controller);
         // Invoke before render callbacks.
         static $first_render = true;
         if ($first_render) {
@@ -191,24 +207,27 @@ abstract class Controller {
         // ELSE crash.
         if ($ignore_controller_layout)
             $controller->layout = null;
-        if ($ret_view === false)
+        if ($ret_view === false) {
+            array_pop(self::$invoke_stack);
             return true;
-        else if ($ret_view === null) {
+        } else if ($ret_view === null) {
             if (strtolower($controller_name) == "index") {
                 $path_parts[] = "index";
                 $path_parts[] = "index";
-            } else if (strtolower($action_name) == "index")
+            } else if (strtolower($action_name) == "index") {
                 $path_parts[] = "index";
+            }
             $path_part_cnt = -count($arguments) + count($extra_arguments);
             if ($path_part_cnt < 0)
                 $path_parts = array_slice($path_parts, 0, $path_part_cnt);
             $found_view = View::render(implode("/", $path_parts), $controller, false, true, true);
         } else if (is_string($ret_view)) {
             $found_view = View::render($ret_view, $controller, false, true, true);
-        }else
+        } else
             trigger_error("Did not understand what controller action returned (" . var_dump($ret_view) . ").", \E_USER_ERROR);
         // Rendering complete.
         $controller->afterRender();
+        array_pop(self::$invoke_stack);
         return true;
     }
 }
