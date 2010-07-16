@@ -64,7 +64,7 @@ abstract class Module {
 abstract class CoreModule extends Module {
     public static function getAuthor() {
         $year = date("Y");
-        return "Hannes Landeholm, Media People Sverige AB, ©$year";
+        return "Hannes Landeholm, Omnicloud AB, ©$year";
     }
 
     public static function getInfo() {
