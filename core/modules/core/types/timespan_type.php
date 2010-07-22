@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 class TimespanType extends \nmvc\AppType {
     public $title = "";

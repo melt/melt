@@ -1,10 +1,12 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 class IntegerType extends \nmvc\AppType {
     public function getSQLType() {
         return "int";
+    }
+
+    public function get() {
+        return intval($this->value);
     }
 
     public function getSQLValue() {

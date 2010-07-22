@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 class UploadType extends cache\BlobPointerType {
     public $allowed_extentions = ".zip|.gz|.tar|.rar|.7z|.png|.gif|.jpg|.jpeg";

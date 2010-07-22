@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 class ActionController extends \nmvc\AppController {
     public function fork() {

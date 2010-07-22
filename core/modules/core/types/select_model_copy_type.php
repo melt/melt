@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 class SelectModelCopyType extends TextType {
     /** @var Where condition to filter targets. */

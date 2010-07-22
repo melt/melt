@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\string;
+<?php namespace nmvc\string;
 
 class StringModule extends \nmvc\CoreModule { }
 

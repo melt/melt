@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\string;
+<?php namespace nmvc\string;
 
 /** Returns a string from a numeric index. Eg 0 = a, 1 = b... */
 function from_index($index) {

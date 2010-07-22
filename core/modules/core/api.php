@@ -225,11 +225,11 @@ namespace nmvc;
 function is($class, $base_class) {
     if (is_object($class))
         $class = get_class($class);
-    else if (!is_string($class))
+    else if (!is_string($class) || !class_exists($class))
         return false;
     if (is_object($base_class))
         $base_class = get_class($base_class);
-    else if (!is_string($base_class))
+    else if (!is_string($base_class) || !class_exists($base_class))
         return false;
     return $class == $base_class || is_subclass_of($class, $base_class);
 }

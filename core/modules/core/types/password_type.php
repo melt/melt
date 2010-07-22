@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 class PasswordType extends \nmvc\AppType {
     public function getSQLType() {

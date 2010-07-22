@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 class TextAreaType extends TextType {
     public function getInterface($name) {

@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 /** SelectType, for selecting multiple options. */
 class SelectType extends \nmvc\AppType {

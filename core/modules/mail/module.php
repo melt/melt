@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\mail;
+<?php namespace nmvc\mail;
 
 class MailModule extends \nmvc\CoreModule { }
 

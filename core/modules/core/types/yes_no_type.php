@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 define("STR_YES", __("YES"));
 define("STR_NO", __("NO"));
@@ -8,6 +6,10 @@ define("STR_NO", __("NO"));
 class YesNoType extends \nmvc\AppType {
     public $true_str = null;
     public $false_str = null;
+
+    public function get() {
+        return $this->value == true;
+    }
 
     private function yes() {
         return $this->true_str == null? STR_YES: escape($this->true_str);

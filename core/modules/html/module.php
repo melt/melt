@@ -1,5 +1,3 @@
-<?php
-
-namespace nmvc\html;
+<?php namespace nmvc\html;
 
 class HtmlModule extends \nmvc\CoreModule { }

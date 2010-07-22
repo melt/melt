@@ -1,10 +1,12 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 class BooleanType extends \nmvc\AppType {
     public $true_str = "yes";
     public $false_str = "no";
+
+    public function get() {
+        return $this->value == true;
+    }
 
     public function getSQLType() {
         return "boolean";

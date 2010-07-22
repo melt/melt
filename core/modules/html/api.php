@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\html;
+<?php namespace nmvc\html;
 
 /** Echos a complete xhtml 1.1 document. */
 function write($head, $body) {

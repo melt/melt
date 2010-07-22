@@ -1,4 +1,4 @@
-<?php namespace nmvc; ?>
+<?php namespace nmvc\request; ?>
 <?php $this->layout->enterSection("head"); ?>
 <title><?php echo $this->topic; ?></title>
 <?php $this->layout->exitSection(); ?>

@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 class BytesType extends \nmvc\AppType {
     public function getSQLType() {

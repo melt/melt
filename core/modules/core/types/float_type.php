@@ -1,10 +1,12 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 class FloatType extends \nmvc\AppType {
     public function getSQLType() {
         return "float";
+    }
+
+    public function get() {
+        return floatval($this->value);
     }
 
     public function getSQLValue() {

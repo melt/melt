@@ -15,19 +15,16 @@ abstract class SingletonModel extends \nmvc\AppModel {
         $class_name = get_called_class();
         if (isset($singleton_model_cache[$class_name]))
             return $singleton_model_cache[$class_name];
-        // Fetching singleton model is done in an atomic operations to ensure no duplicates.
-        static::lock();
         $result = parent::selectWhere();
         $singleton_model = \reset($result);
-        // If there are more than one model instance, unlink the rest.
-        while (false !== ($instance = \next($result)))
-            $instance->unlink();
-        if ($singleton_model === null) {
-            $singleton_model = self::insert();
+        if ($singleton_model === false) {
+            $singleton_model = parent::insert();
             $singleton_model->store();
+        } else {
+            // If there are more than one model instance, unlink the rest.
+            while (false !== ($instance = \next($result)))
+                $instance->unlink();
         }
-        // Exiting critical section.
-        \nmvc\db\unlock();
         return $singleton_model_cache[$class_name] = $singleton_model;
     }
 
@@ -38,8 +35,6 @@ abstract class SingletonModel extends \nmvc\AppModel {
     public static function insert() {
         return self::get();
     }
-
-    
 
     // This functions is meaningless when used directly but still
     // useful for automated operations that don't care if this is a singelton
