@@ -42,25 +42,6 @@ function error_handler($errno, $errstr, $errfile, $errline) {
         if (\nmvc\string\starts_with($file, $vendor_path))
             return true;
     }
-    /*
-    // Fetching undefined keys in arrays is not exceptional.
-    if (strpos($errstr, "Undefined offset") !== FALSE)
-        return true;
-    if (strpos($errstr, "Undefined index") !== FALSE)
-        return true;
-    // Connection timed out is expected and not an exceptional event.
-    if (strpos($errstr, "Connection timed out") !== FALSE)
-        return true;
-    // Failing to delete the output buffer is expected when ob_close is
-    // called just to be sure.
-    if (strpos($errstr, "failed to delete buffer") !== FALSE)
-        return true;
-    // Yes, nanoMVC uses static abstract functions, which is normally bad,
-    // but useful in this Model implementation.
-    if (strpos($errstr, "Static function ") !== FALSE
-    && strpos($errstr, " should not be abstract") !== FALSE)
-        return true;
-    */
     $error_map = array(
         E_WARNING => "E_WARNING",
         E_NOTICE => "E_NOTICE ",
@@ -77,13 +58,22 @@ function error_handler($errno, $errstr, $errfile, $errline) {
     exit;
 }
 
+const INTERNAL_LOCATION = "~Internal Location~";
+
+function development_crash($type, $variables) {
+    if (!\nmvc\config\MAINTENANCE)
+        trigger_error("Development Error Caught: " . $message, \E_USER_ERROR);
+    \nmvc\request\reset();
+    header("HTTP/1.x 500 Internal Server Error");
+    header("Status: 500 Internal Server Error");
+    $msg = \nmvc\View::render("/core/deverrors/$type", $variables);
+    die("<h1>Development Error $type</h1>" . $msg);
+}
+
 function crash($message, $file, $line, $trace) {
     // Restore output buffer.
     \nmvc\request\reset();
     $errcode = \nmvc\string\random_alphanum_str(6);
-    $errlocation = "__Path: " . REQ_URL . "\n";
-    $errraised = "__File: $file; line #$line\n";
-    $errmessage = "__Messsage: $message\n";
     // Log the error.
     $errtrace = "__Stack:\n";
     $html_errtrace = "__Stack:\n";
@@ -92,6 +82,20 @@ function crash($message, $file, $line, $trace) {
             $call['file'] = '~Internal Location~';
             $call['line'] = 'N/A';
         }
+        /* Keep track of previous function to move trace forward if
+         * currently located on a trigger_error or internal location
+         * which is not interesting as it's very unlikely to be the real case
+         * of the error. */
+        if (@$prev_function == "trigger_error" || @$prev_file == INTERNAL_LOCATION) {
+            $file = @$call['file'];
+            $line = @$call['line'];
+            $prev_file = @$call['file'];
+            $prev_function = @$call['function'];
+        } else {
+            $prev_file = null;
+            $prev_function = null;
+        }
+        // Format the trace line.
         $trace_line = '#' . (count($trace) - $key) . ' ' . basename($call['file']) . "(" . $call['line'] . ") " . $call['function'] . '(';
         $first = false;
         if (isset($call['args'])) {
@@ -109,7 +113,7 @@ function crash($message, $file, $line, $trace) {
         }
         $trace_line .= ")";
         $errtrace .= "$trace_line\n";
-        if (\preg_match("#[/\\\\]core[/\\\\]#", $call['file']))
+        if (\preg_match("#[/\\\\]core[/\\\\]#", $call['file']) || $call['file'] == INTERNAL_LOCATION)
             $html_errtrace .= escape($trace_line) . "\n";
         else if (\preg_match("#[/\\\\]modules[/\\\\]#", $call['file']))
             $html_errtrace .= "<span style=\"color: green;\">" . escape($trace_line) . "</span>\n";
@@ -117,6 +121,9 @@ function crash($message, $file, $line, $trace) {
             $html_errtrace .= "<span style=\"color: blue;\">" . escape($trace_line) . "</span>\n";
             
     }
+    $errlocation = "__Path: " . REQ_URL . "\n";
+    $errraised = "__File: $file; line #$line\n";
+    $errmessage = "__Messsage: $message\n";
     error_log(str_replace("\n", ";", "Exception caught: " . $errraised . $errmessage . $errtrace));
     if (!APP_IN_DEVELOPER_MODE) {
         // Do not unsafly print error information for non developers.
