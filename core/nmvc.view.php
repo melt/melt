@@ -157,19 +157,27 @@ final class View {
     }
 
     /**
-     * Renders a view (template) in an internal subrequest and returns content.
+     * Renders a view (template) in the specified controller.
+     * The layout of the controller is used when rendering.
+     * While rendering, the controllers layout will be replaced with a
+     * Layout object and rendered, except if it is already replaced.
+     * Also, the layout will not be rendered if no layout path is specified.
+     * In that case, data written in the top level section is lost.
+     * After the Layout object is created (replaced), the rendering will take
+     * place in the "content" section by default.
      * @param string $view_path The path of the view to show.
-     * @param boolean $final_render If this should be rendered in the final
-     * @param mixed $controller The controller instance that runs this view or
-     * or an array of controller data to insert into a standard controller
-     * without layout, or null to use standard controller without layout
-     * and no data.
-     * @param boolean $return Set to false to ouput buffer instead of returning it.
-     * @param boolean $final Set to true to render this in the final layout.
-     * If a layout path is specified in the controller with this set to true,
-     * that layout path will be used to render the application layout, and
-     * all section data will be consumed.
-     * @param mixed $just_try Set to false to return instead of crashing if view doesn't exist.
+     * @param mixed $controller_data The controller instance that runs this
+     * view and contains the layout to render in.
+     * @param boolean $return Set to false to output the return value directly
+     * to output buffer rather than returning it by value.
+     * @param boolean $final Setting this to true without passing a layout
+     * will use the application layout instead when rendering.
+     * @param mixed $just_try Set to false to return instead of crashing if
+     * view doesn't exist.
+     * @return boolean Returns FALSE if the view wasn't found and $just_try
+     * is set to TRUE. Otherwise returns the output or NULL if returning
+     * output in output buffer instead (when $return is FALSE).
+     * NULL can also be returned on nonexisting output.
      */
     public static function render($view_path, $controller_data = null, $return = true, $final = false, $just_try = false) {
         // Initialize application layout.
@@ -190,18 +198,7 @@ final class View {
         } else {
             $controller = $controller_data;
         }
-        if ((!is_object($controller->layout) && !class_exists($controller->layout))
-        || !is($controller->layout, "nmvc\Layout")) {
-            // Layout not initialized yet.
-            $layout_path = $controller->layout;
-            if ($final)
-                $controller->layout = self::$application_layout;
-            else if ($controller->layout == '')
-                $controller->layout = new VoidLayout();
-            else
-                $controller->layout = new Layout();
-        } else
-            $layout_path = '';
+        // Get the view file path and module context.
         $ret_view = self::findView($view_path);
         if ($ret_view === false) {
             if (!$just_try)
@@ -209,42 +206,55 @@ final class View {
             return false;
         }
         list($view_file_path, $module_context) = $ret_view;
-        // Buffer if returning.
-        if ($return)
-            ob_start();
-        // Make sure there's no level imbalance.
+        // Make sure layout is initialized.
+        $layout_path = null;
+        if (!is($controller->layout, "nmvc\Layout")) {
+            $layout_path = $controller->layout;
+            if ($final)
+                $controller->layout = self::$application_layout;
+            else
+                $controller->layout = new Layout();
+        }
+        // Buffer the view output that it should return or ignore if
+        // render layout is true.
+        ob_start();
         $level = $controller->layout->getLevel();
-        // Enter content (if not done so).
-        if (!is_a($controller->layout, "nmvc\\VoidLayout") && $level == 0)
+        $top_render = $level == 0;
+        if ($top_render)
             $controller->layout->enterSection("content");
-        // Render the view.
         new View($controller, $view_file_path, $module_context);
-        // Exit content.
-        if (!is_a($controller->layout, "nmvc\\VoidLayout") && $level == 0)
+        if ($top_render)
             $controller->layout->exitSection();
         // Should now be back at last level.
         if ($controller->layout->getLevel() != $level)
             trigger_error("nanoMVC: After rendering '$view_path.php', a level imbalance was detected! The enterSections() does not have a balanced ammount of exitSections().", \E_USER_ERROR);
-        // Will render the layout if a layout is set.
-        if ($layout_path != '') {
-            $controller->layout->render($layout_path, $controller);
-            // If this is a render into the final "application layout",
-            // that layout should now be reset.
-            if ($final)
-                self::$application_layout = null;
-        }
-        if ($return) {
-            // Return output.
-            $output = ob_get_contents();
+        // Should render if it prepared the layout.
+        if ($layout_path != null) {
+            // Throw away any output that was ignored.
             ob_end_clean();
-            return $output;
-        } else
-            return true;
+            $content = $controller->layout->render($layout_path, $controller);
+            // Reset layout now when it has been rendered.
+            $controller->layout = $layout_path;
+        } else {
+            // Get render content from the ob.
+            $content = ob_get_contents();
+            ob_end_clean();
+            // Restore the non-set layout.
+            if ($final)
+                $controller->layout = null;
+        }
+        // There are two ways to return content.
+        if ($return)
+            return $content;
+        else
+            echo $content;
     }
 }
 
 /** Buffers output to a layout. */
 class Layout {
+    const LAYOUT_RENDER = "\x00";
+
     // Section buffers.
     private $section_buffers = array();
     // The current stack of buffers.
@@ -254,18 +264,18 @@ class Layout {
         return count($this->buffer_stack);
     }
 
-    /**
-     * Displays the layout with it's buffered sections.
-     */
+    /** Displays the layout with it's buffered sections. */
     public function render($path, $layout_controller) {
         if (count($this->buffer_stack) > 0)
-            trigger_error("Rendering layout without exiting all sections!", \E_USER_ERROR);
+            trigger_error("Rendering layout without exiting all sections! (Bottom of stack: " . $this->buffer_stack[0]->getName() . ")", \E_USER_ERROR);
+        // If just a layout render, it should return content.
+        if ($path == self::LAYOUT_RENDER)
+            return $this->readSection("content");
         // Render layout just like a view, but without specified layout.
-        $layout_controller->layout = null;
         foreach ($this->section_buffers as $name => $section)
             $layout_controller->$name = $section->output();
-        $layout_controller->layout = new VoidLayout();
-        View::render($path, $layout_controller, false, false, false);
+        $layout_controller->layout = self::LAYOUT_RENDER;
+        return View::render($path, $layout_controller, true, false, false);
     }
 
     /**
@@ -279,7 +289,7 @@ class Layout {
     public function enterSection($name) {
         $foot_section = substr($name, -5) == '_foot';
         if (!array_key_exists($name, $this->section_buffers))
-            $this->section_buffers[$name] = $section = new SectionBuffer($foot_section);
+            $this->section_buffers[$name] = $section = new SectionBuffer($name, $foot_section);
         else
             $section = $this->section_buffers[$name];
         $section->enter();
@@ -330,48 +340,20 @@ class Layout {
     }
 }
 
-/** A layout without any buffer. The default layout. */
-class VoidLayout extends Layout {
-    private $buffer_level = 0;
-
-    public function getLevel() {
-        return $this->buffer_level;
-    }
-
-    /**
-    * Does nothing.
-    */
-    public function _finalize() {  }
-
-    /**
-    * Throws away all data on this level.
-    */
-    public function enterSection($name) {
-        $this->buffer_level += 1;
-        if ($this->buffer_level == 1)
-            ob_start();
-    }
-
-    /**
-    * Exits the section in the layout.
-    */
-    public function exitSection() {
-        $this->buffer_level -= 1;
-        if ($this->buffer_level == 0) {
-            ob_clean();
-            ob_end_clean();
-        }
-    }
-}
-
 class SectionBuffer {
+    private $name;
     private $final_chunks = array();
     private $chunks = array();
     private $at = -1;
     private $reversed = false;
 
-    public function __construct($reversed) {
+    public function __construct($name, $reversed) {
         $this->reversed = $reversed;
+        $this->name = $name;
+    }
+
+    public function getName() {
+        return $this->name;
     }
 
     public function enter() {
