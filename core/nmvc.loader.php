@@ -42,18 +42,18 @@ function underline_to_cased($text) {
 function create_blank_override_class($path, $class, $extends) {
     $pos = strrpos($class, '\\');
     if ($pos === false)
-        trigger_error("nanoMVC: Class name '$class' missing required namespace part.", \E_USER_ERROR);
+        development_crash("dboc_missing_namespace", array("path" => $path, "class_name" => $class));
     $namespace = substr($class, 0, $pos);
     $class = substr($class, $pos + 1);
     $pos = strrpos($extends, '\\');
     if ($pos === false)
-        trigger_error("nanoMVC: Class name '$extends' missing required namespace part.", \E_USER_ERROR);
+        development_crash("dboc_missing_namespace", array("path" => $path, "class_name" => $extends));
     $extends = substr($extends, $pos + 1);
     $file_data = "<?php namespace $namespace;\n/* Auto generated empty class override. */\n\n\nclass $class extends $extends {\n\t\n}\n";
     if (!is_dir(dirname($path)))
         mkdir(dirname($path), 0775, true);
     if (file_exists($path))
-        trigger_error("nanoMVC: Filesystem conflict. '$path' exists and can't be initialized as a blank override class.", \E_USER_ERROR);
+        development_crash("dboc_filesystem_conflict", array("path" => $path));
     file_put_contents($path, $file_data);
 }
 
@@ -99,7 +99,7 @@ function autoload($name) {
             $class_name = "nmvc\\" . $parts[1] . "\\" . $parts[2];
             $app_overridable_declarable = true;
         } else if ($i == 2) {
-            // Application level module override.
+            // Application level module extention.
             $path = APP_DIR;
             $subdir = $parts[1] . "/";
             $file_name = $parts[2];
@@ -144,7 +144,7 @@ function autoload($name) {
                 $class_ao_name = $class_name . "_app_overrideable";
                 if (class_exists($class_ao_name) || interface_exists($class_ao_name)) {
                     if (!\nmvc\core\is_abstract($class_ao_name))
-                        trigger_error("nanoMVC: '$class_ao_name' must be declared abstract, as required by by '_app_overrideable' identifier!", \E_USER_ERROR);
+                        development_crash("ao_must_be_abstract", array("path" => $path, "class_name" => $class_ao_name));
                     // For further validation.
                     $class_name = $class_ao_name;
                     $pending_app_override = true;
@@ -152,15 +152,24 @@ function autoload($name) {
                 }
             }
             if ($trigger_error)
-                trigger_error("nanoMVC: '$path' did not declare a class named '$class_name' as expected!", \E_USER_ERROR);
+                development_crash("invalid_class_name", array("path" => $path, "expected_name" => $class_name));
         }
         if (\nmvc\config\MAINTENANCE) {
             // Also check case sensitivity.
             if (!in_array($class_name, get_declared_classes()) && !in_array($class_name, get_declared_interfaces()))
-                trigger_error("nanoMVC: '$path' did not declare '$class_name' with a correct letter case! This is against convention and could breaks some logic!", \E_USER_ERROR);
+                development_crash("invalid_class_name", array("path" => $path, "expected_name" => $class_name));
+            // Also check file initializor.
+            $namespace = preg_replace('#\\\\[^\\\\]*$#', "", $class_name);
+            $prefix = "<?php namespace $namespace;";
+            $h = fopen($path, "r");
+            $found = fread($h, strlen($prefix));
+            if ($found != $prefix)
+                development_crash("invalid_prefix", array("path" => $path, "prefix" => $prefix, "found" => $found));
+            fclose($h);
+
         }
         if ($must_extend !== null && !is_subclass_of($class_name, $must_extend))
-            trigger_error("nanoMVC: '$class_name' must extend '$must_extend'! (Declared in '$path')", \E_USER_ERROR);
+            development_crash("invalid_parent_class", array("path" => $path,  "class_name" => $class_name, "must_extend" => $must_extend));
         if ($pending_app_override)
             continue;
         return true;
@@ -185,8 +194,10 @@ array('\nmvc\AppModel', '\nmvc\Model', 'app_model.php'),
 array('\nmvc\AppType', '\nmvc\Type', 'app_type.php')) as $app_include) {
     list($class, $base, $file) = $app_include;
     require APP_DIR . "/" . $file;
-    if (!class_exists($class) || !is_subclass_of($class, $base))
-        trigger_error("$class must be declared in $file and extend $base! (Application design restriction)", \E_USER_ERROR);
+    if (!class_exists($class))
+         development_crash("invalid_class_name", array("path" => $path, "expected_name" => $class));
+    else if (!is_subclass_of($class, $base))
+         development_crash("invalid_parent_class", array("path" => $path,  "class_name" => $class, "must_extend" => $base));
     else if (!\nmvc\core\is_abstract($class))
-        trigger_error("$class must be declared abstract! (Application design restriction)", \E_USER_ERROR);
+         development_crash("must_be_abstract", array("path" => $path,  "class_name" => $class));
 }
