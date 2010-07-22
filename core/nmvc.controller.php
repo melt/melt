@@ -128,7 +128,8 @@ abstract class Controller {
     /**
      * Used once by nanoMVC to invoke from the external request.
      * This invoke has less privligies, why the separate function.
-     * You can override this function if you want to rewrite the request somehow.
+     * You can override this function in the AppController if you want to
+     * rewrite the request somehow.
      * @param array $path_tokens Array of path tokens (/token1/token2/...)
      */
     public static function invokeFromExternalRequest($path_tokens) {
@@ -201,12 +202,12 @@ abstract class Controller {
             }
         }
         $controller->beforeRender();
+        if ($ignore_controller_layout)
+            $controller->layout = null;
         // NULL = Display default view if it exists,
         // FALSE = Display nothing,
         // STRING = Force display of this view or crash,
         // ELSE crash.
-        if ($ignore_controller_layout)
-            $controller->layout = null;
         if ($ret_view === false) {
             array_pop(self::$invoke_stack);
             return true;
