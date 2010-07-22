@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\db;
+<?php namespace nmvc\db;
 
 /**
  * @desc Calling this function enables buffer printing of all SQL queries.

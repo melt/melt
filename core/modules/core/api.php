@@ -1,6 +1,4 @@
-<?php
-
-namespace nmvc\core;
+<?php namespace nmvc\core;
 
 /**
  * Forks a function call, allowing parallell execution.
