@@ -968,31 +968,6 @@ EOP;
         return $count;
     }
 
-
-    /** Locks read and write on this model.
-     * Useful when doing critical operations.
-     * @see \nmvc\db\unlock() for unlocking all locks.  */
-    public static function lock($read = true, $write = true) {
-        return;
-
-        // TODO: Redesign model locking.
-        // mySQL locking and reading is not this simple.
-
-        /*
-        $family_tree = self::getMetaData("family_tree");
-        $name = get_called_class();
-        if (!isset($family_tree[$name]))
-            trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
-        foreach ($family_tree[$name] as $table_name) {
-            // "If a table is to be locked with a read and a write lock,
-            // put the write lock request before the read lock request."
-            if ($write)
-                db\run("LOCK TABLES " . table($table_name) . " WRITE");
-            if ($read)
-                db\run("LOCK TABLES " . table($table_name) . " READ");
-        }*/
-    }
-
     protected static function tableNameToClassName($table_name) {
         static $cache = array();
         if (!isset($cache[$table_name])) {
