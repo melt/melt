@@ -137,17 +137,30 @@ abstract class Controller {
     }
 
     private static $invoke_stack = array();
+    private static $invoke_path_stack = array();
 
     /**
      * Returns the controller that are currently beeing invoked, or NULL
      * if no controller is currently beeing invoked.
      * @return Controller
      */
-    public static function getCurrentlyInvoked() {
+    public static final function getCurrentlyInvoked() {
         $ret = end(self::$invoke_stack);
         if ($ret === false)
             $ret = null;
         return $ret;
+    }
+
+    /**
+     * Returns the path that are currently beeing invoked, or NULL
+     * if no controller path is currently beeing invoked.
+     * @return string
+     */
+    public static final function getCurrentlyInvokedPath() {
+        $ret = end(self::$invoke_path_stack);
+        if ($ret === false)
+            $ret = null;
+        return "/" . (is_array($ret)? implode("/", $ret): $ret);
     }
 
     private static function invokeInternal($path, $extra_arguments, $ignore_internal_declarations, $ignore_controller_layout) {
@@ -186,12 +199,13 @@ abstract class Controller {
         $max_parameters = $method_reflector->getNumberOfParameters();
         if (count($arguments) > $max_parameters)
             return false;
+        // Put this invoke on stack.
+        array_push(self::$invoke_stack, $controller);
+        array_push(self::$invoke_path_stack, $path);
         // Before filter.
         call_user_func_array(array($controller, "beforeFilter"), array_merge(array($action_name), $arguments));
         // Call the action now.
         $ret_view = call_user_func_array(array($controller, $action_name), $arguments);
-        // Put this invoke on stack.
-        array_push(self::$invoke_stack, $controller);
         // Invoke before render callbacks.
         static $first_render = true;
         if ($first_render) {
@@ -210,6 +224,7 @@ abstract class Controller {
         // ELSE crash.
         if ($ret_view === false) {
             array_pop(self::$invoke_stack);
+            array_pop(self::$invoke_path_stack);
             return true;
         } else if ($ret_view === null) {
             if (strtolower($controller_name) == "index") {
@@ -229,6 +244,7 @@ abstract class Controller {
         // Rendering complete.
         $controller->afterRender();
         array_pop(self::$invoke_stack);
+        array_pop(self::$invoke_path_stack);
         return true;
     }
 }
