@@ -2,7 +2,7 @@
 
 namespace nmvc {
     // Core constants.
-    const VERSION = "1.5.3";
+    const VERSION = "1.5.4";
     define("APP_CORE_DIR", dirname(__FILE__));
     // Standard function to restore the working dir to the core directory.
     function restore_workdir() {
