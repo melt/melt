@@ -281,7 +281,7 @@ abstract class Controller {
         $action_name = $data->getActionName();
         $arguments = $data->getArguments();
         // Raise beforeFilter event.
-        $controller::beforeFilter($action_name, $arguments);
+        $controller->beforeFilter($action_name, $arguments);
         // Call the action now. Return values:
         // NULL = Render default view if it exists,
         // FALSE = Skip rendering,
@@ -293,7 +293,7 @@ abstract class Controller {
             return;
         }
         // Raise beforeRender event.
-        $controller::beforeRender($action_name, $arguments);
+        $controller->beforeRender($action_name, $arguments);
         if ($ignore_controller_layout)
             $controller->layout = null;
         if ($ret_view === null) {
@@ -304,7 +304,7 @@ abstract class Controller {
         } else
             trigger_error("Did not understand what controller action returned (" . var_export($ret_view, true) . ").", \E_USER_ERROR);
         // Raise afterRender event.
-        $controller::afterRender($action_name, $arguments);
+        $controller->afterRender($action_name, $arguments);
         array_pop(self::$invoke_stack);
     }
 
