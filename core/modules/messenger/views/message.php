@@ -18,7 +18,7 @@
     }
 </script>
 <?php $this->layout->exitSection(); ?>
-<?php $this->layout->enterSection("body_head"); ?>
+<?php $this->layout->enterSection("content_head"); ?>
 <div onclick="this.style.visibility = 'hidden';" class="message_bar msg_bar_status_<?php echo $this->status; ?>" id="message_bar">
     <?php echo $this->message; ?>
 </div>
