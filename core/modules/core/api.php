@@ -9,7 +9,7 @@
  * will timeout after 5 seconds without throwing an exception.
  * @param callback $callback Callback function.
  * @param array $parameters Array of parameters.
- * @see call_user_func_array()
+ * @see call_user_func_array
  */
 function fork($callback, $parameters = array()) {
     if (!is_file(".forkkey"))
@@ -105,6 +105,43 @@ function array_merge_recursive_distinct() {
         }
     }
     return $base;
+}
+
+/**
+ * Search the given directory for files which has a path relative to given
+ * directory which matches the given regex pattern.
+ * If $directory is not a directory, an empty array will be returned.
+ * @param string $directory The directory to search.
+ * @param integer $pattern Regex pattern to match with the relative paths
+ * of the traversed files, or NULL to match all files.
+ * @return array Files matching the pattern.
+ */
+function grep($directory, $pattern = null) {
+    static $in_recurse = false;
+    static $skip_charachers;
+    $reset_in_recurse = false;
+    if (!$in_recurse) {
+        if (!is_dir($directory))
+            return array();
+        $directory = realpath($directory) . "/";
+        $skip_charachers = strlen($directory);
+        $in_recurse = $reset_in_recurse = true;
+    }
+    $ret = array();
+    $dirhandle = opendir($directory);
+    while (false !== ($nodename = readdir($dirhandle))) {
+        if ($nodename[0] == ".")
+            continue;
+        $subpath = $directory . $nodename;
+        if (is_dir($subpath))
+            $ret = array_merge($ret, grep($subpath . "/", $pattern));
+        else if ($pattern == null || preg_match($pattern, $subpath))
+            $ret[] = substr($subpath, $skip_charachers);
+    }
+    closedir($dirhandle);
+    if ($reset_in_recurse)
+        $in_recurse = false;
+    return $ret;
 }
 
 /**
@@ -204,8 +241,6 @@ function on_windows() {
     return $cache;
 }
 
-namespace nmvc;
-
 /**
  * Returns TRUE if class is a base_class.
  * Replacement for PHP is_subclass_of that refuses to return true
@@ -231,3 +266,26 @@ function is($class, $base_class) {
         return false;
     return $class == $base_class || is_subclass_of($class, $base_class);
 }
+
+/**
+ * This function throws an E_USER_WARNING error if the application is in
+ * developer mode, and proceeds to print all arguments that where
+ * passed to it.
+ */
+function debug() {
+    if (!APP_IN_DEVELOPER_MODE)
+        return;
+    $args = func_get_args();
+    ob_start();
+    if (count($args) > 1) {
+        echo var_dump($args);
+    } else if (count($args) == 1) {
+        echo var_dump(reset($args));
+    }
+    $message = ob_get_contents();
+    ob_end_clean();
+    trigger_error("debug() triggered with the following data:\n\n$message", \E_USER_WARNING);
+}
+
+// Import some functions to the global namespace.
+include __DIR__ . "/imports.php";

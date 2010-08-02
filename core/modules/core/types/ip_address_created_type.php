@@ -3,7 +3,7 @@
 /**
 *@desc Stores a remote address.
 */
-class IpAddressCreatedType extends RemoteAddressType {
+class IpAddressCreatedType extends IpAddressType {
     public function getInterface($name) {
         return false;
     }

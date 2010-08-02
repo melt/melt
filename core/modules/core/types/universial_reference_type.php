@@ -5,7 +5,7 @@
  * The downside is that they aren't "normal" pointers, so they cannot be
  * used for child lookups and cannot garbage collect themselves.
  */
-abstract class UniversialPointer extends Type {
+abstract class UniversialReferenceType extends \nmvc\AppType {
     protected $value = array(null, 0);
 
     /** Resolves this pointer and returns the model it points to. */

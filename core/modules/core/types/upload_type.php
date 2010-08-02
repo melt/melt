@@ -1,6 +1,6 @@
 <?php namespace nmvc\core;
 
-class UploadType extends cache\BlobPointerType {
+class UploadType extends \nmvc\cache\BlobPointerType {
     public $allowed_extentions = ".zip|.gz|.tar|.rar|.7z|.png|.gif|.jpg|.jpeg";
     public $upload_status = null;
     /**
@@ -36,6 +36,7 @@ class UploadType extends cache\BlobPointerType {
                 return;
             }
             // Read data and import.
+            $data = file_get_contents($path);
             $this->setBinaryData($data, $is_ext);
             $this->upload_status = "loaded";
         } else if (isset($_POST[$name . '_rem']) && $_POST[$name . '_rem'] == 'delete') {
@@ -47,7 +48,7 @@ class UploadType extends cache\BlobPointerType {
 
     public function getInterface($name) {
         // Returns the status and a file upload control.
-        $file_url = $this->getCachePath();
+        $file_url = $this->getFileCacheLink();
         if ($file_url !== null) {
             $remname = $name."_rem";
             $status = "<br /><a target=\"_blank\" href=\"$file_url\">" . __("Download current file.") . "</a>"
@@ -60,7 +61,7 @@ class UploadType extends cache\BlobPointerType {
     }
 
     public function __toString() {
-        $file_url = $this->getCachePath();
+        $file_url = $this->getFileCacheLink();
         if ($file_url !== null) {
             return "<a target=\"_blank\" href=\"$file_url\">$file_url</a>";
         } else
