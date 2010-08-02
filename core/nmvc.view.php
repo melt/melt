@@ -219,7 +219,9 @@ final class View {
         // render layout is true.
         ob_start();
         $level = $controller->layout->getLevel();
-        $top_render = $level == 0;
+        // Only setting "content" level by default in layout specified top
+        // renders and in the final layout.
+        $top_render = $level == 0 && ($layout_path !== null || $final);
         if ($top_render)
             $controller->layout->enterSection("content");
         new View($controller, $view_file_path, $module_context);
@@ -273,7 +275,7 @@ class Layout {
             return $this->readSection("content");
         // Render layout just like a view, but without specified layout.
         foreach ($this->section_buffers as $name => $section)
-            $layout_controller->$name = $section->output();
+            $layout_controller->$name = $this->readSection($name);
         $layout_controller->layout = self::LAYOUT_RENDER;
         return View::render($path, $layout_controller, true, false, false);
     }
@@ -287,10 +289,10 @@ class Layout {
      * @param string $name Identifier of the section.
      */
     public function enterSection($name) {
-        $foot_section = substr($name, -5) == '_foot';
-        if (!array_key_exists($name, $this->section_buffers))
+        if (!array_key_exists($name, $this->section_buffers)) {
+            $foot_section = substr($name, -5) == '_foot';
             $this->section_buffers[$name] = $section = new SectionBuffer($name, $foot_section);
-        else
+        } else
             $section = $this->section_buffers[$name];
         $section->enter();
         array_push($this->buffer_stack, $section);
@@ -316,12 +318,12 @@ class Layout {
      * @return string
      */
     public function readSection($name) {
-        $content = null;
         $end = substr($name, -5);
         if ($end == "_head" || $end == "_foot")
             $parts = array($name);
         else
             $parts = array($name . "_head", $name, $name . "_foot");
+        $content = null;
         foreach ($parts as $part_name)
         if (array_key_exists($part_name, $this->section_buffers))
             $content .= $this->section_buffers[$part_name]->output();
@@ -346,6 +348,7 @@ class SectionBuffer {
     private $chunks = array();
     private $at = -1;
     private $reversed = false;
+    private $cache = null;
 
     public function __construct($name, $reversed) {
         $this->reversed = $reversed;
@@ -364,6 +367,7 @@ class SectionBuffer {
     }
 
     public function leave() {
+        $this->cache = null;
         $contents = ob_get_contents();
         if ($this->at > 0)
             $this->chunks[] = $contents;
@@ -377,6 +381,8 @@ class SectionBuffer {
     }
 
     public function output() {
+        if ($this->cache !== null)
+            return $this->cache;
         $output = "";
         $total = count($this->final_chunks);
         if ($this->reversed)
@@ -385,6 +391,7 @@ class SectionBuffer {
         else
             for ($i = 0; $i < $total; $i++)
                 $output .= $this->final_chunks[$i];
+        $this->cache = $output;
         return $output;
     }
 }
