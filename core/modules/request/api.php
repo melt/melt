@@ -147,7 +147,7 @@ function show_invalid($reason = null) {
 */
 function info($topic, $body) {
     reset();
-    \nmvc\Controller::invoke("/request/info/_show", true, $topic, $body);
+    InfoController::invoke("_show", array($topic, $body), true);
     exit;
 }
 
