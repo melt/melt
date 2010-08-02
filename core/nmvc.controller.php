@@ -18,24 +18,31 @@ abstract class Controller {
     public final function __construct() {}
 
     /**
-     * This function is executed before every action in the controller.
+     * This function is executed before any action in the controller.
      * It's a handy place to check for an active session or
      * inspect user permissions.
-     * @param $action_name Action name about to be called. This function may
-     * be called with additional parameters.
+     * @param string $action_name Action name about to be called.
+     * @param array $arguments Arguments that will be passed to action.
+     * @return void
      */
-    public function beforeFilter($action_name) {}
+    public function beforeFilter($action_name, $arguments) {}
 
     /**
      * Called after controller action logic, but before the view is rendered.
+     * @param string $action_name Action name that was called.
+     * @param array $arguments Arguments that was passed to action.
+     * @return void
      */
-    public function beforeRender() {}
+    public function beforeRender($action_name, $arguments) {}
 
     /**
      * Called after every controller action, and after rendering is complete.
      * This is the last controller method to run.
+     * @param string $action_name Action name that was called.
+     * @param array $arguments Arguments that was passed to action.
+     * @return void
      */
-    public function afterRender() {}
+    public function afterRender($action_name, $arguments) {}
     
     /**
      * Override this prototype in AppController to rewrite incomming
@@ -49,11 +56,6 @@ abstract class Controller {
      */
     public static function rewriteRequest($path_tokens) {
         return null;
-    }
-
-    /** Generates a path to this controller action and parameters. */
-    public static final function getPath($action = null, $parameters = array()) {
-        return self::controllerToPath(get_called_class(), $action, $parameters);
     }
 
     /**
@@ -75,9 +77,28 @@ abstract class Controller {
     }
 
     /**
-     * Generates a path from a controller class name, action and parameters array.
+     * Generates a path to this controller action and parameters.
+     * This function does not check weather the action actually exists
+     * and/or is callable/valid.
+     * @param string $action Name of action or NULL for index.
+     * @param array $arguments Optional array of arguments.
+     * @return string Path.
      */
-    public static final function controllerToPath($controller_class_name, $action = null, $parameters = array()) {
+    public static final function getPath($action = null, $arguments = array()) {
+        return self::controllerToPath(get_called_class(), $action, $arguments);
+    }
+
+    /**
+     * Generates a path from a controller class name,
+     * action and parameters array.
+     * This function does not check weather the action actually exists
+     * and/or is callable/valid.
+     * @param string $controller_class_name Controller class name.
+     * @param string $action Name of action or NULL for index.
+     * @param array $arguments Optional array of arguments.
+     * @return string Path.
+     */
+    public static final function controllerToPath($controller_class_name, $action = null, $arguments = array()) {
         $controller = str_replace("\\", "/", substr(string\cased_to_underline($controller_class_name), 5, -11));
         if ($action == "index")
             $action = null;
@@ -86,8 +107,8 @@ abstract class Controller {
             $path .= $controller;
             if ($action !== null) {
                 $path .= "/" . $action;
-                foreach ($parameters as $parameter)
-                    $path .= "/" . $parameter;
+                foreach ($arguments as $argument)
+                    $path .= "/" . $$argument;
             }
         }
         return $path;
@@ -259,9 +280,8 @@ abstract class Controller {
         // Compile event arguments.
         $action_name = $data->getActionName();
         $arguments = $data->getArguments();
-        $event_arguments = array_merge(array($action_name), $arguments);
         // Raise beforeFilter event.
-        call_user_func_array(array($controller, "beforeFilter"), $event_arguments);
+        $controller::beforeFilter($action_name, $arguments);
         // Call the action now. Return values:
         // NULL = Render default view if it exists,
         // FALSE = Skip rendering,
@@ -273,7 +293,7 @@ abstract class Controller {
             return;
         }
         // Raise beforeRender event.
-        call_user_func_array(array($controller, "beforeRender"), $event_arguments);
+        $controller::beforeRender($action_name, $arguments);
         if ($ignore_controller_layout)
             $controller->layout = null;
         if ($ret_view === null) {
@@ -284,7 +304,7 @@ abstract class Controller {
         } else
             trigger_error("Did not understand what controller action returned (" . var_export($ret_view, true) . ").", \E_USER_ERROR);
         // Raise afterRender event.
-        call_user_func_array(array($controller, "afterRender"), $event_arguments);
+        $controller::afterRender($action_name, $arguments);
         array_pop(self::$invoke_stack);
     }
 
