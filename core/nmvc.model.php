@@ -4,8 +4,11 @@
  * nanoModel
  */
 abstract class Model implements \Iterator {
-    /** @var int Identifier of this data set.
-     * Either NULL if unlinked or a random 128 bit hash. */
+    /**
+     * Identifier of this data set or <= 0 if unlinked.
+     * @var int
+     * @internal
+     */
     protected $_id;
     /** @var array Where columns are internally stored for assignment overload. */
     private $_cols;
@@ -113,7 +116,7 @@ abstract class Model implements \Iterator {
                 if (!$ends_with_id)
                     trigger_error("Invalid model column: $model_name.\$$column_name. nanoMVC name convention demands that all pointer type columns ends with '_id'!", \E_USER_ERROR);
             } else if ($ends_with_id)
-                trigger_error("Invalid model column: $model_name.\$$column_name. nanoMVC name convention demands that only pointer type columns ends with '_id'!", \E_USER_ERROR);
+                trigger_error("Invalid model column: $model_name.\$$column_name. nanoMVC name convention demands that only pointer type columns ends with '_id'! (Type: $type_class_name)", \E_USER_ERROR);
             // Reflect the type constructor.
             $type_reflector = new \ReflectionClass($type_class_name);
             // The first argument is always the Type name.
@@ -649,8 +652,9 @@ abstract class Model implements \Iterator {
         if ($limit != 0)
             $limit = " LIMIT " . $offset . "," . $limit;
         else if ($offset != 0)
-            $limit = " OFFSET " . $offset;
-        else $limit = "";
+            $limit = " LIMIT " . $offset . ",18446744073709551615";
+        else
+            $limit = "";
         if ($order != "")
             $order = " ORDER BY " . $order;
         return self::selectFreely($where . $order . $limit);
@@ -692,7 +696,7 @@ abstract class Model implements \Iterator {
      * @return array An matrix of returned data.
      */
     public static function findData($columns_to_select, $where = "", $offset = 0, $limit = 0, $order = "") {
-                // Compile and transform filter query.
+        // Compile and transform filter query.
         if ($where != "")
             $where = " WHERE " . $where;
         if ($order != "")
