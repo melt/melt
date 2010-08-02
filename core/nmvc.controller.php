@@ -274,6 +274,8 @@ abstract class Controller {
     private static function internalInvoke(core\InvokeData $data, $ignore_controller_layout) {
         // Put this invoke on stack.
         array_push(self::$invoke_stack, $data);
+        if (count(self::$invoke_stack) > 128)
+            trigger_error("Invoke depth reached limit of 128 calls. There is most likely an invoke recursion death loop in the application. Aborting to prevent out of memory exception.", \E_USER_ERROR);
         // Create Controller.
         $controller = $data->getControllerClass();
         $controller = new $controller();
