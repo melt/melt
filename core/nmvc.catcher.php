@@ -77,6 +77,7 @@ function crash($message, $file, $line, $trace) {
     // Log the error.
     $errtrace = "__Stack:\n";
     $html_errtrace = "__Stack:\n";
+    $first_trace = true;
     foreach ($trace as $key => $call) {
         if (!isset($call['file']) || $call['file'] == '') {
             $call['file'] = '~Internal Location~';
@@ -86,7 +87,11 @@ function crash($message, $file, $line, $trace) {
          * currently located on a trigger_error or internal location
          * which is not interesting as it's very unlikely to be the real case
          * of the error. */
-        if (@$prev_function == "trigger_error" || @$prev_file == INTERNAL_LOCATION) {
+        if ($first_trace) {
+            $prev_file = @$call['file'];;
+            $prev_function = @$call['function'];
+            $first_trace = false;
+        } else if (@$prev_function == "trigger_error" || @$prev_file == INTERNAL_LOCATION || basename(@$prev_file) == "imports.php") {
             $file = @$call['file'];
             $line = @$call['line'];
             $prev_file = @$call['file'];
@@ -123,7 +128,8 @@ function crash($message, $file, $line, $trace) {
     }
     $errlocation = "__Path: " . REQ_URL . "\n";
     $errraised = "__File: $file; line #$line\n";
-    $errmessage = "__Messsage: $message\n";
+    // The message cannot be larger than 8K. Prevents error log flooding.
+    $errmessage = "__Messsage: " . substr($message, 0, 8000) . "\n";
     error_log(str_replace("\n", ";", "Exception caught: " . $errraised . $errmessage . $errtrace));
     if (!APP_IN_DEVELOPER_MODE) {
         // Do not unsafly print error information for non developers.
