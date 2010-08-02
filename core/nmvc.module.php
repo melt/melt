@@ -23,14 +23,6 @@ abstract class Module {
     }
 
     /**
-     * Overridable event-function.
-     * Called just before application rendering.
-     */
-    public static function beforeRender() {
-        return;
-    }
-
-    /**
      * Allows catching requests that would otherwise have 404'd.
      * @param array $url_tokens Url tokens.
      */
