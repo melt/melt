@@ -131,7 +131,7 @@ function crash($message, $file, $line, $trace) {
     // The message cannot be larger than 8K. Prevents error log flooding.
     $errmessage = "__Messsage: " . substr($message, 0, 8000) . "\n";
     error_log(str_replace("\n", ";", "Exception caught: " . $errraised . $errmessage . $errtrace));
-    if (!APP_IN_DEVELOPER_MODE) {
+    if (!APP_IN_DEVELOPER_MODE && !\nmvc\core\config\FORCE_ERROR_DISPLAY) {
         // Do not unsafly print error information for non developers.
         $topic = "500 - Internal Server Error";
         $msg = "<p>" . __("The server encountered an internal error and failed to process your request. Please try again later. If this error is temporary, reloading the page might resolve the problem.") . "</p>"
@@ -158,7 +158,8 @@ function crash($message, $file, $line, $trace) {
             // Don't read more than 10 MB.
             $file_lines = explode("\n", file_get_contents($file, null, null, 0, 10000000));
             // Show two lines below and two lines above.
-            $file_lines = array_slice($file_lines, $zero_offseted_line - 2, 5, true);
+            $top_line = $zero_offseted_line - 2;
+            $file_lines = array_slice($file_lines, $top_line > 0? $top_line: 0, 5, true);
             if (count($file_lines) > 0) {
                 end($file_lines);
                 $pad_len = strlen(key($file_lines) + 1);
@@ -190,8 +191,10 @@ assert_options(ASSERT_CALLBACK, '\nmvc\internal\assert_failed');
 set_exception_handler('\nmvc\internal\exception_handler');
 set_error_handler('\nmvc\internal\error_handler');
 
-// Catch all errors in maintence mode.
-if (\nmvc\config\MAINTENANCE)
+// Catch all errors in maintence mode or if forcing error display.
+if (is_integer(\nmvc\core\config\FORCE_ERROR_FLAGS))
+    error_reporting(\nmvc\core\config\FORCE_ERROR_FLAGS);
+else if (\nmvc\core\config\MAINTENANCE_MODE || \nmvc\core\config\FORCE_ERROR_DISPLAY)
     error_reporting(E_ALL | E_STRICT);
 else
     error_reporting(E_USER_ERROR);
