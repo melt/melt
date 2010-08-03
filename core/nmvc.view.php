@@ -219,9 +219,8 @@ final class View {
         // render layout is true.
         ob_start();
         $level = $controller->layout->getLevel();
-        // Only setting "content" level by default in layout specified top
-        // renders and in the final layout.
-        $top_render = $level == 0 && ($layout_path !== null || $final);
+        // Only setting "content" level by default in layout specified top renders.
+        $top_render = $level == 0 && $layout_path !== null;
         if ($top_render)
             $controller->layout->enterSection("content");
         new View($controller, $view_file_path, $module_context);
@@ -246,10 +245,12 @@ final class View {
                 $controller->layout = null;
         }
         // There are two ways to return content.
-        if ($return)
+        if ($return) {
             return $content;
-        else
+        } else {
             echo $content;
+            return true;
+        }
     }
 }
 
