@@ -14,8 +14,8 @@
 function fork($callback, $parameters = array()) {
     if (!is_callable($callback))
         trigger_error("The callback '$callback' is invalid!", \E_USER_ERROR);
-    if (!is_file(".forkkey"))
-        file_put_contents(".forkkey", $forkkey = \nmvc\string\random_hex_str(16));
+    if (!is_file(APP_DIR . "/.forkkey"))
+        file_put_contents(APP_DIR . "/.forkkey", $forkkey = \nmvc\string\random_hex_str(16));
     else
         $forkkey = file_get_contents(".forkkey");
     // Execute fork.
