@@ -12,22 +12,26 @@
  * @see call_user_func_array
  */
 function fork($callback, $parameters = array()) {
+    if (!is_callable($callback))
+        trigger_error("The callback '$callback' is invalid!", \E_USER_ERROR);
     if (!is_file(".forkkey"))
-        file_put_contents(".forkkey", $forkkey = api_string::random_hex_str(16));
+        file_put_contents(".forkkey", $forkkey = \nmvc\string\random_hex_str(16));
     else
         $forkkey = file_get_contents(".forkkey");
     // Execute fork.
     $headers = array(
-        "Host" => \nmvc\config\APP_ROOT_HOST,
-        "User-Agent" => "nanoMVC/" . \nmvc\VERSION . " (Internal Fork)",
+        "Host" => APP_ROOT_HOST,
+        "User-Agent" => "nanoMVC/" . \nmvc\internal\VERSION . " (Internal Fork)",
     );
     $data = serialize(array(
         "forkkey" => $forkkey,
         "callback" => $callback,
         "parameters" => $parameters,
     ));
-    $base_path = Config::$root_path;
-    $status = \nmvc\http\raw_request("http://localhost" . $base_path . "core/action/fork", "POST", $headers, $data, 15);
+    $base_path = APP_ROOT_PATH;
+    if (substr($base_path, 0, -1) != "/")
+        $base_path .= "/";
+    $status = \nmvc\http\raw_request("http://localhost" . $base_path . "core/callback/fork", "POST", $headers, $data, 15);
     $return_code = $status[1];
     if ($return_code != "200")
         trigger_error("fork() failed! Return code: $return_code", \E_USER_ERROR);
