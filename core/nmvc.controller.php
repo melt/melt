@@ -135,11 +135,9 @@ abstract class Controller {
         if (preg_match("#[A-Z]#", $action))
             return false;
         // Action must exist.
-        try {
-            $method_reflector = new \ReflectionMethod($controller_class, $action);
-        } catch (ReflectionException $e) {
+        if (!method_exists($controller_class, $action))
             return false;
-        }
+        $method_reflector = new \ReflectionMethod($controller_class, $action);
         // Must be public.
         if (!$method_reflector->isPublic())
             return false;
@@ -229,9 +227,14 @@ abstract class Controller {
 
     /**
      * Used once by nanoMVC to invoke from the external request.
+     * This kind of invoke differs from "normal" invokes as it has
+     * less privligies.
      * @param mixed $path Path as a string or array.
+     * @param string $require_controller Set to a controller class name
+     * to require the request to be of a controller type or otherwise return
+     * false.
      */
-    public static final function invokeFromExternalRequest($path) {
+    public static final function invokeFromExternalRequest($path, $require_controller = null) {
         $rewritten_path = AppController::rewriteRequest(self::arrayizePath($path));
         if (!is_array($path) && !is_null($path))
             trigger_error("Expected rewriteRequest to return array or null. Instead " . gettype($rewritten_path) . " was returned.", \E_USER_ERROR);
@@ -244,9 +247,14 @@ abstract class Controller {
         $action_name = $invoke_data->getActionName();
         if ($action_name[0] == "_")
             return false;
+        // Require controller.
+        if ($require_controller !== null && !is($invoke_data->getControllerClass(), $require_controller))
+            return false;
         // Invoke action on controller.
         self::internalInvoke($invoke_data, false);
         return true;
+
+        
     }
 
     /**
@@ -313,9 +321,8 @@ abstract class Controller {
     private static $invoke_stack = array();
 
     /**
-     * Returns the controller that are currently beeing invoked, or NULL
-     * if no controller is currently beeing invoked.
-     * @return Controller
+     * Returns the current invoke.
+     * @return InvokeData
      */
     public static final function getCurrentlyInvoked() {
         $ret = end(self::$invoke_stack);
