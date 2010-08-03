@@ -100,7 +100,7 @@ class Mailer {
     private function doMail($subject, $content, $headers) {
         // Also append other standard headers.
         $headers .= 'MIME-Version: 1.0' . PHP_EOL;
-        $headers .= 'X-Mailer: nanoMVC/' . \nmvc\VERSION . '; PHP/' . phpversion() . PHP_EOL;
+        $headers .= 'X-Mailer: nanoMVC/' . \nmvc\internal\VERSION . '; PHP/' . phpversion() . PHP_EOL;
         $headers .= 'Date: ' . date("r") . PHP_EOL;
 
         // Verify that INI settings are correct.
