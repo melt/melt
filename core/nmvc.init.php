@@ -104,7 +104,7 @@ define("APP_ROOT_PATH", substr($php_self, 0, -strlen("core/core.php")));
 define("APP_USING_STANDARD_PORT", (APP_ROOT_PROTOCOL == "http" && APP_ROOT_PORT == 80) || (APP_ROOT_PROTOCOL == "https" && APP_ROOT_PORT == 443));
 define("APP_ROOT_URL", APP_ROOT_PROTOCOL . "://" . APP_ROOT_HOST . (APP_USING_STANDARD_PORT? "": ":" . APP_ROOT_PORT) . APP_ROOT_PATH);
 // Parse the request url which is relatie to the application root path.
-define("REQ_URL", substr(read_server_var("REDIRECT_URL"), strlen(APP_ROOT_PATH)));
+define("REQ_URL", substr(read_server_var("REDIRECT_URL"), strlen(APP_ROOT_PATH) - 1));
 define("REQ_URL_DIR", dirname(REQ_URL));
 define("REQ_URL_BASE", basename(REQ_URL));
 define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
