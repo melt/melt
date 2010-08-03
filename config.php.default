@@ -11,18 +11,63 @@ namespace nmvc\config {
     /** Configure what non-core modules the application should use.  */
     modules_using(
     );
-    /** IF SET: Treats users that set this developer key under /core/setkey as
-     * site developers.
-     * IF BLANK: Treats all users as site developers. Warning: Site developers
-     * are also granted other rights, like /core/migrate. */
     const DEV_KEY = "";
-    /** IF TRUE: Outputs exceptions to site developers. Makes non developers
-     * unable to reach the site.
-     * IF FALSE: Never display errors. */
     const MAINTENANCE = true;
     /** The remote URL where this application can reach itself.
      * nanoMVC needs to know where it is located. */
     const ROOT_URL = "http://localhost/";
+}
+
+namespace nmvc\internal {
+    /** Pass the names of non core modules to include to this function. */
+    modules_using(
+        
+    );
+}
+
+
+namespace nmvc\core\config {
+    /** Restrict application to accept connections for certain paths. */
+    const REDIRECT_URL = NULL;
+    const REQUIRE_PORT = '#^80$#';
+    const REQUIRE_PATH = NULL;
+    const REQUIRE_HOST = '#^localhost$#';
+    const REQUIRE_PROTOCOL = NULL;
+    /** IF TRUE: Outputs exceptions to site developers. Makes non developers
+     * unable to reach the site.
+     * IF FALSE: Not displaying errors. */
+    const MAINTENANCE_MODE = true;
+    /** IF SET: Treats users that set this developer key under /core/setkey as
+     * site developers.
+     * IF BLANK: Treats all users as site developers. Warning: Site developers
+     * are also granted other rights, like /core/migrate. */
+    const DEVELOPER_KEY = '';
+    /** Message to display when taking site down. */
+    const DOWN_MESSAGE = '';
+    /** Display notice when in developer mode. *recommended*. */
+    const DISPLAY_DEVMODE_NOTICE = true;
+    /** Forcing display of errors.
+     * Overrides MAINTENANCE_MODE. *SECURITY RISK* */
+    const FORCE_ERROR_DISPLAY = false;
+    /** Overrides internal error flags and any other configuration
+     * options that specifies error visibility. */
+    const FORCE_ERROR_FLAGS = false;
+}
+
+
+namespace nmvc\db\config {
+    /** VERY RECOMMENDED. Increeses performance of queries and prevents
+     * object id corruption by other software that accesses the database. */
+    const USE_TRIGGER_SEQUENCING = true;
+    /** Theese are standard database configuration options. */
+    const HOST = 'localhost';
+    const NAME = 'nanomvc';
+    const PREFIX = 'nanomvc_';
+    const USER = 'root';
+    const PASSWORD = '';
+    /** Set this to true to dump all queries made to
+     * db_debug_query_benchmark.log Results in VERY POOR PERFORMANCE. */
+    const DEBUG_QUERY_BENCHMARK = false;
 }
 
 namespace nmvc\translate\config {
@@ -30,43 +75,71 @@ namespace nmvc\translate\config {
     const ENABLE = true;
     /** Sets the table to use for translation. */
     const TRANSLATION_TABLE = "translation";
-    /** Set to true to enable translation capture, before translating.
+    /**
+     * Set to true to enable translation capture, before translating.
      * This gives significant performance overhead so only enable
-     * it before translation phase. */
+     * it before translation phase.
+     */
     const TRANSLATION_CAPTURE = false;
 }
 
-namespace nmvc\db\config {
-    /** Database host to connect to. */
-    const HOST = "localhost";
-    /** Connecting to the database with this username. */
-    const USER = "root";
-    /** Connecting to the database with this password. */
-    const PASSWORD = "";
-    /** Database name to use. */
-    const NAME = "nanomvc";
-    /** Database table prefix to use. */
-    const PREFIX = "nanomvc";
-    /** Trigger sequenceing is faster and safer as it allows other mysql
-     * software to insert rows without corrupting tables with duplicate ids.
-     * However, it requires special TRIGGER permissions. */
-    const USE_TRIGGER_SEQUENCING = true;
-    /** Enable this to log the queries made and the time they take to
-     * complete. This is logged to db_debug_query_benchmark.log in you
-     * application directory. */
-    const DEBUG_QUERY_BENCHMARK = false;
-}
-
 namespace nmvc\mail\config {
-    /** Optional. The desired name used by nanoMVC to
-     * mail FROM when sending e-mail. */
+    /**
+     * Optional. The desired name used by nanoMVC to
+     * mail FROM when sending e-mail.
+     */
     const FROM_NAME = "";
-    /** The desired mail address used by nanoMVC to
-     * mail FROM when sending e-mail. */
+    /**
+     * The desired mail address used by nanoMVC to
+     * mail FROM when sending e-mail.
+     */
     const FROM_ADDRESS = "";
-    /** The SMTP host Vector will use when sending mail. */
+    /**
+     * The SMTP host Vector will use when sending mail.
+     */
     const SMTP_HOST = "";
-    /** An e-mail address that reaches an administrator for administrative
-     * notifications and other site related messages. */
+    /**
+     * An e-mail address that reaches an administrator for administrative
+     * notifications and other site related messages.
+     */
     const ADMIN_ADDRESS = "";
 }
+
+namespace nmvc\userx\config {
+    /** Time before logged in sessions time out. */
+    const SESSION_TIMEOUT_MINUTES = 60;
+
+    /** Local URL where timeout sessions should be refered to. */
+    const SESSION_TIMEOUT_URL = '/';
+
+    /** Local URL where logged in users should be sent. */
+    const LOGIN_URL = '/';
+
+    /** Local URL where logged out users should be sent. */
+    const LOGOUT_URL = '/';
+}
+
+namespace nmvc\jquery\config {
+    /** The theme used by jquery-ui. Set this to null to not include it. */
+    const JQUERY_UI_THEME = "smoothness";
+
+    /**
+     * For performance reasons you might want to disable the
+     * includes you don't use.
+     */
+    const INCLUDE_JQUERY_CORNER = true;
+    const INCLUDE_JQUERY_LIGHTBOX = true;
+    const INCLUDE_JQUERY_TREE = true;
+    const INCLUDE_JQUERY_DATATABLES = true;
+    const INCLUDE_JQUERY_AUTOCOMPLETE = true;
+}
+
+namespace nmvc\nano_cms\config {
+    /** Set this to true to not include the built-in default page. */
+    const NO_DEFAULT_PAGES = false;
+
+    /** Set this to the view to render by default into the dynamic page. */
+    const FRAME_VIEW = false;
+}
+
+
