@@ -7,17 +7,6 @@
  * configuration option.
  */
 
-namespace nmvc\config {
-    /** Configure what non-core modules the application should use.  */
-    modules_using(
-    );
-    const DEV_KEY = "";
-    const MAINTENANCE = true;
-    /** The remote URL where this application can reach itself.
-     * nanoMVC needs to know where it is located. */
-    const ROOT_URL = "http://localhost/";
-}
-
 namespace nmvc\internal {
     /** Pass the names of non core modules to include to this function. */
     modules_using(
