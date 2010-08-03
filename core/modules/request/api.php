@@ -217,9 +217,7 @@ function get_url_query($url) {
 function url($path, $get = null) {
     if (strlen($path) == 0 || $path[0] != '/')
         $path = '/' . $path;
-    $path = (substr(\nmvc\config\ROOT_URL, -1) == '/'?
-             substr(\nmvc\config\ROOT_URL, 0, -1):
-             \nmvc\config\ROOT_URL) . $path;
+    $path = (substr(APP_ROOT_URL, -1) == '/'? substr(APP_ROOT_URL, 0, -1): APP_ROOT_URL) . $path;
     return $get === null? $path: create_url($path, $get);
 }
 
