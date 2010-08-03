@@ -10,7 +10,7 @@ function get_all_modules() {
     if ($modules !== null)
         return $modules;
     // Scan modules.
-    foreach (\nmvc\config\modules_using() as $module) {
+    foreach (modules_using() as $module) {
         if (!is_dir(APP_DIR . "/modules/" . $module))
             trigger_error("The module '$module' specified in config.php is not installed!", \E_USER_ERROR);
         $modules[$module] = array("nmvc\\$module\\" . underline_to_cased($module) . "Module", APP_DIR . "/modules/" . $module);
@@ -154,7 +154,7 @@ function autoload($name) {
             if ($trigger_error)
                 development_crash("invalid_class_name", array("path" => $path, "expected_name" => $class_name));
         }
-        if (\nmvc\config\MAINTENANCE) {
+        if (\nmvc\core\config\MAINTENANCE_MODE) {
             // Also check case sensitivity.
             if (!in_array($class_name, get_declared_classes()) && !in_array($class_name, get_declared_interfaces()))
                 development_crash("invalid_class_name", array("path" => $path, "expected_name" => $class_name));
@@ -179,12 +179,23 @@ function autoload($name) {
 // Registers autoload function.
 spl_autoload_register("nmvc\internal\autoload");
 
-// Include the API's of all modules.
+// Include the API's of all modules and configure them.
 foreach (get_all_modules() as $module_name => $module_parameters) {
     $module_path = $module_parameters[1];
     $api_path = $module_path . "/api.php";
     if (is_file($api_path))
         require $api_path;
+    // Configure module.
+    $mod_cfg_path = $module_path . "/config.php";
+    if (is_file($mod_cfg_path)) {
+        $config_directives = require($mod_cfg_path);
+        if (!is_array($config_directives))
+            trigger_error("The file '$mod_cfg_path' did not return an array as expected!");
+        foreach ($config_directives as $config_var_name => $default_value) {
+            $config_var_fqn = "nmvc\\$module_name\\config\\$config_var_name";
+            put_configuration_directive($config_var_fqn, $default_value);
+        }
+    }
 }
 
 // Include application specifyers.
