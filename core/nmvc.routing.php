@@ -1,110 +1,74 @@
-<?php namespace nmvc;
-
-// URL Parsing.
-{
-    $host = strval($_SERVER["HTTP_HOST"]);
-    $rurl = strval($_SERVER["REDIRECT_URL"]);
-    // Remove :80 if specified on host as this port is implicit.
-    if (substr($host, -3) == ":80")
-        $host = substr($host, 0, -3);
-    $slen = strlen(APP_ROOT_PATH);
-    // Parse relevant url parts and prevent dot escape.
-    define("REQ_URL", "/" . substr($rurl, $slen));
-    define("REQ_URL_DIR", dirname(REQ_URL));
-    define("REQ_URL_BASE", basename(REQ_URL));
-    define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
-}
-
+<?php namespace nmvc\internal;
 // Stuff can be rendered beyond this point, so reset output buffer.
-request\reset();
-
-// Include all module descriptor classes and call their beforeRequestProcesses.
-$config_file_data = null;
-foreach (internal\get_all_modules() as $module_name => $module_parameters) {
-    $class_name = $module_parameters[0];
-    $module_path = $module_parameters[1];
-    // Configure module.
-    $mod_cfg_path = $module_path . "/config.php";
-    if (is_file($mod_cfg_path)) {
-        $config_directives = require($mod_cfg_path);
-        foreach ($config_directives as $name => $default) {
-            $const = "nmvc\\$module_name\\config\\$name";
-            if (!defined($const)) {
-                define($const, $default);
-                // Add constant to application configuration.
-                if ($config_file_data === null)
-                    $config_file_data = file_get_contents(APP_CONFIG);
-                $default = var_export($default, true);
-                if (preg_match('#namespace\s+nmvc\\\\' . $module_name . '\\\\config\s*{#si', $config_file_data, $match, \PREG_OFFSET_CAPTURE)) {
-                    // Insert.
-                    $offset = $match[0][1] + strlen($match[0][0]);
-                    $config_file_data = substr($config_file_data, 0, $offset)
-                    . "\r\n\tconst $name = $default;"
-                    . substr($config_file_data, $offset);
-                } else {
-                    // Append.
-                    $config_file_data .= "\r\n\r\nnamespace nmvc\\$module_name\\config {\r\n\tconst $name = $default;\r\n}\r\n";
-                }
-            }
-        }
+\nmvc\request\reset();
+// Parse the request and redirect if the url is invalid.
+$url_tokens = explode("/", substr(REQ_URL, 1));
+// If any arguments are empty the URL is invalid, remove them and
+// redirect the browser. This prevents double URL mapped to the same
+// things so it is good for consistancy and SEO.
+if (count($url_tokens) > 1) {
+    $clear_arg = array();
+    foreach ($url_tokens as $url_token)
+    if (strlen($url_token) > 0)
+        $clear_arg[] = $url_token;
+    if (count($url_tokens) != count($clear_arg)) {
+        $clear_arg = count($clear_arg) > 0? "/" . implode("/", $clear_arg): "";
+        request\redirect(url($clear_arg));
+        exit;
     }
-    // Call before request process.
+}
+// Make sure root location is matched as required.
+$invalid_protocol = \nmvc\core\config\REQUIRE_PROTOCOL != null && !preg_match(\nmvc\core\config\REQUIRE_PROTOCOL, APP_ROOT_PROTOCOL);
+$invalid_host = \nmvc\core\config\REQUIRE_HOST != null && !preg_match(\nmvc\core\config\REQUIRE_HOST, APP_ROOT_HOST);
+$invalid_port = \nmvc\core\config\REQUIRE_PORT != null && !preg_match(\nmvc\core\config\REQUIRE_PORT, APP_ROOT_PORT);
+$invalid_path = \nmvc\core\config\REQUIRE_PATH != null && !preg_match(\nmvc\core\config\REQUIRE_PATH, APP_ROOT_PATH);
+if ($invalid_protocol || $invalid_host || $invalid_port || $invalid_path) {
+    if (APP_ROOT_URL == \nmvc\core\config\REDIRECT_URL)
+        trigger_error("Invalid configuration. The client was redirected to the configured URL, but the URL does not match the core\\REQUIRE_* configuration.", \E_USER_ERROR);
+    // Redirect if configured.
+    if (\nmvc\core\config\REDIRECT_URL != null)
+        \nmvc\request\redirect(\nmvc\core\config\REDIRECT_URL);
+    // Otherwise show 404 or information.
+    if (!APP_IN_DEVELOPER_MODE)
+        \nmvc\request\show_404();
+    else {
+        $debug_match = "<ul>";
+        if ($invalid_protocol)
+            $debug_match .= "<li>Protocol '" . APP_ROOT_PROTOCOL . "' did not match REQUIRE_PROTOCOL pattern '" . \nmvc\core\config\REQUIRE_PROTOCOL . "'</li>";
+        if ($invalid_host)
+            $debug_match .= "<li>Host '" . APP_ROOT_HOST . "' did not match REQUIRE_HOST pattern '" . \nmvc\core\config\REQUIRE_HOST . "'</li>";
+        if ($invalid_port)
+            $debug_match .= "<li>Port '" . APP_ROOT_PORT . "' did not match REQUIRE_PORT pattern '" . \nmvc\core\config\REQUIRE_PORT . "'</li>";
+        if ($invalid_path)
+            $debug_match .= "<li>Path '" . APP_ROOT_PATH . "' did not match REQUIRE_PATH pattern '" . \nmvc\core\config\REQUIRE_PATH . "'</li>";
+        $debug_match .= "</ul>";
+        \nmvc\request\info("This request did not match requirements in configuration", "<p>This HTTP server is configured to let the application handle this request, however the applications core\\REQUIRE_* configuration does not match this URL, and no core\\REDIRECT_URL is configured. This request would have been displayed as a 404, however the application is currently in developer mode.</p>" . $debug_match);
+    }
+    exit;
+}
+// Handle apache special code pages.
+$redir_status = $_SERVER["REDIRECT_STATUS"];
+if ($redir_status != "200" && $redir_status != null)
+    request\show_xyz($redir_status);
+// Stop request here if in developer mode and not developer controller.
+if (\nmvc\core\config\MAINTENANCE_MODE && !APP_IN_DEVELOPER_MODE) {
+    if (\nmvc\Controller::invokeFromExternalRequest($url_tokens, 'nmvc\core\InternalController'))
+        exit;
+    \nmvc\core\DeveloperController::invoke("_maintenance_info", array(), true);
+    exit;
+}
+// Invoke all modules before request processors.
+foreach (get_all_modules() as $module_name => $module_parameters) {
+    $class_name = $module_parameters[0];
     call_user_func(array($class_name, "beforeRequestProcess"));
 }
-
-// Save the new configuration file if it was modified.
-if ($config_file_data !== null)
-    file_put_contents(APP_CONFIG, $config_file_data);
-
-// Special request handling.
-{
-    // Handle apache special code pages.
-    $redir_status = $_SERVER["REDIRECT_STATUS"];
-    if ($redir_status != "200" && $redir_status != null)
-        request\show_xyz($redir_status);
-    // Redirect if the host is invalid.
-    if (APP_ROOT_HOST != $host)
-        request\redirect(url("/"));
-    // Must be same root url.
-    if (substr($rurl, 0, $slen) != APP_ROOT_PATH)
-        request\show_404();
-    // Stop users trying to access site during maintence without beeing developers.
-    if (config\MAINTENANCE && !APP_IN_DEVELOPER_MODE) {
-        header("HTTP/1.x 503 Service Unavailable");
-        header("Status: 503 Service Unavailable");
-        $est = (strlen(config\DOWN_MSG) > 0)? "<p>" . config\DOWN_MSG . "</p>":
-                                               "<p>" . __("Please try again in a moment.") . "</p>";
-        $topic = "503 Service Unavailable";
-        $msg = "<p>" . __("Temporary maintence is in effect so the site is currently not availible.") . "</p>" . $est;
-        request\info($topic, $msg);
-    }
+// Inject request into standard MVC handling.
+if (\nmvc\Controller::invokeFromExternalRequest($url_tokens))
+    exit;
+// See if any module is interested in catching the request instead.
+foreach (get_all_modules() as $module_name => $module_parameters) {
+    $class_name = $module_parameters[0];
+    call_user_func(array($class_name, "catchRequest"), $url_tokens);
 }
-
-// Injecting request in to standard MVC handling.
-{
-    $url_tokens = explode("/", substr(REQ_URL, 1));
-    // If any arguments are empty the URL is invalid, remove them and
-    // redirect the browser. This prevents double URL mapped to the same
-    // things so it is good for consistancy and SEO.
-    if (count($url_tokens) > 1) {
-        $clear_arg = array();
-        foreach ($url_tokens as $url_token)
-        if (strlen($url_token) > 0)
-            $clear_arg[] = $url_token;
-        if (count($url_tokens) != count($clear_arg)) {
-            $clear_arg = count($clear_arg) > 0? "/" . implode("/", $clear_arg): "";
-            request\redirect(url($clear_arg));
-            exit;
-        }
-    }
-    // If there is a controller with this name, run it.
-    if (!AppController::invokeFromExternalRequest($url_tokens)) {
-        // See if any module is interested in catching the request instead.
-        foreach (internal\get_all_modules() as $module_name => $module_parameters) {
-            $class_name = $module_parameters[0];
-            call_user_func(array($class_name, "catchRequest"), $url_tokens);
-        }
-        request\show_404();
-    } else
-        return;
-}
+// Finally show 404.
+\nmvc\request\show_404();
