@@ -86,9 +86,11 @@ abstract class Model implements \Iterator {
             // Ignore non column members.
             if ($column_name[0] == '_')
                 continue;
+            // Ignore reset columns
+            if (is_null($column_args))
+                continue;
             $column_construct_args = array();
             $column_attributes = array();
-            
             if (!is_array($column_args)) {
                 $type_class_name = $column_args;
             } else {
