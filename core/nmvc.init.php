@@ -47,8 +47,8 @@ function put_configuration_directive($config_var_fqn, $default_value) {
     // Add constant to application configuration.
     $config_file_data = file_get_contents(APP_CONFIG);
     $default_value = var_export($default_value, true);
-    $namespace = dirname($config_var_fqn);
-    $config_var_name = basename($config_var_fqn);
+    $namespace = preg_replace('#\\\\[^\\\\]*$#', '', $config_var_fqn);
+    $config_var_name = preg_replace('#^([^\\\\]*\\\\)*#', '', $config_var_fqn);
     if ($config_var_name != strtoupper($config_var_name))
         trigger_error("Configuration constants must be upper case, '$config_var_fqn' is not.", \E_USER_ERROR);
     if (preg_match('#namespace\s+' . str_replace("\\",  "\\\\", $namespace) . '\s*{#si', $config_file_data, $match, \PREG_OFFSET_CAPTURE)) {
