@@ -239,8 +239,8 @@ abstract class Controller {
      */
     public static final function invokeFromExternalRequest($path, $require_controller = null) {
         $rewritten_path = AppController::rewriteRequest(self::arrayizePath($path));
-        if (!is_array($rewritten_path) && !is_null($rewritten_path) && $rewritten_path !== NULL)
-            trigger_error("Expected rewriteRequest to return array, null or FALSE. Instead " . gettype($rewritten_path) . " was returned.", \E_USER_ERROR);
+        if (!is_array($rewritten_path) && !is_null($rewritten_path) && $rewritten_path !== FALSE)
+            trigger_error("Expected rewriteRequest to return array, null or bool(false). Instead " . gettype($rewritten_path) . " was returned.", \E_USER_ERROR);
         if (is_array($rewritten_path))
             $path = $rewritten_path;
         else if ($rewritten_path === false)
