@@ -49,7 +49,10 @@ abstract class Controller {
      * requests to other paths in your application.
      * The function should return NULL if it does not wish to rewrite the
      * request, otherwise, it should return an array of path tokens
-     * which represents the rewritten local URL.
+     * which represents the rewritten local URL. Optionally, it can also
+     * return false if it wishes the request to 404. Doing anything else
+     * in this function is not an error but invalid and will result in
+     * undefined behaviour (e.g. terminating the request, redirecting...)
      * @param array $path_tokens The incomming path request in tokens that
      * where separated by "/".
      * @return array
@@ -236,10 +239,12 @@ abstract class Controller {
      */
     public static final function invokeFromExternalRequest($path, $require_controller = null) {
         $rewritten_path = AppController::rewriteRequest(self::arrayizePath($path));
-        if (!is_array($path) && !is_null($path))
-            trigger_error("Expected rewriteRequest to return array or null. Instead " . gettype($rewritten_path) . " was returned.", \E_USER_ERROR);
-        if ($rewritten_path !== null)
+        if (!is_array($rewritten_path) && !is_null($rewritten_path) && $rewritten_path !== NULL)
+            trigger_error("Expected rewriteRequest to return array, null or FALSE. Instead " . gettype($rewritten_path) . " was returned.", \E_USER_ERROR);
+        if (is_array($rewritten_path))
             $path = $rewritten_path;
+        else if ($rewritten_path === false)
+            return false;
         $invoke_data = self::pathToInvokeData($path);
         if ($invoke_data === false)
             return false;
