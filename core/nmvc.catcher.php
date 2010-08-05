@@ -61,7 +61,7 @@ function error_handler($errno, $errstr, $errfile, $errline) {
 const INTERNAL_LOCATION = "~Internal Location~";
 
 function development_crash($type, $variables) {
-    if (!\nmvc\config\MAINTENANCE_MODE)
+    if (!\nmvc\core\config\MAINTENANCE_MODE)
         trigger_error("Development Error Caught: " . $message, \E_USER_ERROR);
     \nmvc\request\reset();
     header("HTTP/1.x 500 Internal Server Error");
