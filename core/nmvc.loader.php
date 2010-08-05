@@ -83,7 +83,7 @@ function autoload($name) {
             $path = APP_DIR;
             $subdir = "";
             $file_name = $parts[1];
-            $class_name = "nmvc\\" . $parts[1];
+            $class_name = "nmvc\\" . ucfirst($parts[1]);
             $app_overridable_declarable = false;
         } else if ($i == 1) {
             // Module.
@@ -96,14 +96,14 @@ function autoload($name) {
             $path = $modules[$module_name][1];
             $subdir = "";
             $file_name = $parts[2];
-            $class_name = "nmvc\\" . $parts[1] . "\\" . $parts[2];
+            $class_name = "nmvc\\" . $parts[1] . "\\" . ucfirst($parts[2]);
             $app_overridable_declarable = true;
         } else if ($i == 2) {
             // Application level module extention.
             $path = APP_DIR;
             $subdir = $parts[1] . "/";
             $file_name = $parts[2];
-            $class_name = "nmvc\\" . $parts[1] . "\\" . $parts[2];
+            $class_name = "nmvc\\" . $parts[1] . "\\" . ucfirst($parts[2]);
             $app_overridable_declarable = false;
         }
         $file_name = \nmvc\string\cased_to_underline($file_name);
@@ -118,7 +118,13 @@ function autoload($name) {
             $path .= "/models/" . $subdir . substr($file_name, 0, -6) . "_model.php";
             $must_extend = 'nmvc\AppModel';
         } else if (\nmvc\string\ends_with($class_name, "Module")) {
-            if ($i == 2)
+            // Application and application extentions may not have
+            // classes ending with "Module".
+            if ($i != 1)
+                return false;
+            // Check that the classname is correct.
+            $module_name = strtolower($parts[1]);
+            if ($name != 'nmvc\\' . $module_name . '\\' . underline_to_cased($module_name) . 'Module')
                 return false;
             $path .= "/" . $subdir . "module.php";
             $must_extend = 'nmvc\Module';
