@@ -42,6 +42,7 @@ class TranslateModule extends \nmvc\CoreModule {
     }
 
     public static function initializeTranslation() {
+        define("TRANSLATION_INITIALIZED", true);
         // Ignore the rest of this file if not translating.
         if (!\nmvc\translate\config\ENABLE)
             return;

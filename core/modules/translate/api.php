@@ -1,17 +1,42 @@
 <?php namespace nmvc\translate;
 
 /**
+ * This function will return the translation language the current
+ * request is initialized with.
+ * @return string Two letter ISO-639-1 code of the language
+ * or NULL if no language is set.
+ */
+function get_language() {
+    // Initialize translation.
+    if (!defined("TRANSLATION_INITIALIZED"))
+        TranslateModule::initializeTranslation();
+    if (defined("LANGUAGE_SET"))
+        return LANGUAGE_SET;
+    else
+        return null;
+}
+
+/**
+ * This function will set the translation language this session should use.
+ * Most likley, the request has to be reloaded for the language change to take
+ * effect. If the set language does not exist, the translation will fall
+ * back to the default value for this client.
+ * @param string $iso_639_1 Two letter ISO-639-1 code of the language to set.
+ * @return void
+ */
+function set_language($iso_639_1 = 'en') {
+    $_SESSION['language'] = $iso_639_1;
+}
+
+/**
  * Human language wrapper function for translations.
  * @see  sprintf()
  */
 function __($str) {
-    // Initialize
-    static $initialized = false;
-    if (!$initialized) {
+    // Initialize translation.
+    if (!defined("TRANSLATION_INITIALIZED"))
         TranslateModule::initializeTranslation();
-        $initialized = true;
-    }
-    // Using translation!
+    // Using translation.
     global $_lang_translation;
     if (config\ENABLE) {
         if (TRANSLATION_AVAILIBLE && isset($_lang_translation[$str])) {
