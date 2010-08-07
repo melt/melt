@@ -49,7 +49,7 @@ if ($invalid_protocol || $invalid_host || $invalid_port || $invalid_path) {
 // Handle apache special code pages.
 $redir_status = $_SERVER["REDIRECT_STATUS"];
 if ($redir_status != "200" && $redir_status != null)
-    request\show_xyz($redir_status);
+    \nmvc\request\show_xyz($redir_status);
 // Stop request here if in developer mode and not developer controller.
 if (\nmvc\core\config\MAINTENANCE_MODE && !APP_IN_DEVELOPER_MODE) {
     if (\nmvc\Controller::invokeFromExternalRequest($url_tokens, 'nmvc\core\InternalController'))
