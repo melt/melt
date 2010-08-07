@@ -121,7 +121,6 @@ function show_404() {
     exit;
 }
 
-
 /**
 * @desc Displays an informative page that reads that the request was invalid.
 * @desc String $info Additional information that will be displayed as reason request failed.
