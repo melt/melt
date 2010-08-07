@@ -64,6 +64,7 @@ function create_blank_override_class($path, $class, $extends) {
  */
 function autoload($name) {
     $parts = explode("\\", $name);
+    // Valid nanoMVC classes are located in the nmvc namespace.
     if ($parts[0] != "nmvc")
         return false;
     $part_cnt = count($parts);
@@ -80,6 +81,9 @@ function autoload($name) {
             // Application level.
             if ($part_cnt == 3)
                 continue;
+            // Class name may not contain underscore. (invalid and won't load)
+            if (strpos($parts[1], "_") !== false)
+                continue;
             $path = APP_DIR;
             $subdir = "";
             $file_name = $parts[1];
@@ -88,6 +92,9 @@ function autoload($name) {
         } else if ($i == 1) {
             // Module.
             if ($part_cnt == 2)
+                return false;
+            // Class name may not contain underscore. (invalid and won't load)
+            if (strpos($parts[2], "_") !== false)
                 return false;
             $modules = get_all_modules();
             $module_name = $parts[1];
