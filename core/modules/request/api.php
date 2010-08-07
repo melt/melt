@@ -108,7 +108,14 @@ function show_404() {
         flush();
     }
     $topic = __("404 - Page not found");
-    $msg = "<p>" . __("The page you requested does not exist on this server: %s%s%s", '<br /><br /><span style="font-family: monospace;">', url(REQ_URL), '</span><br /></p>');
+    $msg = '<br /><br /><span style="font-family: monospace;">' . url(REQ_URL) . '</span>';
+    if (APP_IN_DEVELOPER_MODE && defined("REQ_REWRITTEN_PATH")) {
+        if (is_string(REQ_REWRITTEN_PATH))
+            $msg .= '<br /><br />' . __('Developer info: The request was rewritten by AppController::rewriteRequest into:') . '<br /><br /><span style="font-family: monospace;">' . url(REQ_REWRITTEN_PATH) . '</span>';
+        else
+            $msg .= '<br /><br />' . __('Developer info:  The request was rewritten to 404 by AppController::rewriteRequest') . '<br /><br />';
+    }
+    $msg = "<p>" . __("The page you requested does not exist on this server: %s", $msg) . "</p>";
     $msg .= "<p><a href=\"" . url("/") . "\">" . __("Go to our main page.") . "</a></p>";
     info($topic, $msg);
     exit;
