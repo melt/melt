@@ -27,7 +27,8 @@ function error_handler($errno, $errstr, $errfile, $errline) {
     if ($errno == \E_STRICT && substr($errstr, -22) == "should not be abstract")
         return true;
     $backtrace = debug_backtrace();
-    unset($backtrace[0]);
+    unset($backtrace[0]["function"]);
+    unset($backtrace[0]["args"]);
     if ($errno == E_USER_ERROR) {
         crash("E_USER_ERROR caught: " . $errstr, $errfile, $errline, $backtrace);
         exit;
@@ -85,8 +86,8 @@ function crash($message, $file, $line, $trace) {
         }
         /* Keep track of previous function to move trace forward if
          * currently located on a trigger_error or internal location
-         * which is not interesting as it's very unlikely to be the real case
-         * of the error. */
+         * or imports alias which is not interesting as it's very unlikely
+         * to be the real cause of the error. */
         if ($first_trace) {
             $prev_file = @$call['file'];;
             $prev_function = @$call['function'];
@@ -101,22 +102,25 @@ function crash($message, $file, $line, $trace) {
             $prev_function = null;
         }
         // Format the trace line.
-        $trace_line = '#' . (count($trace) - $key) . ' ' . basename($call['file']) . "(" . $call['line'] . ") " . $call['function'] . '(';
-        $first = false;
-        if (isset($call['args'])) {
-            foreach ($call['args'] as $arg) {
-                if (is_string($arg))
-                    $arg = '"' . (strlen($arg) <= 64? $arg: substr($arg, 0, 64) . "…") . '"';
-                else if (is_object($arg))
-                    $arg = "[Instance of '".get_class($arg)."']";
-                else
-                    $arg = strval($arg);
-                if (empty($arg)) $arg = 'null';
-                if (!$first) $first = true; else $arg = ', ' . $arg;
-                $trace_line .= $arg;
+        $trace_line = '#' . (count($trace) - $key) . ' ' . basename($call['file']) . "(" . $call['line'] . ") ";
+        if (isset($call['function'])) {
+            $trace_line .= $call['function'] . '(';
+            $first = false;
+            if (isset($call['args'])) {
+                foreach ($call['args'] as $arg) {
+                    if (is_string($arg))
+                        $arg = '"' . (strlen($arg) <= 64? $arg: substr($arg, 0, 64) . "…") . '"';
+                    else if (is_object($arg))
+                        $arg = "[Instance of '".get_class($arg)."']";
+                    else
+                        $arg = strval($arg);
+                    if (empty($arg)) $arg = 'null';
+                    if (!$first) $first = true; else $arg = ', ' . $arg;
+                    $trace_line .= $arg;
+                }
             }
+            $trace_line .= ")";
         }
-        $trace_line .= ")";
         $errtrace .= "$trace_line\n";
         if (\preg_match("#[/\\\\]core[/\\\\]#", $call['file']) || $call['file'] == INTERNAL_LOCATION)
             $html_errtrace .= escape($trace_line) . "\n";
