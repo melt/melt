@@ -29,41 +29,33 @@ abstract class Model implements \Iterator {
     }
 
     /**
-     * @desc Overidable event. Called on model instances before they are stored.
+     * Overidable event. Called on model instances before they are stored.
      * @param boolean $is_linked True if the model instance is currently linked in the database. False if it's about to be INSERTED.
      */
     public abstract function beforeStore($is_linked);
 
     /**
-     * @desc Overidable event. Called on model instances after they are stored.
+     * Overidable event. Called on model instances after they are stored.
      * @param boolean $is_linked True if the model instance was linked in the database before the store. False if it was INSERTED just now.
      */
     public abstract function afterStore($was_linked);
 
     /**
-     * @desc Overidable event. Called on model instances that is about to be unlinked in the database.
+     * Overidable event. Called on model instances that is about to be unlinked in the database.
      */
     public abstract function beforeUnlink();
 
     /**
-     * @desc Overidable event. Called on model instances after they have been unlinked in the database.
+     * Overidable event. Called on model instances after they have been unlinked in the database.
      */
     public abstract function afterUnlink();
 
     /**
-     * @desc Overidable function. Called on model instances when one of their pointers
-     * is turning invalid because the instance that pointer points to is about
-     * to be unlinked from the database.
-     * The default implementation is to clear that pointer (set it to 0)
-     * but this can be overridden to any particular garbage collection behavior.
-     * @desc Note: Always clearing broken pointers to zero is useful because
-     * you can find out if a pointer points nowhere with a simple == 0.
-     * @desc This function is NOT called on instances that are currently beeing unlinked
-     * in the stack. This is because GC is considered unneccessary on already
-     * deleted instances. Also, it enables you to unlink any instances freely
-     * in this function, in any model graph, without getting infinite loops.
+     * Called when model has a pointer that is CALLBACK disconnect reaction
+     * configured and it's targeted instance is unlinked from database.
+     * (Custom handling.)
      */
-    public abstract function gcPointer($field_name);
+    public abstract function disconnectCallback($pointer_name);
 
     /**
      * Override this function to implement application
@@ -108,21 +100,21 @@ abstract class Model implements \Iterator {
                 }
             }
             $type_class_name = 'nmvc\\' . $type_class_name;
-            if (!class_exists($type_class_name))
-                trigger_error("Invalid model column: $model_name.\$$column_name - Type '$type_class_name' is undefined.", \E_USER_ERROR);
+            if (!class_exists($type_class_name) || core\is_abstract($type_class_name))
+                trigger_error("Invalid model column: $model_name.\$$column_name - Type '$type_class_name' is undefined or abstract.", \E_USER_ERROR);
             if (!is_subclass_of($type_class_name, 'nmvc\Type'))
                 trigger_error("Invalid model column: $model_name.\$$column_name - The specified type '$type_class_name' is not a nmvc\\Type.", \E_USER_ERROR);
             // Core pointer name convention check.
             $ends_with_id = string\ends_with($column_name, "_id");
-            if (is($type_class_name, 'nmvc\core\PointerType')) {
-                if (!$ends_with_id)
-                    trigger_error("Invalid model column: $model_name.\$$column_name. nanoMVC name convention demands that all pointer type columns ends with '_id'!", \E_USER_ERROR);
-            } else if ($ends_with_id)
-                trigger_error("Invalid model column: $model_name.\$$column_name. nanoMVC name convention demands that only pointer type columns ends with '_id'! (Type: $type_class_name)", \E_USER_ERROR);
+            $is_pointer_type = is($type_class_name, 'nmvc\core\PointerType');
+            if ($ends_with_id && !$is_pointer_type)
+                trigger_error("Invalid model column: $model_name.\$$column_name. The field ends with '_id' which is a reserved suffix for pointer type fields.", \E_USER_ERROR);
+            else if (!$ends_with_id && $is_pointer_type)
+                trigger_error("Invalid model column: $model_name.\$$column_name. Pointer type fields must end with '_id'.", \E_USER_ERROR);
             // Reflect the type constructor.
             $type_reflector = new \ReflectionClass($type_class_name);
             // The first argument is always the Type name.
-            $column_construct_args = array_merge(array($column_name), $column_construct_args);
+            array_unshift($column_construct_args, $column_name);
             // Check if correct number of args where passed to constructor.
             $constr_reflector = new \ReflectionMethod($type_class_name, "__construct");
             $tot_args = count($column_construct_args);
@@ -176,94 +168,180 @@ abstract class Model implements \Iterator {
         } else
             return null;
     }
-    
-    /** Helper function to get the actual type handler of a column. */
-    public function type($name) {
-        $subresolve = self::doSubResolve($name);
-        if (!isset($this->_cols[$name])) {
-            trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_WARNING);
-            return;
+
+    private function resolveGetClosure($name, $probing = false) {
+        static $closures = array();
+        $class_name = get_class($this);
+        if (isset($closures[$class_name][$name]))
+            return $closures[$class_name][$name];
+        // ->id closure returns id of instance.
+        $unresolved_name = $name;
+        if ($name == "id") {
+            $closure = function($columns, $id) {
+                return $id > 0? intval($id): null;
+            };
+        } else {
+            $subresolve = self::doSubResolve($name);
+            $id_companion = $name . "_id";
+            if (isset($this->_cols[$id_companion])) {
+                // ->xyz for existing xyz_id column returns object.
+                $closure = function($columns) use ($id_companion, $subresolve) {
+                    $ret = $columns[$id_companion]->get();
+                    if ($subresolve !== null)
+                        $ret = $ret->$subresolve;
+                    return $ret;
+                };
+            } else if (!isset($this->_cols[$name])) {
+                if ($probing)
+                    return null;
+                $closure = "Trying to read non existing field '$name'.";
+            } else if ($subresolve !== null) {
+                if ($probing)
+                    return null;
+                $closure = "Trying to use arrow reference operator on non-reference field '$name'!";
+            } else if (substr($name, -3) == "_id") {
+                // ->xyz_id closure returns id of pointer without resolving it.
+                $closure = function($columns) use ($name) {
+                    return $columns[$name]->getID();
+                };
+            } else {
+                $closure = function($columns) use ($name) {
+                    return $columns[$name]->get();
+                };
+            }
         }
-        if ($subresolve === null)
-            return $this->_cols[$name];
-        else {
-            $model_instance = $this->__get($name);
-            if ($model_instance === null)
-                return null;
-            if (!is_object($model_instance) || !is_subclass_of($model_instance, 'nmvc\Model'))
-                trigger_error("Trying to resolve non pointer column (to get type)!", \E_USER_WARNING);
-            else
-                return $model_instance->type($subresolve);
-        }
+        $closures[$class_name][$unresolved_name] = $closure;
+        return $closure;
     }
 
-    /** Helper function to view a column. */
-    public function view($name) {
-        if ($name == "id")
-            return (string) $this->getID();
+    private function resolveSetClosure($name) {
+        static $closures = array();
+        $class_name = get_class($this);
+        if (isset($closures[$class_name][$name]))
+            return $closures[$class_name][$name];
+        // ->id closure returns id of instance.
+        $unresolved_name = $name;
         $subresolve = self::doSubResolve($name);
-        if (!isset($this->_cols[$name])) {
-            trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_WARNING);
-            return null;
+        $id_companion = $name . "_id";
+        if (isset($this->_cols[$id_companion])) {
+            // ->xyz for existing xyz_id field sets value by object reference
+            $closure = function($columns, $value) use ($id_companion, $subresolve) {
+                $type = $columns[$id_companion];
+                if ($subresolve !== null)
+                    $type->get()->$subresolve = $value;
+                else if (is_object($value) || is_null($value))
+                    $type->set($value);
+                else
+                    trigger_error("Setting pointer by unexpected type " . gettype($value) . " (expected null or object) Ignoring.", \E_USER_NOTICE);
+            };
+        } else if (!isset($this->_cols[$name])) {
+            $closure = "Trying to access non existing field '$name'.";
+        } else if ($subresolve !== null) {
+            $closure = "Trying to use arrow reference operator on non-reference field '$name'!";
+        } else if (substr($name, -3) == "_id") {
+            // ->xyz_id can only set id. cast value to integer.
+            $closure = function($columns, $value) use ($name) {
+                if (is_object($value))
+                    trigger_error("Setting pointer by unexpected type " . gettype($value) . " (expected non object integer id) Ignoring.", \E_USER_NOTICE);
+                else
+                    $columns[$name]->set($value);
+            };
+        } else {
+            $closure = function($columns, $value) use ($name) {
+                $columns[$name]->set($value);
+            };
         }
-        if ($subresolve === null)
-            return (string) $this->_cols[$name];
-        else {
-            $model_instance = $this->__get($name);
-            if ($model_instance === null)
-                return null;
-            if (!is_object($model_instance) || !is_subclass_of($model_instance, 'nmvc\Model'))
-                trigger_error("Trying to resolve non pointer column (to view column)!", \E_USER_WARNING);
-            else
-                return $model_instance->view($subresolve);
+        $closures[$class_name][$unresolved_name] = $closure;
+        return $closure;
+    }
+
+    private function resolveTypeClosure($name) {
+        static $closures = array();
+        $class_name = get_class($this);
+        if (isset($closures[$class_name][$name]))
+            return $closures[$class_name][$name];
+        // ->id closure returns id of instance.
+        $unresolved_name = $name;
+        $subresolve = self::doSubResolve($name);
+        $id_companion = $name . "_id";
+        if (isset($this->_cols[$id_companion])) {
+            // ->xyz for existing xyz_id field resolves subtype.
+            $closure = function($columns) use ($id_companion, $subresolve) {
+                $ret = $columns[$id_companion];
+                if ($subresolve !== null)
+                    $ret = $ret->get()->type($subresolve);
+                return $ret;
+            };
+        } else if (!isset($this->_cols[$name])) {
+            $closure = "Trying to access non existing field '$name'.";
+        } else if ($subresolve !== null) {
+            $closure = "Trying to use arrow reference operator on non-reference field '$name'!";
+        } else {
+            $closure = function($columns) use ($name) {
+                return $columns[$name];
+            };
         }
+        $closures[$class_name][$unresolved_name] = $closure;
+        return $closure;
     }
 
     /** Assignment overloading. Returns value. */
     public function __get($name) {
-        if ($name == "id")
-            return $this->getID();
-        $subresolve = self::doSubResolve($name);
-        if (!isset($this->_cols[$name])) {
-            trigger_error("Trying to read non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_NOTICE);
-            return;
-        }
-        $ret = $this->_cols[$name]->get();
-        if ($subresolve !== null)
-            $ret = $ret->$subresolve;
-        return $ret;
+        $get_closure = $this->resolveGetClosure($name);
+        if (is_string($get_closure))
+            trigger_error($get_closure, \E_USER_NOTICE);
+        else
+            return $get_closure($this->_cols, $this->_id);
+    }
+
+    /**
+     * Returns true if this model has a field with the given name.
+     * @return boolean
+     */
+    public function hasField($name) {
+        return $this->resolveGetClosure($name) !== null;
     }
 
     /** Assignment overloading. Sets value. */
-    public function __set($name,  $value) {
-        $subresolve = self::doSubResolve($name);
-        if (!isset($this->_cols[$name])) {
-            trigger_error("Trying to write to non existing column '$name' on model '" . get_class($this) . "'.", \E_USER_NOTICE);
+    public function  __set($name,  $value) {
+        $set_closure = $this->resolveSetClosure($name);
+        if (is_string($set_closure)) {
+            trigger_error($set_closure, \E_USER_NOTICE);
             return;
         }
-        if ($subresolve === null) {
-            if (is_a($value, '\nmvc\Type'))
-                // Transfer value automagically.
-                $this->_cols[$name]->set($value->get());
-            else
-                // Just set value.
-                $this->_cols[$name]->set($value);
-        } else {
-            // Set the value of subresolve.
-            $get = $this->_cols[$name]->get()->$subresolve = $value;
+        $set_closure($this->_cols, $value);
+    }
+
+    /** Helper function to get the actual type handler of a column. */
+    public function type($name) {
+        $type_closure = $this->resolveTypeClosure($name);
+        if (is_string($type_closure)) {
+            trigger_error($type_closure, \E_USER_NOTICE);
+            return;
         }
+        return $type_closure($this->_cols);
+    }
+
+    /** Helper function to view a column. */
+    public function view($name) {
+        $type_closure = $this->resolveTypeClosure($name);
+        if (is_string($type_closure)) {
+            trigger_error($type_closure, \E_USER_NOTICE);
+            return;
+        }
+        if (substr($name, -3) !== "_id")
+            return (string) $type_closure($this->_cols);
+        else
+            return (string) $type_closure($this->_cols)->getID();
     }
 
     /** Overloading isset due to assignment overloading. */
     public function __isset($name) {
-        if ($name == "id")
-            return true;
-        $subresolve = self::doSubResolve($name);
-        $isset = isset($this->_cols[$name]);
-        if ($subresolve === null || !$isset)
-            return $isset;
+        $get_closure = $this->resolveGetClosure($name);
+        if (!is_object($get_closure))
+            return false;
         else
-            return isset($this->_cols[$name]->get()->$subresolve);
+            return $get_closure($this->_cols, $this->_id) !== null;
     }
 
     /** Allows quickly creating model copies. */
@@ -277,7 +355,10 @@ abstract class Model implements \Iterator {
         }
     }
 
-    /** Displays this model. Should be overriden. */
+    /**
+     * Displays this model.
+     * Contains an example implementation that should be overriden.
+     */
     public function __toString() {
         if ($this->isLinked())
             return __("Not Set");
@@ -365,11 +446,24 @@ abstract class Model implements \Iterator {
                 $id = $id[0];
             } else
                 $id = db\insert_id();
-            $this->_id = intval($id);
+            $id = intval($id);
+            $this->_id = $id;
+            // Put this instance in the instance cache.
+            self::$_instance_cache[$id] = $this;
+            // Turn virtual object pointers to this instance
+            // into real database pointers.
+            foreach (core\PointerType::getIncommingMemoryObjectPointers($this) as $incomming_pointer) {
+                list($instance, $ptr_field) = $incomming_pointer;
+                if (!$instance->isLinked())
+                    continue;
+                $table_name = self::classNameToTableName(class_name($instance));
+                db\query("UPDATE " . table($table_name) . " SET `$ptr_field` = $id WHERE id = " . $instance->_id);
+                $instance->type($ptr_field)->setSyncPoint();
+            }
             $this->afterStore(false);
         }
     }
-
+    
     /**
      * Returns TRUE if changed since last syncronization point.
      * @return boolean
@@ -386,35 +480,59 @@ abstract class Model implements \Iterator {
         // Can't unlink non linked instances.
         if ($this->_id < 1)
             return;
-        static $called = false;
-        if (!$called) {
-            // Prevent a user abort from terminating the script during GC.
-            ignore_user_abort(true);
-            $called = true;
-        }
+        // Prevent a user abort from terminating the script during GC.
+        ignore_user_abort(true);
+        // Extend the script time limit.
+        set_time_limit(180);
         // Before unlink event.
         $this->beforeUnlink();
         // Gather information.
         $name = get_class($this);
-        $id = intval($this->_id);
-        // Find all pointers that will get broken by this unlink and garbage collect.
+        $old_id = intval($this->_id);
+        $this->_id = -1;
+        // Unlink from database.
+        $table_name = self::classNameToTableName($name);
+        db\run("DELETE FROM " . table($table_name) . " WHERE id = " . $old_id);
+        // Remove from instance cache.
+        unset(self::$_instance_cache[$old_id]);
+        // Remove pointers that gets broken by this unlink
+        //  and handle this disconnect according to it's configuration.
+        // Nullifying pointers before doing *anything* else to prevent
+        // a corrupt database state.
+        $cascade_callbacks = array();
+        $disconnect_callbacks = array();
         $pointer_map = self::getMetaData("pointer_map");
         if (isset($pointer_map[$name]))
         foreach ($pointer_map[$name] as $pointer) {
             list($child_model, $child_column) = $pointer;
-            $instances = $child_model::selectWhere("$child_column = $id");
-            // Garbage collect.
+            $instances = $child_model::selectWhere("$child_column = $old_id");
+            if (count($instances) == 0)
+                continue;
+            $table_name = self::classNameToTableName($child_model);
+            db\query("UPDATE " . table($table_name) . " SET `$child_column` = 0 WHERE $child_column = $old_id");
             foreach ($instances as $instance) {
-                // Don't call GC on unlinked instances. gcPointer() may unlink recursivly.
-                if ($instance->_id > 0)
-                    $instance->gcPointer($child_column);
+                // Reflect the broken pointer in memory too as a state where
+                // pointers also gets broken in memory on unlink is more
+                // interesting from a developers POV.
+                $column = $instance->_cols[$child_column];
+                $column->setSQLValue(0);
+                $column->setSyncPoint();
+                // Index reactions.
+                $disconnect_reaction = $column->getDisconnectReaction();
+                if ($disconnect_reaction == "CASCADE")
+                    $cascade_callbacks[] = $instance;
+                else if ($disconnect_reaction == "CALLBACK")
+                    $disconnect_callbacks[] = $instance;
             }
         }
-        // Do the actual unlink in database backend.
-        $table_name = self::classNameToTableName($name);
-        db\run("DELETE FROM " . table($table_name) . " WHERE id = " . $id);
-        unset(self::$_instance_cache[$id]);
-        $this->_id = -1;
+        // Now handling the broken pointers according to configuration.
+        foreach ($cascade_callbacks as $instance)
+            $instance->unlink();
+        // Custom callbacks after cascade, this allows us to guarantee
+        // that any models that should have been cascade deleted
+        // by a previous unlink has been so at the time of invoke.
+        foreach ($disconnect_callbacks as $instance)
+            $instance->disconnectCallback();
         // After unlink event.
         $this->afterUnlink();
     }
@@ -455,20 +573,40 @@ abstract class Model implements \Iterator {
     /**
      * Returns an associative array of column pointer field names and the model
      * class names they point to.
+     * @param boolean $as_id_fields Set to true to return fields
+     * with suffixed '_id'.
      * @return array
      */
-    public static function getPointerColumns() {
+    public static function getPointerColumns($as_id_fields = true) {
         $self = get_called_class();
         static $cache = array();
-        if (isset($cache[$self]))
-            return $cache[$self];
+        if (isset($cache[$self][$as_id_fields]))
+            return $cache[$self][$as_id_fields];
         $ret = array();
         foreach (static::getParsedColumnArray() as $col_name => $column) {
-            if (substr($col_name, -3) != "_id")
+            if (!is($column, 'nmvc\core\PointerType'))
                 continue;
+            if (!$as_id_fields)
+                $col_name = substr($col_name, 0, -3);
             $ret[$col_name] = $column->getTargetModel();
         }
-        return $cache[$self] = $ret;
+        return $cache[$self][$as_id_fields] = $ret;
+    }
+
+    /**
+     * Checks that if the field exists and at the same time
+     * translates it to the SQL table column name.
+     */
+    public static function translateFieldToColumn($col_name, $error_on_missing = true) {
+        $columns = static::getParsedColumnArray();
+        if (array_key_exists($col_name, $columns))
+            return $col_name;
+        $id_companion = $col_name . "_id";
+        if (array_key_exists($id_companion, $columns))
+            return $id_companion;
+        if ($error_on_missing)
+            trigger_error("The field $col_name does not exist on " . get_called_class(), \E_USER_ERROR);
+        return $col_name;
     }
 
     private function getInsertSQL() {
@@ -512,7 +650,8 @@ abstract class Model implements \Iterator {
     }
 
     /**
-     * This function sets this model instance to the stored ID specified.
+     * Returns the model instance of the class called as
+     * and linked with the specified id.
      * @return Model The model with the ID specified or NULL.
      */
     public static function selectByID($id) {
@@ -748,7 +887,7 @@ abstract class Model implements \Iterator {
             return $columns_data[$column_name];
         $base_model_alias = string\from_index(0);
         if (false === strpos($column_name, "->")) {
-            $col_sql_ref = $base_model_alias . '.' . $column_name;
+            $col_sql_ref = $base_model_alias . '.' . static::translateFieldToColumn($column_name);
             $columns_data[$column_name] = array($col_sql_ref, null, null, null);
             return $columns_data[$column_name];
         }
@@ -760,6 +899,11 @@ abstract class Model implements \Iterator {
         // (col_sql_ref, target_model, table_join_alias, left_join).
         reset($ref_columns);
         while (false !== $ref_column = next($ref_columns)) {
+            if (substr($parent_pointer_column, -3) == "_id")
+                trigger_error("Syntax error in semantic query: Remove '_id' suffix when resolving pointer colum with the arrow operator.", \E_USER_ERROR);
+            $parent_pointer_column .= "_id";
+            if (!array_key_exists($parent_pointer_column, $parent_class::getPointerColumns()))
+                trigger_error("Syntax error in semantic query: The pointer column '$parent_pointer_column' is not declared for '$parent_class'!", \E_USER_ERROR);
             if (!isset($columns_data[$parent_pointer][1])) {
                 $cur_target_model = $columns_data[$parent_pointer][1] = $parent_class::getTargetModel($parent_pointer_column);
                 $cur_alias = $columns_data[$parent_pointer][2] = string\from_index(count($columns_data));
@@ -771,7 +915,7 @@ abstract class Model implements \Iterator {
             }
             $cur_pointer .= "->" . $ref_column;
             if (!isset($columns_data[$cur_pointer])) {
-                $col_sql_ref = $cur_alias . '.' . $ref_column;
+                $col_sql_ref = $cur_alias . '.' . $cur_target_model::translateFieldToColumn($ref_column);
                 $columns_data[$cur_pointer] = array($col_sql_ref, null, null, null);
             }
             $parent_class = $cur_target_model;
@@ -844,6 +988,10 @@ EOP;
             if ($column[0] != '$' && strpos($column, '(') === false) {
                 $column_data = static::registerSemanticColumn($column, $columns_data);
                 $column = $column_data[0];
+            } else {
+                // Do not check if column exists, can be a viritual mySQL
+                // column like COUNT(*) for example.
+                $column = static::translateFieldToColumn($column, false);
             }
         }
         $sql_select_columns = ($supress_id? "": string\from_index(0) . ".id,") . implode(",", $columns_to_select);
@@ -1022,11 +1170,11 @@ EOP;
         db\run("REPLACE INTO " . table('core/metadata') . " (k,v) VALUES (" . strfy($key) . "," . strfy(serialize($value)) . ")");
     }
 
-    public static final function syncronize_all_models() {
-        // Clear metadata.
-        db\run("DROP TABLE " . table('core/metadata'));
-        db\run("CREATE TABLE " . table('core/metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
-        $creating_sequence = !in_array(db\config\PREFIX . 'core/seq', db\get_all_tables());
+    /**
+     * Lists all model classes in application.
+     */
+    private static final function findAllModels() {
+        $model_classes = array();
         // Locate and sync all models in all enabled modules.
         $model_paths = array(APP_DIR . "/models");
         foreach (\nmvc\internal\get_all_modules() as $module_params) {
@@ -1060,25 +1208,110 @@ EOP;
                 // Ignore models that are abstract.
                 if (core\is_abstract($cls_name))
                     continue;
-                $model_classes[$cls_name] = $cls_name;
-                // Syncronize this model.
-                $parsed_col_array = $cls_name::getParsedColumnArray();
-                db\sync_table_layout_with_model($table_name, $parsed_col_array);
-                // Record pointers for pointer map.
-                $columns = $cls_name::getColumnNames();
-                foreach ($parsed_col_array as $col_name => $col_type) {
-                    if (substr($col_name, -3) != "_id")
+                $model_classes[$table_name] = $cls_name;
+            }
+        }
+        return $model_classes;
+    }
+
+    /**
+     * This function repairs any broken pointer structures it finds
+     * in the database by simulating that the already deleted instances
+     * becomes deleted.
+     * @return void
+     */
+    public static final function repairAllModels() {
+        // This maintenance script can run forever.
+        ignore_user_abort(true);
+        set_time_limit(0);
+        $cascade_callbacks = array();
+        $disconnect_callbacks = array();
+        $model_classes = self::findAllModels();
+        $family_tree = self::getMetaData("family_tree");
+        // Find pointers that
+        foreach ($model_classes as $table_name => $model_class) {
+            $model_columns = $model_class::getParsedColumnArray();
+            $pointer_fields = $model_class::getPointerColumns();
+            if (count($pointer_fields) == 0)
+                continue;
+            foreach ($pointer_fields as $ptr_name => $target_model) {
+                $disconnect_reaction = $model_columns[$ptr_name]->getDisconnectReaction();
+                $query = array();
+                if (!isset($family_tree[$target_model]))
+                    trigger_error("Model '$target_model' is out of sync with database.", \E_USER_ERROR);
+                foreach ($family_tree[$target_model] as $table_name)
+                    $query[] = "($ptr_name NOT IN (SELECT id FROM " . table($table_name) . "))";
+                if (count($query) > 0) {
+                    $query = implode(" OR ", $query);
+                    $instances = $model_class::selectFreely("WHERE $ptr_name > 0 AND ($query)");
+                    if (count($instances) > 0) {
+                        // Found pointers that are broken.
+                        echo "\nFound " . count($instances) . " instances of " . $model_class . " with their " . $ptr_name . " pointer broken! Repairing...\n\n";
+                        // Remove pointers from database (nullify).
+                        $table_name = self::classNameToTableName($model_class);
+                        db\query("UPDATE " . table($table_name) . " SET `$ptr_name` = 0 WHERE id IN (" . implode(",", array_keys($instances)) . ")");
+                        // Reflect the broken pointers in memory.
+                        foreach ($instances as $instance) {
+                            $column = $instance->_cols[$ptr_name];
+                            $column->setSQLValue(0);
+                            $column->setSyncPoint();
+                        }
+                        // Index reactions.
+                        if ($disconnect_reaction == "CASCADE")
+                            $cascade_callbacks = array_merge($cascade_callbacks, $instances);
+                        else if ($disconnect_reaction == "CALLBACK")
+                            $disconnect_callbacks = array_merge($cascade_callbacks, $instances);
+                    }
+                }
+                // The cascade reaction also implies that the ID is not NULL.
+                // Unlink all models with NULL cascade marked pointers.
+                if ($disconnect_reaction == "CASCADE") {
+                    $instances = $model_class::selectWhere("$ptr_name <= 0");
+                    if (count($instances) == 0)
                         continue;
-                    $target_model = $col_type->getTargetModel();
-                    $pointer_map[$target_model][] = array($cls_name, $col_name);
+                    echo "\nFound " . count($instances) . " instances of " . $model_class . " with their CASCADE pointer " . $ptr_name . " unset! Marking them for cascade unlinking...\n\n";
+                    $cascade_callbacks = array_merge($cascade_callbacks, $instances);
                 }
-                // If creating sequence, record max.
-                if ($creating_sequence) {
-                    $max_result = db\next_array(db\query("SELECT MAX(id) FROM " . table($table_name)));
-                    $max_result = intval($max_result[0]);
-                    if ($sequence_max < $max_result)
-                        $sequence_max = $max_result;
-                }
+            }
+            // Since this routine can be memory intensive, collecting cycles here.
+            gc_collect_cycles();
+        }
+        echo "\nDone selecting. CASCADE unlinking " . count($cascade_callbacks) . " (initially) and calling " . count($disconnect_callbacks) . " disconnect callbacks...\n\n";
+        // Handling the broken pointers according to configuration.
+        foreach ($cascade_callbacks as $instance)
+            $instance->unlink();
+        gc_collect_cycles();
+        foreach ($disconnect_callbacks as $instance)
+            $instance->disconnectCallback();
+    }
+
+    public static final function syncronizeAllModels() {
+        // This maintenance script can run forever.
+        ignore_user_abort(true);
+        set_time_limit(0);
+        // Clear metadata.
+        db\run("DROP TABLE " . table('core/metadata'));
+        db\run("CREATE TABLE " . table('core/metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
+        $creating_sequence = !in_array(db\config\PREFIX . 'core/seq', db\get_all_tables());
+        $model_classes = self::findAllModels();
+        foreach ($model_classes as $table_name => $model_class) {
+            // Syncronize this model.
+            $parsed_col_array = $model_class::getParsedColumnArray();
+            db\sync_table_layout_with_model($table_name, $parsed_col_array);
+            // Record pointers for pointer map.
+            $columns = $model_class::getColumnNames();
+            foreach ($parsed_col_array as $col_name => $col_type) {
+                if (substr($col_name, -3) != "_id")
+                    continue;
+                $target_model = $col_type->getTargetModel();
+                $pointer_map[$target_model][] = array($model_class, $col_name);
+            }
+            // If creating sequence, record max.
+            if ($creating_sequence) {
+                $max_result = db\next_array(db\query("SELECT MAX(id) FROM " . table($table_name)));
+                $max_result = intval($max_result[0]);
+                if ($sequence_max < $max_result)
+                    $sequence_max = $max_result;
             }
         }
         self::setMetaData("pointer_map", $pointer_map);

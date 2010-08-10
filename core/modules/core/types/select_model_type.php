@@ -9,8 +9,8 @@ class SelectModelType extends PointerType {
     /** @var Column in target to use for labeling objects. */
     public $label_column;
 
-    public function __construct($column_name, $target_model, $label_column = null) {
-        parent::__construct($column_name, $target_model);
+    public function __construct($column_name, $target_model, $disconnect_reaction = "SET NULL", $label_column = null) {
+        parent::__construct($column_name, $target_model, $disconnect_reaction);
         $this->label_column = $label_column;
     }
 
@@ -24,7 +24,7 @@ class SelectModelType extends PointerType {
     private $denied_ids = array();
 
     public function getInterface($name) {
-        $value = intval($this->value);
+        $current_id = $this->getID();
         $html = "<select name=\"$name\" id=\"$name\">";
         $nothing = __("—");
         $html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
@@ -39,7 +39,7 @@ class SelectModelType extends PointerType {
             $id = $model->getID();
             if (in_array($id, $this->denied_ids))
                 continue;
-            $s = ($value == $id)? $selected: null;
+            $s = ($current_id == $id)? $selected: null;
             $out_list[$label] = "<option$s value=\"$id\">$label</option>";
         }
         ksort($out_list);
