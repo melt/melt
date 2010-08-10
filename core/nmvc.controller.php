@@ -282,6 +282,8 @@ abstract class Controller {
      */
     public static final function invoke($action_name, $arguments = array(), $use_controller_layout = false) {
         $controller_class = get_called_class();
+        if (!is_subclass_of($controller_class, 'nmvc\AppController'))
+            trigger_error("Controller::invoke can only be called in the context of controllers that extend AppController.", \E_USER_ERROR);
         if (!self::validateAction($controller_class, $action_name, $arguments, true))
             return false;
         $invoke_data = new core\InvokeData($controller_class, $action_name, $arguments);
