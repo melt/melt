@@ -19,6 +19,8 @@ iconv_set_encoding("internal_encoding", "UTF-8");
 iconv_set_encoding("output_encoding", "UTF-8");
 // Start session.
 session_start();
+// Start output buffering.
+ob_start();
 // Walk down from the script filename to get the app dir.
 // Note: This method is compatible with symbolic links.
 $app_dir = dirname(dirname($_SERVER['SCRIPT_FILENAME']));
