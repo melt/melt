@@ -29,6 +29,10 @@ class InvokeData {
     public function __construct($controller_class, $action_name, $arguments) {
         $this->controller_class = strval($controller_class);
         $this->action_name = strval($action_name);
+        if (!is_array($arguments)) {
+            trigger_error("InvokeData expects arguments to be passed in array form. Assuming passing one argument.", \E_USER_NOTICE);
+            $arguments = array($arguments);
+        }
         $this->arguments = $arguments;
     }
 }
