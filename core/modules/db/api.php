@@ -8,6 +8,7 @@ function enable_display() {
     \nmvc\request\reset();
     header('Content-Type: text/plain');
     define("OUTPUT_MYSQL_QUERIES", true);
+    ob_end_clean();
 }
 
 function get_auto_increment($table) {
@@ -33,13 +34,16 @@ function insert_id() {
 }
 
 /**
- * @desc This function properly escapes and quotes any string you insert,
- * @desc making it ready to be directly inserted into your SQL queries.
- * @example Input: > a 'test' <   Output: > "a \'test\'" <
- * @return String The escaped and quoted string you inputed.
+ * This function properly escapes and quotes any string you insert,
+ * making it ready to be directly inserted into your SQL queries.
+ * @example Input: a 'test' Output: "a \'test\'"
+ * @param string $string
+ * @param integer $max_length Maximum length of string in charachers.
+ * Only use this parameter if string contains UTF-8 text and not binary data.
+ * @return string The escaped and quoted string you inputed.
  */
-function strfy($string, $max_length = -1) {
-    if ($max_length >= 0)
+function strfy($string, $max_length = null) {
+    if ($max_length !== null && $max_length >= 0)
         $string = iconv_substr($string, 0, $max_length);
     // Have to connect for mysql_real_escape_string to work.
     if (!defined("NANOMVC_DB_LINK"))
@@ -120,8 +124,7 @@ function run($query) {
     }
     if (defined("OUTPUT_MYSQL_QUERIES")) {
         echo $query . "\r\n";
-        if (ob_get_length() > 0)
-            ob_flush();
+        ob_flush();
     }
     if (!config\DEBUG_QUERY_BENCHMARK)
         return mysql_query($query);
@@ -240,7 +243,7 @@ function sync_table_layout_with_columns($table_name, $columns) {
             // ID column is special case.
             if ($current_name == 'id') {
                 if (!\nmvc\string\starts_with($current_type, "int"))
-                    trigger_error("ID column found in table '$table_name', but with unexpected type ($current_type). Has it been tampered with? nanoMVC not written to handle this condition.", \E_USER_ERROR);
+                    trigger_error("ID column found in table '$table_name', but with unexpected type ($current_type). Has it been tampered with? nanoMVC can not handle this exception automatically.", \E_USER_ERROR);
                 continue;
             }
             // Skip unknown columns.
@@ -310,7 +313,11 @@ function unlock() {
     run("UNLOCK TABLES");
 }
 
-/** Translating a string to a mysql packed nanomvc database table name. */
+/**
+ * Convenience function for prefixing tables.
+ * @param string $table_name
+ * @return string
+ */
 function table($table_name) {
     static $cache = array();
     if (isset($cache[$table_name]))
