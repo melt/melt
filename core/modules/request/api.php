@@ -6,12 +6,10 @@
 */
 function reset() {
     // Remove previous buffers.
-    $level = ob_get_status(true);
-    if (isset($level['level'])) {
-        $level = intval($level['level']);
-        for (;$level > 1; $level--)
-            ob_end_clean();
-    }
+    $info = ob_get_status(false);
+    $level = intval($info['level']);
+    for (;$level > 1; $level--)
+        ob_end_clean();
     // Reset to default content type.
     if (!headers_sent())
         header('Content-Type: text/html');
@@ -28,6 +26,8 @@ function reset() {
  * by itself. (Handler usually called rpc.php)
  * It will disable nanoMVC error handling and forward the request there.
  * Note: Does not disable \Exception handling. That would be pointless.
+ * @param string $php_file Path to php file to pass execution to.
+ * @return void Does not return.
  */
 function forward($php_file) {
     restore_error_handler();
