@@ -246,6 +246,19 @@ function on_windows() {
 }
 
 /**
+ * Takes an error number and returns the constant name.
+ * @example 128 returns "E_COMPILE_WARNING"
+ * @see http://se2.php.net/manual/en/errorfunc.constants.php
+ * @param integer $error_number
+ * @return string Error constant name or NULL if no such error constant
+ * or if input is a combination of constants.
+ */
+function get_error_name($error_number) {
+    return \nmvc\internal\get_error_name($error_number);
+}
+
+
+/**
  * Returns TRUE if class is a base_class.
  * Replacement for PHP is_subclass_of that refuses to return true
  * for two classes that are the same and is_a also refuses to take a

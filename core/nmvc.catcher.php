@@ -1,5 +1,27 @@
 <?php namespace nmvc\internal;
 
+function get_error_name($error_number) {
+    $error_map = array(
+        \E_ERROR => "E_ERROR",
+        \E_WARNING => "E_WARNING",
+        \E_PARSE => "E_PARSE",
+        \E_NOTICE => "E_NOTICE ",
+        \E_CORE_ERROR => "E_CORE_ERROR",
+        \E_CORE_WARNING => "E_CORE_WARNING",
+        \E_COMPILE_ERROR => "E_COMPILE_ERROR",
+        \E_COMPILE_WARNING => "E_COMPILE_WARNING",
+        \E_USER_ERROR => "E_USER_ERROR",
+        \E_USER_WARNING => "E_USER_WARNING",
+        \E_USER_NOTICE => "E_USER_NOTICE",
+        \E_STRICT => "E_STRICT",
+        \E_RECOVERABLE_ERROR => "E_RECOVERABLE_ERROR",
+        \E_DEPRECATED => "E_DEPRECATED",
+        \E_USER_DEPRECATED => "E_USER_DEPRECATED",
+        \E_ALL => "E_ALL",
+    );
+    return isset($error_map[$error_number])? $error_map[$error_number]: null;
+}
+
 function assert_failed($file, $line, $message) {
     throw new \Exception('Assertation failed! ' . $message);
 }
@@ -43,18 +65,9 @@ function error_handler($errno, $errstr, $errfile, $errline) {
         if (\nmvc\string\starts_with($file, $vendor_path))
             return true;
     }
-    $error_map = array(
-        E_WARNING => "E_WARNING",
-        E_NOTICE => "E_NOTICE ",
-        E_USER_ERROR => "E_USER_ERROR",
-        E_USER_WARNING => "E_USER_WARNING",
-        E_USER_NOTICE => "E_USER_NOTICE",
-        E_STRICT => "E_STRICT",
-        E_RECOVERABLE_ERROR => "E_RECOVERABLE_ERROR",
-        E_DEPRECATED => "E_DEPRECATED",
-        E_USER_DEPRECATED => "E_USER_DEPRECATED",
-    );
-    $type = isset($error_map[$errno])? $error_map[$errno]: "E_UNKNOWN";
+    $type = get_error_name($errno);
+    if ($type === null)
+        $type = "E_UNKNOWN";
     crash("$type caught: " . $errstr, $errfile, $errline, $backtrace);
     exit;
 }
