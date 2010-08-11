@@ -55,11 +55,9 @@ class Mailer {
     public function mailPlain($body, $subject = null) {
         $headers = $this->addressEmail();
         $headers .= 'Content-Type: text/plain; charset=UTF-8' . PHP_EOL;
-
         // Base 64 encode content and put it in a single blob.
         $headers .= 'Content-transfer-encoding: base64' . PHP_EOL;
-        $content = base64_encode($content);
-
+        $body = base64_encode($body);
         // Remove whitespace from start and end of rows, and cut rows to a length of 998.
         $rows_out = array();
         $rows_in = explode("\n", $body);
@@ -83,15 +81,12 @@ class Mailer {
     /** Sends this mail with HTML content. */
     public function mailHTML($body, $subject = null) {
         $headers = $this->addressEmail();
-
         // Assemble the content.
         $html_subject = ($subject == null)? 'Untitled': escape($subject);
         $content = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\"\r\n \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\r\n";
         $content = "<html>\r\n\t<head>\r\n\t\t<title>$html_subject\r\n\t</title>\r\n\t</head>\r\n\t<body>\r$body\r\n\t</body>\r\n</html>\r\n";
-        
         // Create a plain text fallback for the HTML content.
         $content = $this->createPlainTextFallback($content, $headers);
-
         // Send the mail.
         $this->doMail($subject, $content, $headers);
         return;
@@ -102,7 +97,6 @@ class Mailer {
         $headers .= 'MIME-Version: 1.0' . PHP_EOL;
         $headers .= 'X-Mailer: nanoMVC/' . \nmvc\internal\VERSION . '; PHP/' . phpversion() . PHP_EOL;
         $headers .= 'Date: ' . date("r") . PHP_EOL;
-
         // Verify that INI settings are correct.
         $smtp = strtolower(ini_get('smtp'));
         $trg = strtolower(config\SMTP_HOST);
@@ -111,10 +105,8 @@ class Mailer {
                 trigger_error("The SMTP server '".$trg."' could not be set into configuration!", \E_USER_ERROR);
         // add_x_header is a potential security risk, disable.
         ini_set('mail.add_x_header', 'Off');
-
         // Use MIME encoded-word syntax to transmit UTF-8 subject.
         $subject = "=?UTF-8?B?" . base64_encode($subject) . "?=";
-
         if (strpos(PHP_OS, "WIN") !== false) {
             // Windows implementation uses >to< argument to speak directly with SMTP servers.
             $to = $this->to->getPlainList();
