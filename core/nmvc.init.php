@@ -83,11 +83,6 @@ if (modules_using() === null)
 // Make sure core directives that it requires right away was included.
 put_configuration_directive('nmvc\core\config\DEVELOPER_KEY', "");
 put_configuration_directive('nmvc\core\config\MAINTENANCE_MODE', true);
-put_configuration_directive('nmvc\core\config\REQUIRE_PROTOCOL', null);
-put_configuration_directive('nmvc\core\config\REQUIRE_HOST', "#^localhost$#");
-put_configuration_directive('nmvc\core\config\REQUIRE_PATH', null);
-put_configuration_directive('nmvc\core\config\REQUIRE_PORT', "#^80$#");
-put_configuration_directive('nmvc\core\config\REDIRECT_URL', null);
 put_configuration_directive('nmvc\core\config\FORCE_ERROR_DISPLAY', false);
 put_configuration_directive('nmvc\core\config\FORCE_ERROR_FLAGS', false);
 // Evaluate developer mode based on configuration and cookies.
