@@ -458,7 +458,7 @@ abstract class Model implements \Iterator {
                 list($instance, $ptr_field) = $incomming_pointer;
                 if (!$instance->isLinked())
                     continue;
-                $table_name = self::classNameToTableName(class_name($instance));
+                $table_name = self::classNameToTableName(get_class($instance));
                 db\query("UPDATE " . table($table_name) . " SET `$ptr_field` = $id WHERE id = " . $instance->_id);
                 $instance->type($ptr_field)->setSyncPoint();
             }
