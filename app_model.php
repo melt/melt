@@ -5,19 +5,19 @@ abstract class AppModel extends Model {
     // Some useful callback/event methods.
     // Refer to the manual for more information.
 
-    public function initialize() { }
+    protected function initialize() { }
 
-    public function afterLoad() { }
+    protected function afterLoad() { }
     
-    public function beforeStore($is_linked) { }
+    protected function beforeStore($is_linked) { }
 
-    public function afterStore($was_linked) { }
+    protected function afterStore($was_linked) { }
 
-    public function beforeUnlink() { }
+    protected function beforeUnlink() { }
 
-    public function afterUnlink() { }
+    protected function afterUnlink() { }
 
-    public function disconnectCallback($pointer_name) { }
+    protected function disconnectCallback($pointer_name) { }
 
     public function validate() {
         return array();

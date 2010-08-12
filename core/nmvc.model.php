@@ -18,54 +18,105 @@ abstract class Model implements \Iterator {
     private static $_instance_cache = array();
 
     
-    /** Returns the ID of this model instance or NULL if unlinked. */
-    public function getID() {
+    /**
+     * Returns the ID of this model instance or NULL if unlinked.
+     * @return integer
+     */
+    public final function getID() {
         return $this->_id > 0? intval($this->_id): 0;
     }
 
-    /** Returns true if this model instance is linked. */
-    public function isLinked() {
+    /**
+     * Returns true if this model instance is linked.
+     * @return boolean
+     */
+    public final function isLinked() {
         return $this->_id > 0;
     }
 
     /**
-     * Overidable event. Called on model instances before they are stored.
-     * @param boolean $is_linked True if the model instance is currently linked in the database. False if it's about to be INSERTED.
+     * Overidable event. Called on model instances after they have
+     * been inserted and are ready to be populated with default data.
+     * @return void
      */
-    public abstract function beforeStore($is_linked);
+    protected abstract function initialize();
+
+    /**
+     * Overidable event. Called on model instances before they are stored.
+     * @param boolean $is_linked True if the model instance is currently
+     * linked in the database. False if it's about to be INSERTED.
+     * @return void
+     */
+    protected abstract function beforeStore($is_linked);
 
     /**
      * Overidable event. Called on model instances after they are stored.
-     * @param boolean $is_linked True if the model instance was linked in the database before the store. False if it was INSERTED just now.
+     * @param boolean $is_linked True if the model instance was linked in the
+     * database before the store. False if it was INSERTED just now.
+     * @return void
      */
-    public abstract function afterStore($was_linked);
+    protected abstract function afterStore($was_linked);
 
     /**
-     * Overidable event. Called on model instances that is about to be unlinked in the database.
+     * Overidable event. Called on model instances that is about to be
+     * unlinked in the database.
+     * @return void
      */
-    public abstract function beforeUnlink();
+    protected abstract function beforeUnlink();
 
     /**
-     * Overidable event. Called on model instances after they have been unlinked in the database.
+     * Overidable event. Called on model instances after they have been
+     * unlinked in the database.
+     * @return void
      */
-    public abstract function afterUnlink();
+    protected abstract function afterUnlink();
 
     /**
-     * Overidable event. Called on model instances after they have been loaded from the database.
+     * Overidable event. Called on model instances after they have been
+     * loaded from the database.
+     * @return void
      */
-    public abstract function afterLoad();
+    protected abstract function afterLoad();
+
+    /**
+     * Callback function that can is useful when the application requires
+     * database partitioning. It will only be called once per request
+     * and model, after which the result is cached.
+     * Any model instances that does not match the given where condition will
+     * literally be completly invisible to nanoMVC. In effect, this means
+     * that any pointer relation that crosses between two partitions
+     * will be cut off and reported as "invalid".
+     * For every UNIQUE where_condition this function returns, a new
+     * persistant mySQL view will be created. The view will never be deleted.
+     * If you are generating many different types of filters, this can quickly
+     * flood the database.
+     * @return mixed If this callback returns NULL, no partitioning will
+     * take place. Otherwise it will be treated as a mySQL where_condition.
+     */
+    protected static function getDatabasePartitionFilter() {
+        return null;
+    }
 
     /**
      * Called when model has a pointer that is CALLBACK disconnect reaction
      * configured and it's targeted instance is unlinked from database.
      * (Custom handling.)
+     * @return void
      */
-    public abstract function disconnectCallback($pointer_name);
+    protected abstract function disconnectCallback($pointer_name);
 
-    /** Override this function to initialize members of this model. */
-    public abstract function initialize();
+    /**
+     * Validates the current data. If invalid, returns an array of all fields
+     * name => reason mapped, otherwise, returns an empty array.
+     * Designed to be overriden.
+     * @return array All invalid fields, name => reason mapped.
+     */
+    public abstract function validate();
 
-    /** Returns a parsed column array for this model. */
+    /**
+     * Returns a parsed column array for this model.
+     * @return array
+     */
     private static function getParsedColumnArray() {
         $model_name = get_called_class();
         static $parsed_model_cache = array();
@@ -418,7 +469,7 @@ abstract class Model implements \Iterator {
         $model = new $name();
         $model->_id = 0;
         // Enter default values.
-        $this->initialize();
+        $model->initialize();
         return $model;
     }
 
@@ -1012,23 +1063,38 @@ EOP;
                 $left_joins[] = $left_join;
         }
         $left_joins = implode(" ", $left_joins);
+        // Evaluate the from_name which can be a table or a view that defines a partition.
+        $class_name = get_called_class();
+        static $from_names = array();
+        if (!array_key_exists($class_name, $from_names)) {
+            $partition_filter = $class_name::getDatabasePartitionFilter();
+            $table_name = table(self::classNameToTableName($class_name));
+            if ($partition_filter !== null) {
+                $from_name = \nmvc\db\config\PREFIX . "nprt/" . substr(sha1($partition_filter, false), 0, 14);
+                $result = db\next_array(db\query("SELECT count(*) FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_NAME` = '$from_name' AND `TABLE_TYPE` = 'VIEW';"));
+                $from_name = "`$from_name`";
+                $view_exists = $result[0] != 0;
+                if (!$view_exists)
+                    db\query("CREATE VIEW $from_name AS SELECT * FROM $table_name WHERE $partition_filter", "The where_condition returned from getDatabasePartitionFilter() or database does not support creating views.");
+            } else
+                $from_name = $table_name;
+            $from_names[$class_name] = $from_name;
+        } else
+            $from_name = $from_names[$class_name];
         // Comple the rest of the query.
-        $main_table = table(self::classNameToTableName(get_called_class()));
         $main_alias = string\from_index(0);
         $found_rows_inject = self::$_have_pending_row_count? "SQL_CALC_FOUND_ROWS": "";
-        $query = "SELECT $found_rows_inject $sql_select_columns FROM $main_table AS $main_alias $left_joins $sql_select_params";
+        $query = "SELECT $found_rows_inject $sql_select_columns FROM $from_name AS $main_alias $left_joins $sql_select_params";
         $result = db\query($query);
         if (self::$_have_pending_row_count) {
             $found_rows_result = db\next_array(db\query("SELECT FOUND_ROWS()"));
             self::$_found_row_count += intval($found_rows_result[0]);
         }
         $return_data = array();
-        while (false !== ($row = db\next_array($result))) {
-            if (!$supress_id)
-                $return_data[$row[0]] = array_splice($row, 1);
-            else
-                $return_data[] = $row;
-        }
+        if (!$supress_id) while (false !== ($row = db\next_array($result)))
+            $return_data[$row[0]] = array_splice($row, 1);
+        else while (false !== ($row = db\next_array($result)))
+            $return_data[] = array_splice($row, 1);
         return $return_data;
     }
 
@@ -1040,6 +1106,7 @@ EOP;
      * without limit statements. This can decreese the performance of
      * queries greatly so make sure you call stopCountNolimit() when
      * you are done counting.
+     * @return void
      */
     public static function startCountNolimit() {
         self::$_have_pending_row_count = true;
@@ -1148,15 +1215,6 @@ EOP;
         }
         return $cache[$class_name];
     }
-
-
-    /**
-     * Validates the current data. If invalid, returns an array of all fields
-     * name => reason mapped, otherwise, returns an empty array.
-     * Designed to be overriden.
-     * @return array All invalid fields, name => reason mapped.
-     */
-    public abstract function validate();
 
     private static $_metadata_cache = array();
 
