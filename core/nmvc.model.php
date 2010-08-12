@@ -189,8 +189,8 @@ abstract class Model implements \Iterator {
     }
     
     /**
-    * @desc Translates the field specifiers to type handler instances.
-    */
+     * Translates the field specifiers to type handler instances.
+     */
     protected final function __construct() {
         // Copies all columns into this model.
         $this->_cols = static::getParsedColumnArray();
