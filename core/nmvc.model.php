@@ -292,7 +292,7 @@ abstract class Model implements \Iterator {
      * @return boolean
      */
     public function hasField($name) {
-        return $this->resolveGetClosure($name) !== null;
+        return $this->resolveGetClosure($name, true) !== null;
     }
 
     /** Assignment overloading. Sets value. */
