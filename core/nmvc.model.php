@@ -622,7 +622,10 @@ abstract class Model implements \Iterator {
             $key_list = $key_list_cache[$table_name];
         $value_list = array();
         foreach ($this->getColumns() as $colname => $column) {
-            $value_list[] = $column->getSQLValue();
+            $value = $column->getSQLValue();
+            if ($value === null || $value === "")
+                trigger_error(get_class($column) . "::getSQLValue() returned null or zero-length string! This is an invalid SQL value.", \E_USER_ERROR);
+            $value_list[] = $value;
             $column->setSyncPoint();
         }
         $value_list = implode(',', $value_list);
@@ -641,7 +644,10 @@ abstract class Model implements \Iterator {
         foreach ($this->getColumns() as $colname => $column) {
             if (!$column->hasChanged())
                 continue;
-            $value_list[] = "`$colname`=" . $column->getSQLValue();
+            $value = $column->getSQLValue();
+            if ($value === null || $value === "")
+                trigger_error(get_class($column) . "::getSQLValue() returned null or zero-length string! This is an invalid SQL value.", \E_USER_ERROR);
+            $value_list[] = "`$colname`=$value";
             $column->setSyncPoint();
         }
         if (count($value_list) == 0)
