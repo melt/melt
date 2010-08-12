@@ -57,12 +57,6 @@ abstract class Model implements \Iterator {
      */
     public abstract function disconnectCallback($pointer_name);
 
-    /**
-     * Override this function to implement application
-     * level model access control.
-     */
-    public abstract function accessing();
-
     /** Override this function to initialize members of this model. */
     public abstract function initialize();
 
@@ -142,7 +136,6 @@ abstract class Model implements \Iterator {
     * @desc Translates the field specifiers to type handler instances.
     */
     protected final function __construct($id) {
-        $this->accessing();
         // Copies all columns into this model.
         $this->_cols = static::getParsedColumnArray();
         foreach ($this->_cols as $column_name => &$type_instance) {
