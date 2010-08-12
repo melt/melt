@@ -398,9 +398,11 @@ abstract class Model implements \Iterator {
         if (isset($columns_name_cache[$name]))
             return $columns_name_cache[$name];
         $columns = array();
-        foreach (get_class_vars($name) as $colname => $def)
-            if ($colname[0] != '_')
-                $columns[$colname] = $colname;
+        foreach (get_class_vars($name) as $colname => $default) {
+            if ($default === null || $colname[0] == '_')
+                continue;
+            $columns[$colname] = $colname;
+        }
         return $columns_name_cache[$name] = $columns;
     }
 
