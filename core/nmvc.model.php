@@ -51,6 +51,11 @@ abstract class Model implements \Iterator {
     public abstract function afterUnlink();
 
     /**
+     * Overidable event. Called on model instances after they have been loaded from the database.
+     */
+    public abstract function afterLoad();
+
+    /**
      * Called when model has a pointer that is CALLBACK disconnect reaction
      * configured and it's targeted instance is unlinked from database.
      * (Custom handling.)
@@ -135,7 +140,7 @@ abstract class Model implements \Iterator {
     /**
     * @desc Translates the field specifiers to type handler instances.
     */
-    protected final function __construct($id) {
+    protected final function __construct() {
         // Copies all columns into this model.
         $this->_cols = static::getParsedColumnArray();
         foreach ($this->_cols as $column_name => &$type_instance) {
@@ -145,11 +150,6 @@ abstract class Model implements \Iterator {
             $type_instance = clone $type_instance;
             $type_instance->parent = $this;
         }
-        $this->_id = intval($id);
-        $this->initialize();
-        // Set sync point after initialization.
-        foreach ($this->_cols as &$type_instance)
-            $type_instance->setSyncPoint();
     }
 
 
@@ -415,7 +415,10 @@ abstract class Model implements \Iterator {
         $name = get_called_class();
         if (core\is_abstract($name))
             trigger_error("'$name' is an abstract class and therefore can't be inserted/created/instantized.", \E_USER_ERROR);
-        $model = new $name(-1);
+        $model = new $name();
+        $model->_id = 0;
+        // Enter default values.
+        $this->initialize();
         return $model;
     }
 
@@ -685,14 +688,16 @@ abstract class Model implements \Iterator {
         if (isset(self::$_instance_cache[$id]))
             return self::$_instance_cache[$id];
         $model_class_name = get_called_class();
-        $model = new $model_class_name($id);
+        $instance = new $model_class_name($id);
+        $instance->_id = $id;
         $value = reset($data_row);
-        foreach ($model->getColumns() as $column) {
+        foreach ($instance->getColumns() as $column) {
             $column->setSQLValue($value);
             $column->setSyncPoint();
             $value = next($data_row);
         }
-        return self::$_instance_cache[$id] = $model;
+        $instance->afterLoad();
+        return self::$_instance_cache[$id] = $instance;
     }
 
     /**
