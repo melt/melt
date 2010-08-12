@@ -20,7 +20,7 @@ abstract class Model implements \Iterator {
     
     /** Returns the ID of this model instance or NULL if unlinked. */
     public function getID() {
-        return $this->_id > 0? intval($this->_id): null;
+        return $this->_id > 0? intval($this->_id): 0;
     }
 
     /** Returns true if this model instance is linked. */
@@ -178,7 +178,7 @@ abstract class Model implements \Iterator {
         $unresolved_name = $name;
         if ($name == "id") {
             $closure = function($columns, $id) {
-                return $id > 0? intval($id): null;
+                return $id > 0? intval($id): 0;
             };
         } else {
             $subresolve = self::doSubResolve($name);
