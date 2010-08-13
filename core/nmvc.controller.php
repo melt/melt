@@ -236,6 +236,7 @@ abstract class Controller {
      * @param string $require_controller Set to a controller class name
      * to require the request to be of a controller type or otherwise return
      * false.
+     * @return void
      */
     public static final function invokeFromExternalRequest($path, $require_controller = null) {
         // Make sure this function is only called once.
@@ -321,6 +322,10 @@ abstract class Controller {
         }
         // Raise beforeRender event.
         $controller->beforeRender($action_name, $arguments);
+        // Raise all beforeFirstRender events.
+        foreach (self::$before_first_render_events as $event)
+            call_user_func($event);
+        self::$before_first_render_events = array();
         if ($ignore_controller_layout)
             $controller->layout = null;
         if ($ret_view === null) {
@@ -333,6 +338,22 @@ abstract class Controller {
         // Raise afterRender event.
         $controller->afterRender($action_name, $arguments);
         array_pop(self::$invoke_stack);
+    }
+
+    private static $before_first_render_events = array();
+
+    /**
+     * Use this function to register a callback function that will be called
+     * before first application render. This is useful for modules when
+     * then want to only execute a procedure if the application reaches
+     * the render phase and not exits in a redirect for example.
+     * @param callback $callback
+     * @return void
+     */
+    public static final function registerBeforeFirstRenderEvent($callback) {
+        if (!is_callable($callback))
+            trigger_error("The callback given is not callable!", \E_USER_ERROR);
+        self::$before_first_render_events[] = $callback;
     }
 
     private static $invoke_stack = array();
