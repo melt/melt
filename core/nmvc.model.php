@@ -1190,7 +1190,6 @@ EOP;
             trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
         foreach ($family_tree[$name] as $table_name) {
             $rows = static::findDataForSelf(array("COUNT(*)"), $where, true);
-            die(var_dump($rows));
             $count += intval($rows[0][0]);
         }
         return $count;
