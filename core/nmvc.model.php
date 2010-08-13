@@ -1353,6 +1353,10 @@ EOP;
         // This maintenance script can run forever.
         ignore_user_abort(true);
         set_time_limit(0);
+        // Clear nanomvc partitioning views as they need to be recreated when adding fields.
+        $result = db\query("SELECT TABLE_NAME FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_NAME` LIKE '" . db\config\PREFIX . "nprt/%' AND `TABLE_TYPE` = 'VIEW';");
+        while (false !== ($row = db\next_array($result)))
+            db\query("DROP VIEW " . table($row[0]));
         // Clear metadata.
         db\run("DROP TABLE " . table('core/metadata'));
         db\run("CREATE TABLE " . table('core/metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
