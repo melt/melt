@@ -1075,7 +1075,7 @@ EOP;
                 $from_name = "`$from_name`";
                 $view_exists = $result[0] != 0;
                 if (!$view_exists)
-                    db\query("CREATE VIEW $from_name AS SELECT * FROM $table_name WHERE $partition_filter", "The where_condition returned from getDatabasePartitionFilter() or database does not support creating views.");
+                    db\query("CREATE VIEW $from_name AS SELECT * FROM $table_name WHERE $partition_filter", "The where_condition returned from getDatabasePartitionFilter() is invalid or database does not support creating views.");
             } else
                 $from_name = $table_name;
             $from_names[$class_name] = $from_name;
