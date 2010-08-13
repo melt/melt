@@ -173,7 +173,7 @@ class PointerType extends \nmvc\AppType {
             // Make sure this is a type of model we are pointing to.
             if (!is_a($value, $this->target_model))
                 trigger_error("Attempted to set a pointer to an incorrect object. The pointer expects " . $this->target_model . " objects, it was given a " . get_class($value) . " object.", \E_USER_ERROR);
-        } else
+        } else if (!is_null($value))
             trigger_error("Pointer expecting Model object or integer ID. Got: " . gettype($value), \E_USER_ERROR);
         // Return on no change.
         if ($value === $this->value)
