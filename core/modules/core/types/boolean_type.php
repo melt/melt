@@ -9,7 +9,7 @@ class BooleanType extends \nmvc\AppType {
     }
 
     public function getSQLType() {
-        return "boolean";
+        return "tinyint";
     }
     public function getSQLValue() {
         return $this->value? "TRUE": "FALSE";

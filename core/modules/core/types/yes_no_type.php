@@ -20,7 +20,7 @@ class YesNoType extends \nmvc\AppType {
     }
 
     public function getSQLType() {
-        return "boolean";
+        return "tinyint";
     }
     public function getSQLValue() {
         return $this->value? "1": "0";
