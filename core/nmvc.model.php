@@ -1094,7 +1094,7 @@ EOP;
         if (!$supress_id) while (false !== ($row = db\next_array($result)))
             $return_data[$row[0]] = array_splice($row, 1);
         else while (false !== ($row = db\next_array($result)))
-            $return_data[] = array_splice($row, 1);
+            $return_data[] = $row;
         return $return_data;
     }
 
@@ -1190,6 +1190,7 @@ EOP;
             trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
         foreach ($family_tree[$name] as $table_name) {
             $rows = static::findDataForSelf(array("COUNT(*)"), $where, true);
+            die(var_dump($rows));
             $count += intval($rows[0][0]);
         }
         return $count;
