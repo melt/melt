@@ -218,7 +218,7 @@ abstract class Model implements \Iterator {
         }
         // Enter default values.
         if (!self::$_skip_initialize)
-            $model->initialize();
+            $this->initialize();
     }
 
 
@@ -1075,7 +1075,7 @@ EOP;
             $partition_filter = $class_name::getDatabasePartitionFilter();
             $table_name = table(self::classNameToTableName($class_name));
             if ($partition_filter !== null) {
-                $from_name = \nmvc\db\config\PREFIX . "nprt/" . substr(sha1($partition_filter, false), 0, 14);
+                $from_name = \nmvc\db\config\PREFIX . "nprt/" . substr($table_name, 1, -1) . "/" . substr(sha1($partition_filter, false), 0, 8);
                 $result = db\next_array(db\query("SELECT count(*) FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_NAME` = '$from_name' AND `TABLE_TYPE` = 'VIEW';"));
                 $from_name = "`$from_name`";
                 $view_exists = $result[0] != 0;
