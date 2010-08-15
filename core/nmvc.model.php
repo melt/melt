@@ -9,7 +9,7 @@ abstract class Model implements \Iterator {
      * @var int
      * @internal
      */
-    protected $_id;
+    protected $_id = 0;
     /** @var array Where columns are internally stored for assignment overload. */
     private $_cols;
     /** @var array Cache of all columns in this model. */
@@ -187,11 +187,26 @@ abstract class Model implements \Iterator {
         $parsed_model_cache[$model_name] = $parsed_col_array;
         return $parsed_col_array;
     }
-    
+
     /**
-     * Translates the field specifiers to type handler instances.
+     * Creates a new unlinked model instance.
+     * @deprecated
+     * @return Model A new unlinked model instance.
      */
-    protected final function __construct() {
+    public static function insert() {
+        $name = get_called_class();
+        if (core\is_abstract($name))
+            trigger_error("'$name' is an abstract class and therefore can't be inserted/created/instantized.", \E_USER_ERROR);
+        return new $name();
+    }
+
+    /** @var boolean Set to true when loading and not inserting. */
+    private static $_skip_initialize = false;
+
+    /**
+     * Creates a new instance of this model.
+     */
+    public final function __construct() {
         // Copies all columns into this model.
         $this->_cols = static::getParsedColumnArray();
         foreach ($this->_cols as $column_name => &$type_instance) {
@@ -201,6 +216,9 @@ abstract class Model implements \Iterator {
             $type_instance = clone $type_instance;
             $type_instance->parent = $this;
         }
+        // Enter default values.
+        if (!self::$_skip_initialize)
+            $model->initialize();
     }
 
 
@@ -458,21 +476,6 @@ abstract class Model implements \Iterator {
         return $this->_cols;
     }
     
-    /**
-     * @desc Creates a new unlinked model instance.
-     * @return Model A new unlinked model instance.
-     */
-    public static function insert() {
-        $name = get_called_class();
-        if (core\is_abstract($name))
-            trigger_error("'$name' is an abstract class and therefore can't be inserted/created/instantized.", \E_USER_ERROR);
-        $model = new $name();
-        $model->_id = 0;
-        // Enter default values.
-        $model->initialize();
-        return $model;
-    }
-
     /**
      * Stores any changes to this model instance to the database.
      * If this is a new instance, it's inserted, otherwise, it's updated.
@@ -739,7 +742,9 @@ abstract class Model implements \Iterator {
         if (isset(self::$_instance_cache[$id]))
             return self::$_instance_cache[$id];
         $model_class_name = get_called_class();
-        $instance = new $model_class_name($id);
+        self::$_skip_initialize = true;
+        $instance = new $model_class_name();
+        self::$_skip_initialize = false;
         $instance->_id = $id;
         $value = reset($data_row);
         foreach ($instance->getColumns() as $column) {
@@ -1361,6 +1366,13 @@ EOP;
         db\run("DROP TABLE " . table('core/metadata'));
         db\run("CREATE TABLE " . table('core/metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
         $creating_sequence = !in_array(db\config\PREFIX . 'core/seq', db\get_all_tables());
+        if (!$creating_sequence) {
+            // Validate that seq still has one row.
+            $result = db\query("SELECT count(*) FROM " . table('core/seq'));
+            $row = db\next_array($result);
+            $creating_sequence = ($row[0][0] == 0);
+        }
+        $sequence_max = 1;
         $model_classes = self::findAllModels();
         foreach ($model_classes as $table_name => $model_class) {
             // Syncronize this model.
