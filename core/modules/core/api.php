@@ -281,7 +281,7 @@ function is($class, $base_class) {
         $base_class = get_class($base_class);
     else if (!is_string($base_class) || !class_exists($base_class))
         return false;
-    return $class == $base_class || is_subclass_of($class, $base_class);
+    return strcasecmp($class, $base_class) || is_subclass_of($class, $base_class);
 }
 
 /**
