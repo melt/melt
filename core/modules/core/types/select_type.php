@@ -36,7 +36,7 @@ class SelectType extends \nmvc\AppType {
             return intval($this->value);
         } else {
             reset($this->options);
-            key($this->options);
+            return key($this->options);
         }
     }
 
