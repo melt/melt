@@ -198,7 +198,7 @@ class PointerType extends \nmvc\AppType {
         // otherwise trigger error.
         if ($this->disconnect_reaction == "CASCADE" && $this->getID() == 0) {
             if (!is_object($this->value))
-                trigger_error("Trying to store CASCADE pointer in database as NULL (illegal value for CASCADE pointer)", \E_USER_ERROR);
+                trigger_error("Trying to store CASCADE pointer (" . get_class($this->parent) . "->\$" . $this->key . ") in database as NULL (illegal value for CASCADE pointer)", \E_USER_ERROR);
             // Tracking cascade store track to prevent circularity.
             static $cascade_store_stack = array();
             $target_hash = spl_object_hash($this->value);
