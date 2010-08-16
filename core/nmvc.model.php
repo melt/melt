@@ -650,6 +650,8 @@ abstract class Model implements \Iterator {
      * translates it to the SQL table column name.
      */
     public static function translateFieldToColumn($col_name, $error_on_missing = true) {
+        if ($col_name == "id")
+            return $col_name;
         $columns = static::getParsedColumnArray();
         if (array_key_exists($col_name, $columns))
             return $col_name;
