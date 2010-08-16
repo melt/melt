@@ -386,6 +386,8 @@ abstract class Model implements \Iterator {
 
     /** Helper function to view a column. */
     public function view($name) {
+        if ($name == "id")
+            return (string) $this->getID();
         $type_closure = $this->resolveTypeClosure($name);
         if (is_string($type_closure)) {
             trigger_error($type_closure, \E_USER_NOTICE);
