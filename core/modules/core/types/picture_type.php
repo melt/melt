@@ -8,9 +8,9 @@ class PictureType extends \nmvc\cache\BlobPointerType {
 
     private static function initialize() {
         $gd_info = gd_info();
-        define('GD_SUPPORTS_JPG', $gd_info['JPG Support'] === true || $gd_info['JPEG Support'] === true);
-        define('GD_SUPPORTS_PNG', $gd_info['PNG Support'] === true);
-        define('GD_SUPPORTS_GIF', $gd_info['GIF Create Support'] === true && $gd_info['GIF Read Support'] === true);
+        define('GD_SUPPORTS_JPG', @$gd_info['JPG Support'] === true || @$gd_info['JPEG Support'] === true);
+        define('GD_SUPPORTS_PNG', @$gd_info['PNG Support'] === true);
+        define('GD_SUPPORTS_GIF', @$gd_info['GIF Create Support'] === true && @$gd_info['GIF Read Support'] === true);
         self::$ready = true;
     }
 
