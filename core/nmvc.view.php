@@ -1,8 +1,5 @@
 <?php namespace nmvc;
 
-/**
- * nanoView
- */
 final class View {
     /** @var Controller Controller this View uses. */
     private $_controller;
@@ -151,6 +148,7 @@ final class View {
     /**
      * Will reset the application layout, loosing any data that was previously
      * rendered in it.
+     * @return void
      */
     public static function reset_app_layout() {
         self::$application_layout = null;
