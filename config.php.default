@@ -87,11 +87,6 @@ namespace nmvc\mail\config {
      * The SMTP host Vector will use when sending mail.
      */
     const SMTP_HOST = "";
-    /**
-     * An e-mail address that reaches an administrator for administrative
-     * notifications and other site related messages.
-     */
-    const ADMIN_ADDRESS = "";
 }
 
 namespace nmvc\userx\config {
