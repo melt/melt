@@ -16,12 +16,6 @@ namespace nmvc\internal {
 
 
 namespace nmvc\core\config {
-    /** Restrict application to accept connections for certain paths. */
-    const REDIRECT_URL = NULL;
-    const REQUIRE_PORT = '#^80$#';
-    const REQUIRE_PATH = NULL;
-    const REQUIRE_HOST = '#^localhost$#';
-    const REQUIRE_PROTOCOL = NULL;
     /** IF TRUE: Outputs exceptions to site developers. Makes non developers
      * unable to reach the site.
      * IF FALSE: Not displaying errors. */
@@ -84,7 +78,7 @@ namespace nmvc\mail\config {
      */
     const FROM_ADDRESS = "";
     /**
-     * The SMTP host Vector will use when sending mail.
+     * The SMTP host used when sending mail.
      */
     const SMTP_HOST = "";
 }
