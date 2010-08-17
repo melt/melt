@@ -1080,7 +1080,7 @@ EOP;
             $table_name = table(self::classNameToTableName($class_name));
             if ($partition_filter !== null) {
                 $from_name = \nmvc\db\config\PREFIX . "nprt/" . substr($table_name, 1, -1) . "/" . substr(sha1($partition_filter, false), 0, 8);
-                $result = db\next_array(db\query("SELECT count(*) FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_NAME` = '$from_name' AND `TABLE_TYPE` = 'VIEW';"));
+                $result = db\next_array(db\query("SELECT count(*) FROM `INFORMATION_SCHEMA`.`VIEWS` WHERE `TABLE_SCHEMA` = " . strfy(\nmvc\db\config\NAME) . " AND `TABLE_NAME` = '$from_name';"));
                 $from_name = "`$from_name`";
                 $view_exists = $result[0] != 0;
                 if (!$view_exists)
@@ -1363,7 +1363,7 @@ EOP;
         ignore_user_abort(true);
         set_time_limit(0);
         // Clear nanomvc partitioning views as they need to be recreated when adding fields.
-        $result = db\query("SELECT TABLE_NAME FROM `INFORMATION_SCHEMA`.`TABLES` WHERE `TABLE_NAME` LIKE '" . db\config\PREFIX . "nprt/%' AND `TABLE_TYPE` = 'VIEW';");
+        $result = db\query("SELECT TABLE_NAME FROM `INFORMATION_SCHEMA`.`VIEWS` WHERE `TABLE_SCHEMA` = " . strfy(\nmvc\db\config\NAME) . " AND `TABLE_NAME` LIKE '" . db\config\PREFIX . "nprt/%';");
         while (false !== ($row = db\next_array($result)))
             db\query("DROP VIEW " . table($row[0]));
         // Clear metadata.
