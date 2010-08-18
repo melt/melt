@@ -48,7 +48,9 @@ abstract class BlobPointerType extends \nmvc\core\PointerType {
                     list($tag, $extention) = $meta;
                     $glob = $this->getCachePath("*");
                     $glob = preg_replace("#\.[^\.]*$#", "", $glob);
-                    foreach (glob($glob) as $file_name)
+                    $cache_files = glob($glob);
+                    if (is_array($cache_files))
+                    foreach ($cache_files as $file_name)
                         unlink($file_name);
                 }
                 // Need to delete the blob I'm pointing on.
