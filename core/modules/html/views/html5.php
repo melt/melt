@@ -5,8 +5,6 @@
         <?php echo $this->head; ?>
     </head>
     <body>
-        <?php echo $this->body_head; ?>
         <?php echo $this->content; ?>
-        <?php echo $this->body_foot; ?>
     </body>
 </html>
