@@ -765,7 +765,7 @@ abstract class Model implements \Iterator {
     *       Will throw an exception if the specified child model does not point to this model.
     * @desc For security reasons, use db\strfy() to escape and quote
     *       any strings you want to build your sql query from.
-    * @param String $chold_model Name of the child model that points to this model.
+    * @param String $child_model Name of the child model that points to this model.
     * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
     * @param Integer $offset (OFFSET xyz) The offset from the begining to select results from.
     * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
