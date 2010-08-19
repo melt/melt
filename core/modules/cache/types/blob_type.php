@@ -12,7 +12,7 @@ class BlobType extends \nmvc\AppType {
         return strfy($this->value);
     }
 
-    public function view() {
+    public function  __toString() {
         return "#BLOB_DATA#";
     }
 
