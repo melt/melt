@@ -12,7 +12,7 @@ class Str8Type extends \nmvc\AppType {
         return strfy($this->value);
     }
 
-    public function view() {
+    public function  __toString() {
         return escape($this->value);
     }
 
