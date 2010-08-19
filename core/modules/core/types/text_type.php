@@ -22,7 +22,7 @@ class TextType extends \nmvc\AppType {
         $value = escape($this->value);
         $maxlength = null;
         if ($this->varchar_size !== null)
-            $maxlength = "maxlength\"" . $this->varchar_size . "\"";
+            $maxlength = "maxlength=\"" . $this->varchar_size . "\"";
         return "<input type=\"text\" $maxlength name=\"$name\" id=\"$name\" value=\"$value\" />";
     }
 
