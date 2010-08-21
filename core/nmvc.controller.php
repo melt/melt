@@ -272,8 +272,6 @@ abstract class Controller {
         // Invoke action on controller.
         self::internalInvoke($invoke_data, false);
         return true;
-
-        
     }
 
     /**
