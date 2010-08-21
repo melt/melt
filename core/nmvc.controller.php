@@ -1,23 +1,24 @@
 <?php namespace nmvc;
 
 /**
- * nanoController
+ * The Controller. One of the fundamental objects in NanoMVC.
+ * @see http://docs.nanomvc.com/chapter/development_guide/controllers
  */
 abstract class Controller {
     /**
-     * @var mixed The name of the layout to render the view inside of.
-     * The name specified is the filename of the layout in /app/layouts
-     * without the php extension.
-     * This is instanced to a Layout when rendering.
+     * @var mixed View path of layout to render for the views of this
+     * controller. This is instanced to a Layout when rendering.
+     * @see http://docs.nanomvc.com/chapter/development_guide/views#part_layouts
      */
     public $layout = null;
 
     /**
-     * Prevent constructor from beeing overriden.
+     * @internal
      */
     public final function __construct() {}
 
     /**
+     * Callback/Event method.
      * This function is executed before any action in the controller.
      * It's a handy place to check for an active session or
      * inspect user permissions.
@@ -28,6 +29,7 @@ abstract class Controller {
     public function beforeFilter($action_name, $arguments) {}
 
     /**
+     * Callback/Event method.
      * Called after controller action logic, but before the view is rendered.
      * @param string $action_name Action name that was called.
      * @param array $arguments Arguments that was passed to action.
@@ -36,6 +38,7 @@ abstract class Controller {
     public function beforeRender($action_name, $arguments) {}
 
     /**
+     * Callback/Event method.
      * Called after every controller action, and after rendering is complete.
      * This is the last controller method to run.
      * @param string $action_name Action name that was called.
