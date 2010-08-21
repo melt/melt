@@ -259,22 +259,16 @@ function get_error_name($error_number) {
 
 
 /**
- * Returns TRUE if class is a base_class.
- * Replacement for PHP is_subclass_of that refuses to return true
- * for two classes that are the same and is_a also refuses to take a
- * class name as it's first argument.
- * Methaphor for this function:
- * "Zebra", "Zebra" would return TRUE because a Zebra is a Zebra.
- * "Zebra", "Animal" would also return TRUE because a Zebra is an Animal.
- * "Zebra", "Reptile" would however return FALSE. A Zebra is not a Reptile.
+ * Works exactly like the PHP instanceof operator, however
+ * it also takes a class name (string) as it's first argument.
  * @param mixed $class Class name or object to compare.
  * @param mixed $base_class The class name or object to compare with.
  * @return boolean
- * @see is_a(), is_subclass_of()
+ * @see The PHP instanceof operator
  */
 function is($class, $base_class) {
     if (is_object($class))
-        $class = get_class($class);
+        return $class instanceof $base_class;
     else if (!is_string($class) || !class_exists($class))
         return false;
     if (is_object($base_class))
