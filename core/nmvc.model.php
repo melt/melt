@@ -1,7 +1,8 @@
 <?php namespace nmvc;
 
 /**
- * nanoModel
+ * The Model. One of the fundamental objects in NanoMVC.
+ * @see http://docs.nanomvc.com/chapter/development_guide/introduction_to_models
  */
 abstract class Model implements \Iterator {
     /**
