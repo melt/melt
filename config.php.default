@@ -16,18 +16,11 @@ namespace nmvc\internal {
 
 
 namespace nmvc\core\config {
-    /** IF TRUE: Outputs exceptions to site developers. Makes non developers
-     * unable to reach the site.
-     * IF FALSE: Not displaying errors. */
+    // The following configuration options are explained here:
+    // http://docs.nanomvc.com/chapter/development_guide/development_and_debugging
     const MAINTENANCE_MODE = true;
-    /** IF SET: Treats users that set this developer key under /core/setkey as
-     * site developers.
-     * IF BLANK: Treats all users as site developers. Warning: Site developers
-     * are also granted other rights, like /core/migrate. */
     const DEVELOPER_KEY = '';
-    /** Message to display when taking site down. */
     const DOWN_MESSAGE = '';
-    /** Display notice when in developer mode. *recommended*. */
     const DISPLAY_DEVMODE_NOTICE = true;
     /** Forcing display of errors.
      * Overrides MAINTENANCE_MODE. *SECURITY RISK* */
@@ -83,6 +76,7 @@ namespace nmvc\mail\config {
     const SMTP_HOST = "";
 }
 
+// Module userx (only used if enabled)
 namespace nmvc\userx\config {
     /** Time before logged in sessions time out. */
     const SESSION_TIMEOUT_MINUTES = 60;
@@ -97,6 +91,7 @@ namespace nmvc\userx\config {
     const LOGOUT_URL = '/';
 }
 
+// Module jquery (only used if enabled)
 namespace nmvc\jquery\config {
     /** The theme used by jquery-ui. Set this to null to not include it. */
     const JQUERY_UI_THEME = "smoothness";
@@ -111,13 +106,3 @@ namespace nmvc\jquery\config {
     const INCLUDE_JQUERY_DATATABLES = true;
     const INCLUDE_JQUERY_AUTOCOMPLETE = true;
 }
-
-namespace nmvc\nano_cms\config {
-    /** Set this to true to not include the built-in default page. */
-    const NO_DEFAULT_PAGES = false;
-
-    /** Set this to the view to render by default into the dynamic page. */
-    const FRAME_VIEW = false;
-}
-
-
