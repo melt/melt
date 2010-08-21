@@ -206,7 +206,7 @@ final class View {
         list($view_file_path, $module_context) = $ret_view;
         // Make sure layout is initialized.
         $layout_path = null;
-        if (!is($controller->layout, "nmvc\Layout")) {
+        if (!($controller->layout instanceof Layout)) {
             $layout_path = $controller->layout;
             if ($final)
                 $controller->layout = self::$application_layout;
