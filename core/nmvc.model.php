@@ -620,7 +620,7 @@ abstract class Model implements \Iterator {
         if (!isset($columns_array[$pointer_name]))
             trigger_error("'$pointer_name' is not a column of '$model_name'.", \E_USER_ERROR);
         $column = $columns_array[$pointer_name];
-        if (!is($column, 'nmvc\core\PointerType'))
+        if (!($column instanceof core\PointerType))
             trigger_error("'$model_name.$pointer_name' is not a pointer column.", \E_USER_ERROR);
         return $column->getTargetModel();
     }
@@ -639,7 +639,7 @@ abstract class Model implements \Iterator {
             return $cache[$self][$as_id_fields];
         $ret = array();
         foreach (static::getParsedColumnArray() as $col_name => $column) {
-            if (!is($column, 'nmvc\core\PointerType'))
+            if (!($column instanceof core\PointerType))
                 continue;
             if (!$as_id_fields)
                 $col_name = substr($col_name, 0, -3);
@@ -724,7 +724,7 @@ abstract class Model implements \Iterator {
         $base_name = get_called_class();
         $model = @self::$_instance_cache[$id];
         if ($model !== null)
-            return is($model, $base_name)? $model: null;
+            return ($model instanceof $base_name)? $model: null;
         static $family_tree = null;
         if ($family_tree === null)
             $family_tree = self::getMetaData("family_tree");
