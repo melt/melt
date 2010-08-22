@@ -113,7 +113,7 @@ function autoload($name) {
             $class_name = "nmvc\\" . $parts[1] . "\\" . ucfirst($parts[2]);
             $app_overridable_declarable = false;
         }
-        $file_name = \nmvc\string\cased_to_underline($file_name);
+        $file_name = cased_to_underline($file_name);
         // Using nanoMVC naming rules to find the class.
         if (\nmvc\string\ends_with($class_name, "Controller")) {
             $path .= "/controllers/" . $subdir . substr($file_name, 0, -11) . "_controller.php";
