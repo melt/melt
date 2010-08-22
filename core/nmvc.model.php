@@ -425,7 +425,7 @@ abstract class Model implements \Iterator {
      * Contains an example implementation that should be overriden.
      */
     public function __toString() {
-        if ($this->isLinked())
+        if (!$this->isLinked())
             return __("Not Set");
         else
             return get_class($this) . " #" . $this->id;
