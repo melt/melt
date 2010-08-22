@@ -211,7 +211,7 @@ set_error_handler('\nmvc\internal\error_handler');
 // Catch all errors in maintence mode or if forcing error display.
 if (is_integer(\nmvc\core\config\FORCE_ERROR_FLAGS))
     error_reporting(\nmvc\core\config\FORCE_ERROR_FLAGS);
-else if (\nmvc\core\config\MAINTENANCE_MODE || \nmvc\core\config\FORCE_ERROR_DISPLAY)
+else if (APP_IN_DEVELOPER_MODE || \nmvc\core\config\FORCE_ERROR_DISPLAY)
     error_reporting(E_ALL | E_STRICT);
 else
     error_reporting(E_USER_ERROR);
