@@ -26,7 +26,11 @@ class AddressList {
         if (count($this->list) == 0)
             return null;
         else
-            return "$header: " . ($plain? $this->getPlainList(): $this->getList()) . PHP_EOL;
+            return "$header: " . ($plain? $this->getPlainList(): $this->getList()) . Smtp::CRLF;
+    }
+
+    public function getPlainArray() {
+        return $this->plainlist;
     }
 
     public function getList() {

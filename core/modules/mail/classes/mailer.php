@@ -1,27 +1,46 @@
 <?php namespace nmvc\mail;
 
-// nanoMVC wrapper class for sending RFC compatible e-mails.
+/**
+ * nanoMVC wrapper class for sending RFC compatible e-mails
+ * platform compatible and without relying on wrappers.
+ */
 class Mailer {
-    /** @var Address */
+    const RFC_MAX_LINELENGTH = 950;
+
+    /** @var Address Where mailing from, set by configuration by default. */
     public $from;
-    /** @var Address */
+    /** @var Address Optional reply-to address. */
     public $reply_to;
-    /** @var AddressList */
+    /** @var AddressList Where to send mail. Mail must have at least one repicent. */
     public $to;
     /**
-    * @desc Note, names will be discarded in cc due to weak mail() implementation in php that does not support this.
-    * @var AddressList */
+    * @var AddressList List of CC repicents. */
     public $cc;
-    /** @var AddressList */
+    /** @var AddressList List of BCC repicents. */
     public $bcc;
+    
     public function __construct() {
         $this->from = new Address();
+        $this->from->set(config\FROM_ADDRESS, config\FROM_NAME);
         $this->reply_to = new Address();
-
         $this->to = new AddressList();
         $this->cc = new AddressList();
         $this->bcc = new AddressList();
     }
+
+    public $smtp_from_host = config\SMTP_FROM_HOST;
+    /** @var string Host name to send mail to. Default is config value. */
+    public $smtp_host = config\SMTP_HOST;
+    /** @var integer Host port to send mail to. Default is config value. */
+    public $smtp_port = config\SMTP_PORT;
+    /** @var integer Timeout when connecting to SMTP host. Default is config value. */
+    public $smtp_timeout = config\SMTP_TIMEOUT;
+    /** @var boolean True to enable SMTP authentication. Default is config value. */
+    public $smtp_auth_enable = config\SMTP_AUTH_ENABLE;
+    /** @var string Username to use with SMTP authentication. Default is config value. */
+    public $smtp_auth_user = config\SMTP_AUTH_USER;
+    /** @var string Password to use with SMTP authentication. Default is config value. */
+    public $smtp_auth_password = config\SMTP_AUTH_PASSWORD;
 
     private function addressEmail() {
         // If from is not set directly then use config.
@@ -37,7 +56,7 @@ class Mailer {
             $this->from->name = config\FROM_NAME;
         }
         // Setting this in ini is required to send mail correctly.
-        $headers = "From: " . $this->from->getAddress() . PHP_EOL;
+        $headers = "From: " . $this->from->getAddress() . Smtp::CRLF;
         ini_set('sendmail_from', $this->from->email);
         if ($this->to->count() == 0)
             trigger_error("No repicents given!", \E_USER_ERROR);
@@ -45,8 +64,8 @@ class Mailer {
         $headers .= $this->bcc->getAsHeader('Bcc', true);
         if ($this->reply_to->email != null) {
             $reply_to = $this->reply_to->getAddress();
-            $headers .= "Reply-To: $reply_to" . PHP_EOL;
-            $headers .= "Return-Path: $reply_to" . PHP_EOL;
+            $headers .= "Reply-To: $reply_to" . Smtp::CRLF;
+            $headers .= "Return-Path: $reply_to" . Smtp::CRLF;
         }
         return $headers;
     }
@@ -54,9 +73,9 @@ class Mailer {
     /** Sends this mail as plain text. */
     public function mailPlain($body, $subject = null) {
         $headers = $this->addressEmail();
-        $headers .= 'Content-Type: text/plain; charset=UTF-8' . PHP_EOL;
+        $headers .= 'Content-Type: text/plain; charset=UTF-8' . Smtp::CRLF;
         // Base 64 encode content and put it in a single blob.
-        $headers .= 'Content-transfer-encoding: base64' . PHP_EOL;
+        $headers .= 'Content-transfer-encoding: base64' . Smtp::CRLF;
         $body = base64_encode($body);
         // Remove whitespace from start and end of rows, and cut rows to a length of 998.
         $rows_out = array();
@@ -94,31 +113,57 @@ class Mailer {
 
     private function doMail($subject, $content, $headers) {
         // Also append other standard headers.
-        $headers .= 'MIME-Version: 1.0' . PHP_EOL;
-        $headers .= 'X-Mailer: nanoMVC/' . \nmvc\internal\VERSION . '; PHP/' . phpversion() . PHP_EOL;
-        $headers .= 'Date: ' . date("r") . PHP_EOL;
-        // Verify that INI settings are correct.
-        $smtp = strtolower(ini_get('smtp'));
-        $trg = strtolower(config\SMTP_HOST);
-        if ($smtp != $trg)
-            if (false === ini_set('SMTP', $trg))
-                trigger_error("The SMTP server '".$trg."' could not be set into configuration!", \E_USER_ERROR);
-        // add_x_header is a potential security risk, disable.
-        ini_set('mail.add_x_header', 'Off');
-        // Use MIME encoded-word syntax to transmit UTF-8 subject.
-        $subject = "=?UTF-8?B?" . base64_encode($subject) . "?=";
-        if (strpos(PHP_OS, "WIN") !== false) {
-            // Windows implementation uses >to< argument to speak directly with SMTP servers.
-            $to = $this->to->getPlainList();
-            // To preserve the name formating, we need to insert this header ourselves.
-            if (strpos(PHP_OS, "WIN") !== false)
-                $headers .= $this->to->getAsHeader('To');
-        } else
-            // UNIX implementation constructs it's own "to" headers.
-            $to = $this->to->getList();
-        // Finaly mail it.
-        if (FALSE === mail($to, $subject, $content, $headers))
-            trigger_error("Mailer: The mail could not be sent, mail() returned error.");
+        $headers .= 'MIME-Version: 1.0' . Smtp::CRLF;
+        $headers .= 'X-Mailer: nanoMVC/' . \nmvc\internal\VERSION . '; PHP/' . phpversion() . Smtp::CRLF;
+        $headers .= 'Date: ' . date("r") . Smtp::CRLF;
+        $headers .= "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=" . Smtp::CRLF;
+        $headers .= $this->to->getAsHeader('To');
+        $headers .= $this->cc->getAsHeader('Cc');
+        // Compile RCPT array.
+        $rcpt_array = array();
+        foreach ($this->to->getPlainArray() as $rcpt)
+            $rcpt_array[$rcpt] = 1;
+        foreach ($this->cc->getPlainArray() as $rcpt)
+            $rcpt_array[$rcpt] = 1;
+        foreach ($this->bcc->getPlainArray() as $rcpt)
+            $rcpt_array[$rcpt] = 1;
+        if (count($rcpt_array) == 0)
+            trigger_error(__CLASS__ . " failed, no repicents specified!", \E_USER_ERROR);
+        $rcpt_array = array_keys($rcpt_array);
+        foreach ($rcpt_array as $rcpt_email) {
+            if (!\nmvc\string\email_validate($rcpt_email))
+                trigger_error(__CLASS__ . " failed, invalid repicent email address: $rcpt_email", \E_USER_ERROR);
+        }
+        // Read FROM.
+        $from_email = $this->from->email;
+        if (!\nmvc\string\email_validate($from_email))
+            trigger_error(__CLASS__ . " failed, invalid from address: $from_email", \E_USER_ERROR);
+        // Read smtp 'from' host.
+        $smtp_from_host = $this->smtp_from_host;
+        if ($smtp_from_host == null)
+            $smtp_from_host = gethostname();
+        // Compile data.
+        $data = $headers . Smtp::CRLF . $content;
+        // Connect to SMTP server and send the mail.
+        $smtp = new Smtp();
+        $smtp->Connect($this->smtp_host, $this->smtp_port, $this->smtp_timeout)
+            or trigger_error(__CLASS__ . " failed, could not connect to SMTP host " . $this->smtp_host . ":" . $this->smtp_port . "! (Timeout is " . $this->smtp_timeout. " seconds). Message: " . $smtp->error, \E_USER_ERROR);
+        $smtp->Hello($smtp_from_host)
+            or trigger_error(__CLASS__ . " failed, HELO/EHLO command error. Message: " . $smtp->error, \E_USER_ERROR);
+        if ($this->smtp_auth_enable) {
+            $smtp->Authenticate($this->smtp_auth_user, $this->smtp_auth_password)
+                or trigger_error(__CLASS__ . " failed, authentication error. Message: " . $smtp->error, \E_USER_ERROR);
+        }
+        $smtp->Mail($from_email)
+            or trigger_error(__CLASS__ . " failed, MAIL command error. Message: " . $smtp->error, \E_USER_ERROR);
+        foreach ($rcpt_array as $rcpt_email) {
+            $smtp->Recipient($rcpt_email)
+                or trigger_error(__CLASS__ . " failed, RCPT command error. Message: " . $smtp->error, \E_USER_ERROR);
+        }
+        $smtp->Data($data)
+            or trigger_error(__CLASS__ . " failed, DATA command error. Message: " . $smtp->error, \E_USER_ERROR);
+        $smtp->Quit(true)
+            or trigger_error(__CLASS__ . " failed, QUIT command error. Message: " . $smtp->error, \E_USER_ERROR);
     }
 
     /**
@@ -128,8 +173,8 @@ class Mailer {
      * support HTML.
      */
     private function createPlainTextFallback($html, &$headers) {
-        $boundary = "------=_NextPart_" . \nmvc\string\random_alphanum_str(16);
-        $headers .= "Content-Type: multipart/alternative; boundary=\"$boundary\"" . PHP_EOL;
+        $boundary = \nmvc\string\random_alphanum_str(16);
+        $headers .= "Content-Type: multipart/alternative; boundary=$boundary" . Smtp::CRLF;
         // Set of regex whitespace not including newline.
         $wnn = '[\x00-\x09\x0B-\x20]';
         $plain_text = $html;
@@ -151,12 +196,12 @@ class Mailer {
         $plain_text_part = "--$boundary\n"
         . "Content-Type: text/plain; charset=UTF-8\n"
         . "Content-Transfer-Encoding: base64\n\n"
-        . base64_encode($plain_text);
+        . chunk_split(base64_encode($plain_text), self::RFC_MAX_LINELENGTH, smtp::CRLF);
         // Compile HTML part.
         $html_part = "--$boundary\n"
         . "Content-Type: text/html; charset=UTF-8\n"
         . "Content-Transfer-Encoding: base64\n\n"
-        . base64_encode($html);
+        . chunk_split(base64_encode($html), self::RFC_MAX_LINELENGTH, smtp::CRLF);
         // Forge content.
         $content = "$plain_text_part\n\n$html_part\n\n--$boundary--";
         return $content;

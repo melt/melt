@@ -8,7 +8,7 @@ class Address {
     public $name = null;
 
     public function set($email, $name = null) {
-        $this->email = $email;
+        $this->email = strtolower($email);
         $this->name = $name;
     }
 
