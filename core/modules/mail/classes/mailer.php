@@ -146,24 +146,25 @@ class Mailer {
         $data = $headers . Smtp::CRLF . $content;
         // Connect to SMTP server and send the mail.
         $smtp = new Smtp();
-        $smtp->Connect($this->smtp_host, $this->smtp_port, $this->smtp_timeout)
-            or trigger_error(__CLASS__ . " failed, could not connect to SMTP host " . $this->smtp_host . ":" . $this->smtp_port . "! (Timeout is " . $this->smtp_timeout. " seconds). Message: " . $smtp->error, \E_USER_ERROR);
+        $smtp->Connect($this->smtp_host, $this->smtp_port, $this->smtp_timeout);
+        if (!$smtp->Connected())
+            trigger_error(__CLASS__ . " failed, could not connect to SMTP host " . $this->smtp_host . ":" . $this->smtp_port . "! (Timeout is " . $this->smtp_timeout. " seconds). Message: " . var_export($smtp->error, true), \E_USER_ERROR);
         $smtp->Hello($smtp_from_host)
-            or trigger_error(__CLASS__ . " failed, HELO/EHLO command error. Message: " . $smtp->error, \E_USER_ERROR);
+            or trigger_error(__CLASS__ . " failed, HELO/EHLO command error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
         if ($this->smtp_auth_enable) {
             $smtp->Authenticate($this->smtp_auth_user, $this->smtp_auth_password)
-                or trigger_error(__CLASS__ . " failed, authentication error. Message: " . $smtp->error, \E_USER_ERROR);
+                or trigger_error(__CLASS__ . " failed, authentication error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
         }
         $smtp->Mail($from_email)
-            or trigger_error(__CLASS__ . " failed, MAIL command error. Message: " . $smtp->error, \E_USER_ERROR);
+            or trigger_error(__CLASS__ . " failed, MAIL command error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
         foreach ($rcpt_array as $rcpt_email) {
             $smtp->Recipient($rcpt_email)
-                or trigger_error(__CLASS__ . " failed, RCPT command error. Message: " . $smtp->error, \E_USER_ERROR);
+                or trigger_error(__CLASS__ . " failed, RCPT command error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
         }
         $smtp->Data($data)
-            or trigger_error(__CLASS__ . " failed, DATA command error. Message: " . $smtp->error, \E_USER_ERROR);
+            or trigger_error(__CLASS__ . " failed, DATA command error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
         $smtp->Quit(true)
-            or trigger_error(__CLASS__ . " failed, QUIT command error. Message: " . $smtp->error, \E_USER_ERROR);
+            or trigger_error(__CLASS__ . " failed, QUIT command error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
     }
 
     /**
