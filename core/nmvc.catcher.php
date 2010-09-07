@@ -78,8 +78,10 @@ function development_crash($type, $variables) {
     if (!\nmvc\core\config\MAINTENANCE_MODE)
         trigger_error("Development Error Caught: " . $message, \E_USER_ERROR);
     \nmvc\request\reset();
-    header("HTTP/1.x 500 Internal Server Error");
-    header("Status: 500 Internal Server Error");
+    if (!headers_sent()) {
+        header("HTTP/1.x 500 Internal Server Error");
+        header("Status: 500 Internal Server Error");
+    }
     $msg = \nmvc\View::render("/core/deverrors/$type", $variables);
     die("<h1>Development Error $type</h1>" . $msg);
 }
