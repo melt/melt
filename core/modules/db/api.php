@@ -323,7 +323,7 @@ function table($table_name) {
     if (isset($cache[$table_name]))
         return $cache[$table_name];
     // Convert backslashes to forwardslashes as backslashes can mess up queries.
-    $escaped_table_name = str_replace("\\", "/", $table_name);
+    $escaped_table_name = str_replace("\\", "__", $table_name);
     return $cache[$table_name] = '`' . config\PREFIX . $escaped_table_name . '`';
 }
 

@@ -1231,7 +1231,7 @@ EOP;
     protected static function getMetaData($key) {
         if (isset(self::$_metadata_cache[$key]))
             return self::$_metadata_cache[$key];
-        $result = db\query("SELECT v FROM " . table('core/metadata') . " WHERE k = " . strfy($key));
+        $result = db\query("SELECT v FROM " . table('core__metadata') . " WHERE k = " . strfy($key));
         $result = db\next_array($result);
         if ($result !== false)
             $result = unserialize($result[0]);
@@ -1241,7 +1241,7 @@ EOP;
 
     protected static function setMetaData($key, $value) {
         self::$_metadata_cache[$key] = $value;
-        db\run("REPLACE INTO " . table('core/metadata') . " (k,v) VALUES (" . strfy($key) . "," . strfy(serialize($value)) . ")");
+        db\run("REPLACE INTO " . table('core__metadata') . " (k,v) VALUES (" . strfy($key) . "," . strfy(serialize($value)) . ")");
     }
 
     /**
@@ -1368,12 +1368,12 @@ EOP;
         while (false !== ($row = db\next_array($result)))
             db\query("DROP VIEW " . table($row[0]));
         // Clear metadata.
-        db\run("DROP TABLE " . table('core/metadata'));
-        db\run("CREATE TABLE " . table('core/metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
-        $creating_sequence = !in_array(db\config\PREFIX . 'core/seq', db\get_all_tables());
+        db\run("DROP TABLE " . table('core__metadata'));
+        db\run("CREATE TABLE " . table('core__metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
+        $creating_sequence = !in_array(db\config\PREFIX . 'core__seq', db\get_all_tables());
         if (!$creating_sequence) {
             // Validate that seq still has one row.
-            $result = db\query("SELECT count(*) FROM " . table('core/seq'));
+            $result = db\query("SELECT count(*) FROM " . table('core__seq'));
             $row = db\next_array($result);
             $creating_sequence = ($row[0][0] == 0);
         }
@@ -1416,8 +1416,8 @@ EOP;
         self::setMetaData("family_tree", $family_tree);
         if ($creating_sequence) {
             // Need to create the sequence.
-            db\run("CREATE TABLE " . table('core/seq') . " (id INT PRIMARY KEY NOT NULL)");
-            db\run("INSERT INTO " . table('core/seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
+            db\run("CREATE TABLE " . table('core__seq') . " (id INT PRIMARY KEY NOT NULL)");
+            db\run("INSERT INTO " . table('core__seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
         }
     }
 }
