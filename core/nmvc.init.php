@@ -1,7 +1,7 @@
 <?php namespace nmvc\internal;
 
 // Core constants.
-const VERSION = "1.7.4-dev";
+const VERSION = "1.7.5";
 define("APP_CORE_DIR", dirname(__FILE__));
 // Standard function to restore the working dir to the core directory.
 function restore_workdir() {
@@ -68,9 +68,13 @@ function put_configuration_directive($config_var_fqn, $default_value) {
 /**
  * Reads a $_SERVER variable.
  */
-function read_server_var($var_name) {
-    if (!array_key_exists($var_name, $_SERVER))
-        trigger_error("nanoMVC initialization failed: Required \$_SERVER variable '$var_name' is not set! Webserver/PHP incompability?", \E_USER_ERROR);
+function read_server_var($var_name, $alt_var_name = null) {
+    if (!array_key_exists($var_name, $_SERVER)) {
+        if ($alt_var_name !== null && array_key_exists($alt_var_name, $_SERVER))
+            $var_name = $alt_var_name;
+        else
+            trigger_error("nanoMVC initialization failed: Required \$_SERVER variable '$var_name' is not set! Webserver/PHP incompability?", \E_USER_ERROR);
+    }
     return $_SERVER[$var_name];
 }
 // Read configuration, local configuration first if it exist.
@@ -101,7 +105,7 @@ define("APP_ROOT_PATH", substr($php_self, 0, -strlen("core/core.php")));
 define("APP_USING_STANDARD_PORT", (APP_ROOT_PROTOCOL == "http" && APP_ROOT_PORT == 80) || (APP_ROOT_PROTOCOL == "https" && APP_ROOT_PORT == 443));
 define("APP_ROOT_URL", APP_ROOT_PROTOCOL . "://" . APP_ROOT_HOST . (APP_USING_STANDARD_PORT? "": ":" . APP_ROOT_PORT) . APP_ROOT_PATH);
 // Parse the request url which is relatie to the application root path.
-define("REQ_URL", substr(read_server_var("REDIRECT_URL"), strlen(APP_ROOT_PATH) - 1));
+define("REQ_URL", substr(read_server_var("REDIRECT_SCRIPT_URL", "REDIRECT_URL"), strlen(APP_ROOT_PATH) - 1));
 define("REQ_URL_DIR", dirname(REQ_URL));
 define("REQ_URL_BASE", basename(REQ_URL));
 define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
