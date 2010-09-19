@@ -22,6 +22,11 @@ class ActionController extends DeveloperController {
         \nmvc\translate\TranslateModule::export();
     }
 
+    public function info() {
+        \nmvc\request\reset();
+        \phpinfo();
+    }
+
     public function set_key() {
         \nmvc\request\redirect(url("/"));
     }
