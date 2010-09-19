@@ -18,6 +18,13 @@ abstract class Model implements \Iterator {
     /** @var array Cache of all fetched instances.  */
     private static $_instance_cache = array();
 
+    const TRANSITION_STABLE = 0;
+    const TRANSITION_UNLINKING = 1;
+    const TRANSITION_STORING = 2;
+
+    /** @var integer Current transition state of this model instance. */
+    private $_transition = self::TRANSITION_STABLE;
+
     
     /**
      * Returns the ID of this model instance or NULL if unlinked.
@@ -484,17 +491,24 @@ abstract class Model implements \Iterator {
      * If this is a new instance, it's inserted, otherwise, it's updated.
      */
     public function store() {
-        if ($this->_id > 0) {
+        // Enter "storing" transition state.
+        if ($this->_transition == self::TRANSITION_UNLINKING) {
+            \trigger_error ("Trying to store a model instance currently transitioning to an unlinked state! Ignoring store request.", \E_USER_WARNING);
+            return;
+        } else if ($this->_transition == self::TRANSITION_STORING)
+            return;
+        $this->_transition = self::TRANSITION_STORING;
+        // Determine if linking or syncronizing.
+        $was_linked = $this->_id > 0;
+        $this->beforeStore($was_linked);
+        if ($was_linked) {
             // Updating existing row.
-            $this->beforeStore(true);
             $query = $this->getUpdateSQL();
             // No query if nothing changed.
             if ($query !== null)
                 db\query($query);
-            $this->afterStore(true);
         } else {
             // Inserting (linking) new row.
-            $this->beforeStore(false);
             db\query($this->getInsertSQL());
             if (db\config\USE_TRIGGER_SEQUENCING) {
                 $id = db\next_array(db\query("SELECT @last_insert"));
@@ -515,8 +529,10 @@ abstract class Model implements \Iterator {
                 db\query("UPDATE " . table($table_name) . " SET `$ptr_field` = $id WHERE id = " . $instance->_id);
                 $instance->type($ptr_field)->setSyncPoint();
             }
-            $this->afterStore(false);
         }
+        // Exiting "storing" transition state and calling afterStore callback.
+        $this->_transition == self::TRANSITION_STABLE;
+        $this->afterStore($was_linked);
     }
     
     /**
@@ -535,6 +551,13 @@ abstract class Model implements \Iterator {
         // Can't unlink non linked instances.
         if ($this->_id < 1)
             return;
+        // Enter "unlinking" transition state.
+        if ($this->_transition == self::TRANSITION_STORING) {
+            \trigger_error ("Trying to unlink a model instance currently transitioning to a syncronized/stored state! Ignoring unlink request.", \E_USER_WARNING);
+            return;
+        } else if ($this->_transition == self::TRANSITION_UNLINKING)
+            return;
+        $this->_transition = self::TRANSITION_UNLINKING;
         // Prevent a user abort from terminating the script during GC.
         ignore_user_abort(true);
         // Extend the script time limit.
@@ -588,7 +611,8 @@ abstract class Model implements \Iterator {
         // by a previous unlink has been so at the time of invoke.
         foreach ($disconnect_callbacks as $instance)
             $instance->disconnectCallback();
-        // After unlink event.
+        // Exiting "unlinking" transition state and calling afterUnlink callback.
+        $this->_transition == self::TRANSITION_STABLE;
         $this->afterUnlink();
     }
 
