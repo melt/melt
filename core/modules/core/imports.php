@@ -25,3 +25,12 @@ function is($class, $base_class) {
 function debug() {
     call_user_func_array('\nmvc\core\debug', func_get_args());
 }
+
+/**
+ * Gets the ID for a model instance or 0 for null.
+ * @param \nmvc\Model $instance
+ * @return integer
+ */
+function id(\nmvc\Model $instance = null) {
+    return \nmvc\core\id($instance);
+}

@@ -298,5 +298,14 @@ function debug() {
     trigger_error("debug() triggered with the following data:\n\n$message", \E_USER_WARNING);
 }
 
+/**
+ * Gets the ID for a model instance or 0 for null.
+ * @param \nmvc\Model $instance
+ * @return integer
+ */
+function id(\nmvc\Model $instance = null) {
+    return $instance === null? 0: $instance->getID();
+}
+
 // Import some functions to the global namespace.
 include __DIR__ . "/imports.php";
