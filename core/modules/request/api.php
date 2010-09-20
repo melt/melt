@@ -78,7 +78,6 @@ function show_xyz($xyz, $name = null, $message = null) {
     if (!headers_sent()) {
         header("HTTP/1.0 $xyz $desc");
         header("Status: $xyz $desc");
-        flush();
     }
     info("$xyz - $desc", $info);
 }
@@ -105,7 +104,6 @@ function show_404() {
     if (!headers_sent()) {
         header("HTTP/1.x 404 Not Found");
         header("Status: 404 Not Found");
-        flush();
     }
     $topic = __("404 - Page not found");
     $msg = '<br /><br /><span style="font-family: monospace;">' . url(REQ_URL) . '</span>';
