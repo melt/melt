@@ -127,9 +127,14 @@ function crash($message, $file, $line, $trace) {
                         $arg = '"' . (strlen($arg) <= 64? $arg: substr($arg, 0, 64) . "…") . '"';
                     else if (is_object($arg))
                         $arg = "[Instance of '".get_class($arg)."']";
+                    else if ($arg === true)
+                        $arg = "true";
+                    else if ($arg === false)
+                        $arg = "false";
+                    else if ($arg === null)
+                        $arg = "null";
                     else
                         $arg = strval($arg);
-                    if (empty($arg)) $arg = 'null';
                     if (!$first) $first = true; else $arg = ', ' . $arg;
                     $trace_line .= $arg;
                 }
