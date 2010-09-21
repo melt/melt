@@ -52,6 +52,24 @@ function strfy($string, $max_length = null) {
 }
 
 /**
+ * Will strfy escape any charachers that can be used to break the query
+ * without quoting the string automaticlly. In addition,
+ * it will escape any charachers that has special meaning when combined
+ * with the mySQL LIKE operator, turning the string into a LIKE pattern.
+ * @param string $string The string to convert to a LIKE pattern.
+ * @return string String ready to be used as a single matching block in LIKE pattern.
+ */
+function like_pattern_strfy($string, $max_length = null) {
+    if ($max_length !== null && $max_length >= 0)
+        $string = iconv_substr($string, 0, $max_length);
+    // Have to connect for mysql_real_escape_string to work.
+    if (!defined("NANOMVC_DB_LINK"))
+        run(";");
+    $string = mysql_real_escape_string($string);
+    return \str_replace(array('%', '_'), array('\%', '\_'), $string);
+}
+
+/**
  * @desc Queries the database, and throws specified error on failure.
  * @desc It will throw an exception if query fails.
  * @param String $query The SQL query.
