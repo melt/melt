@@ -274,11 +274,19 @@ function sync_table_layout_with_columns($table_name, $columns) {
     // Finally reset the auto id trigger.
     $trigger = table("aid_trigger_" . $table_name);
     run("DROP TRIGGER " . $trigger);
-    if (config\USE_TRIGGER_SEQUENCING) {
-        $result = run("CREATE TRIGGER " . $trigger . " BEFORE INSERT ON " . table($table_name) . " FOR EACH ROW BEGIN UPDATE " . table('core\seq') . " SET id = LAST_INSERT_ID(id+1); SET @last_insert = LAST_INSERT_ID(); SET NEW.id = @last_insert; END;");
-        if ($result === false)
-            trigger_error("Adding trigger failed. Probably due to lack of TRIGGER permission or old mySQL version. Either GRANT TRIGGER permissions to current user or set USE_TRIGGER_SEQUENCING to false in config.php to use a slower method that doesn't protect against data corruption from to duplicate table spanning ID's (by other mySQL software).", \E_USER_ERROR);
-    }
+    if (!config\USE_TRIGGER_SEQUENCING)
+        return;
+    query(
+        "CREATE TRIGGER " . $trigger . " BEFORE INSERT ON " . table($table_name)
+        . " FOR EACH ROW BEGIN UPDATE " . table('core\seq') . " SET id = "
+        . " LAST_INSERT_ID(id+1); SET @last_insert = LAST_INSERT_ID(); SET "
+        . " NEW.id = @last_insert; END;",
+        "Adding trigger failed. Probably due to lack of TRIGGER permission or "
+        . "old mySQL version. Either GRANT TRIGGER permissions to current user "
+        . "or set USE_TRIGGER_SEQUENCING to false in config.php to use a slower"
+        . "method that doesn't protect against data corruption from to "
+        . "duplicate table spanning ID's (by other mySQL software)."
+    );
 }
 
 function verify_keyword($word) {
