@@ -1158,53 +1158,68 @@ EOP;
     }
 
     /**
-     *  This function unlinks the model instance with the given ID.
+     * This function unlinks the model instance with the given ID.
+     * @param integer $id The ID of the model instance to unlink.
+     * @return bool TRUE if model instance was found and unlinked,
+     * otherwise FALSE.
      */
     public static function unlinkByID($id) {
         $instance = forward_static_call(array('nmvc\Model', "selectByID"), $id);
-        if ($instance !== null)
+        if ($instance !== null) {
             $instance->unlink();
+            return true;
+        } else
+            return false;
     }
     /**
-    * @desc This function unlinks the selection of instances that matches the given SQL commands.
-    * @desc For security reasons, use db\strfy() to escape and quote
-    * @desc any strings you want to build your SQL query from.
-    * @param String $sqldata SQL command(s) that will be appended after the DELETE query for free selection.
-    */
+     * This function unlinks the selection of instances that matches the given SQL commands.
+     * For security reasons, use db\strfy() to escape and quote
+     * any strings you want to build your SQL query from.
+     * @param String $sqldata SQL command(s) that will be appended after the DELETE query for free selection.
+     * @return integer Number of model instances found and unlinked.
+     */
     public static function unlinkFreely($sqldata) {
         $instances = forward_static_call(array('nmvc\Model', "selectFreely"), $sqldata);
         foreach ($instances as $instance)
             $instance->unlink();
+        return count($instances);
     }
 
     /**
-    * @desc This function removes the selection of fields that matches the given SQL arguments.
-    * @desc For security reasons, use db\strfy() to escape and quote
-    * @desc any strings you want to build your sql query from.
-    * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
-    * @param Integer $offset (OFFSET xyz) The offset from the begining to select results from.
-    * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
-    */
+     * This function removes the selection of fields that matches the
+     * given SQL arguments.
+     * For security reasons, use db\strfy() to escape and quote
+     * any strings you want to build your sql query from.
+     * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
+     * @param Integer $offset (OFFSET xyz) The offset from the begining to select results from.
+     * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
+     * @return integer Number of model instances found and unlinked.
+     */
     public static function unlinkWhere($where = "", $offset = 0, $limit = 0) {
         $instances = forward_static_call(array('nmvc\Model', "selectWhere"), $where, $offset, $limit);
         foreach ($instances as $instance)
             $instance->unlink();
+        return count($instances);
     }
 
     /**
-    * @desc Removes all children of the specified child model. (Instances that point to this instance.)
-    *       Will throw an exception if the specified child model does not point to this model.
-    * @desc For security reasons, use db\strfy() to escape and quote
-    *       any strings you want to build your sql query from.
-    * @param String $chold_model Name of the child model that points to this model.
-    * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
-    * @param Integer $offset (OFFSET xyz) The offset from the begining to unlink results from.
-    * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
-    */
+     * Removes all children of the specified child model.
+     * Instances with a pointer which points to this instance.
+     * Will throw an exception if the specified child model does not point
+     * to this model.
+     * For security reasons, use db\strfy() to escape and quote
+     * any strings you want to build your sql query from.
+     * @param String $chold_model Name of the child model that points to this model.
+     * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
+     * @param Integer $offset (OFFSET xyz) The offset from the begining to unlink results from.
+     * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
+     * @return integer Number of model instances found and unlinked.
+     */
     public final function unlinkChildren($child_model, $where = "", $offset = 0, $limit = 0) {
         $instances = $this->selectChildren($child_model, $where, $offset, $limit);
         foreach ($instances as $instance)
             $instance->unlink();
+        return count($instances);
     }
 
     /**
