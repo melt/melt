@@ -1265,6 +1265,16 @@ EOP;
         return $cache[$class_name];
     }
 
+    /**
+     * Returns the backend table name for this model.
+     * @return string
+     */
+    public static function getTableName() {
+        if (core\is_abstract(\get_called_class()))
+            return null;
+        return self::classNameToTableName(\get_called_class());
+    }
+
     private static $_metadata_cache = array();
 
     protected static function getMetaData($key) {
