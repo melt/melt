@@ -3,7 +3,7 @@
 class TextAreaType extends TextType {
     public function getInterface($name) {
         $value = escape($this->value);
-        return "<textarea name=\"$name\" id=\"$name\">$value</textarea>";
+        return "<textarea cols=\"32\" rows=\"3\" name=\"$name\" id=\"$name\">$value</textarea>";
     }
 
     public function __toString() {
