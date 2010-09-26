@@ -208,10 +208,13 @@ function sql_column_need_update($specified, $current) {
         // Needs update (specified has length).
         return true;
     } else {
-        // Needs update if lengths differ.
+        // Needs update if length differs.
         $current_length = intval($lengthy_current[2]);
         $specified_length = intval($lengthy_specified[2]);
-        return $current_length != $specified_length;
+        if ($current_length != $specified_length)
+            return true;
+        // Needs update if type differs.
+        return strtolower($lengthy_current[1]) != strtolower($lengthy_specified[1]);
     }
 }
 
