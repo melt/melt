@@ -122,6 +122,8 @@ class PictureType extends \nmvc\cache\BlobPointerType {
         if (!is_file($thumb_path)) {
             // Get blob from database.
             $blob_model = \nmvc\cache\BlobModel::selectByID($this->value);
+            if ($blob_model === null)
+                return null;
             $img = imagecreatefromstring($blob_model->dta);
             if (!$img)
                 return null;
