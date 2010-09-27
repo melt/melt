@@ -1440,6 +1440,32 @@ EOP;
             $instance->disconnectCallback();
     }
 
+    private static function validateCoreSeq() {
+        // Validate that seq has correct structure.
+        $core_seq = db\query("DESCRIBE " . table('core__seq'));
+        $column_desc = db\next_assoc($core_seq);
+        if ($column_desc === null)
+            return false;
+        $expected = array(
+            "field" => "id",
+            "type" => "bigint",
+            "null" => "no",
+            "key" => "pri",
+            "default" => NULL,
+        );
+        // Lowercase keys & values and remove non intersecting keys.
+        $column_desc = array_change_key_case($column_desc, \CASE_LOWER);
+        $column_desc = \array_intersect_key($column_desc, $expected);
+        $column_desc = array_map(function($value) { return is_string($value)? strtolower($value): $value; }, $column_desc);
+        // Remove any paranthesis from type.
+        $column_desc["type"] = \preg_replace('#\(.*#', "", @$column_desc["type"]);
+        if (!core\compare_arrays($column_desc, $expected))
+            return false;
+        // Cannot have additional columns.
+        $column_desc = db\next_assoc($core_seq);
+        return $column_desc === false;
+    }
+
     public static final function syncronizeAllModels() {
         // This maintenance script can run forever.
         ignore_user_abort(true);
@@ -1456,7 +1482,9 @@ EOP;
             // Validate that seq still has one row.
             $result = db\query("SELECT count(*) FROM " . table('core__seq'));
             $row = db\next_array($result);
-            $creating_sequence = ($row[0][0] == 0);
+            $creating_sequence = ($row[0][0] != 1);
+            if (!$creating_sequence)
+                $creating_sequence = !self::validateCoreSeq();
         }
         $sequence_max = 1;
         $model_classes = self::findAllModels();
@@ -1497,8 +1525,9 @@ EOP;
         self::setMetaData("family_tree", $family_tree);
         if ($creating_sequence) {
             // Need to create the sequence.
-            db\run("CREATE TABLE " . table('core__seq') . " (id INT PRIMARY KEY NOT NULL)");
-            db\run("INSERT INTO " . table('core__seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
+            db\query("DROP TABLE " . table('core__seq'));
+            db\query("CREATE TABLE " . table('core__seq') . " (id BIGINT PRIMARY KEY NOT NULL)");
+            db\query("INSERT INTO " . table('core__seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
         }
     }
 }

@@ -263,8 +263,8 @@ function sync_table_layout_with_columns($table_name, $columns) {
             $current_type = strtolower($column[1]);
             // ID column is special case.
             if ($current_name == 'id') {
-                if (!\nmvc\string\starts_with($current_type, "int"))
-                    trigger_error("ID column found in table '$table_name', but with unexpected type ($current_type). Has it been tampered with? nanoMVC can not handle this exception automatically.", \E_USER_ERROR);
+                if (!\nmvc\string\starts_with($current_type, "bigint"))
+                    query("ALTER TABLE " . table($table_name) . " MODIFY COLUMN id bigint");
                 continue;
             }
             // Skip unknown columns.
@@ -287,7 +287,7 @@ function sync_table_layout_with_columns($table_name, $columns) {
             query("ALTER TABLE " . table($table_name) . " ADD ($adds)");
     } else {
         // Creating new table.
-        $adds = 'id INT UNSIGNED NOT NULL, PRIMARY KEY (id)';
+        $adds = 'id BIGINT UNSIGNED NOT NULL, PRIMARY KEY (id)';
         foreach ($columns as $name => $type)
             $adds .= ", $name $type";
         query("CREATE TABLE " . table($table_name) . " ( $adds )");

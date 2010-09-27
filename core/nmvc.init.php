@@ -97,7 +97,9 @@ define("APP_IN_DEVELOPER_MODE", \nmvc\core\config\MAINTENANCE_MODE && ($devkey_i
 // which is determined by the server and optionally restricted by configuration.
 $php_self = read_server_var("PHP_SELF");
 if (!preg_match('#/core/core\.php$#', $php_self))
-    trigger_error("nanoMVC initialization failed: PHP_SELF does not end with '/core/core.php'. Make sure the core is installed properly.");
+    trigger_error("nanoMVC initialization failed: PHP_SELF does not end with '/core/core.php'. Make sure the core is installed properly.", \E_USER_ERROR);
+// Evaluate whether PHP is running in 64 bit mode.
+define("APP_64_BIT", PHP_INT_MAX > 0x7FFFFFFF);
 define("APP_ROOT_PROTOCOL", (isset($_SERVER["HTTPS"]) && !empty($_SERVER["HTTPS"]))? "https": "http");
 define("APP_ROOT_HOST", preg_replace('#:[\d]+$#', "", read_server_var("HTTP_HOST")));
 define("APP_ROOT_PORT", $server_port = intval(read_server_var('SERVER_PORT')));
