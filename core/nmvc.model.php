@@ -1370,6 +1370,37 @@ EOP;
     }
 
     /**
+     * This function purifies all models. It will delete any column
+     * it finds which is not present in the current model layout.
+     */
+    public static final function purifyAllModels() {
+        // This maintenance script can run forever.
+        ignore_user_abort(false);
+        $model_classes = self::findAllModels();
+        echo "\nSearching for redundant/not used columns and removing them...\n\n";
+        \ob_flush();
+        \sleep(6);
+        ignore_user_abort(true);
+        set_time_limit(0);
+        $found_count = 0;
+        foreach ($model_classes as $table_name => $model_class) {
+            $column_names = $model_class::getColumnNames();
+            $description = db\query("DESCRIBE " . table($table_name));
+            while (false !== ($column = db\next_assoc($description))) {
+                $field_name = $column["Field"];
+                if ($field_name == "id")
+                    continue;
+                // Purify dirty column.
+                if (!\array_key_exists($field_name, $column_names)) {
+                    db\query("ALTER TABLE " . table($table_name) . " DROP COLUMN `" . $field_name . "`");
+                    $found_count++;
+                }
+            }
+        }
+        echo "\n\n\nDone. Removed $found_count columns.";
+    }
+
+    /**
      * This function repairs any broken pointer structures it finds
      * in the database by simulating that the already deleted instances
      * becomes deleted.

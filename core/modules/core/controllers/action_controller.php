@@ -17,6 +17,14 @@ class ActionController extends DeveloperController {
         \nmvc\Model::repairAllModels();
         die("\n\n\n>>> Model repairation complete!");
     }
+    
+    public function purify() {
+        // Display all SQL queries made during repair.
+        \nmvc\db\enable_display();
+        \nmvc\Model::purifyAllModels();
+        die("\n\n\n>>> Model purification complete!");
+    }
+
 
     public function export() {
         \nmvc\translate\TranslateModule::export();
