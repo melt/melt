@@ -67,7 +67,7 @@ function compare_arrays($array1, $array2) {
     if (!is_array($array1) || !is_array($array2) || (count($array1) != count($array2)))
         return false;
     foreach ($array1 as $key => $val) {
-        if (!isset($array2[$key]))
+        if (!array_key_exists($array2[$key]))
             return false;
         $val2 = $array2[$key];
         if (is_array($val)) {
