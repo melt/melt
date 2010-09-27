@@ -3,6 +3,28 @@
 /**
  * The Model. One of the fundamental objects in NanoMVC.
  * @see http://docs.nanomvc.com/chapter/development_guide/introduction_to_models
+ *
+ * Model states:
+ *
+ * Linked - Present in the database.
+ * Unlinked - Only present in memory.
+ *
+ * Transition states:
+ *
+ * Stable - No transition in progress.
+ * Updating - In beforeStore callback, updating changes to the database,
+ *            possibly transitioning from unlinked to linked.
+ * Unlinking - In beforeUnlink callback transitioning from linked to unlinked.
+ * Blocking - Store and unlinks are ignored.
+ *
+ * In beforeStore:
+ * store() - No effect.
+ * unlink() - Will (unlink the model/cancel the link) and enter blocking state.
+ *
+ * In beforeUnlink:
+ * store() - No effect.
+ * unlink() - No effect.
+ *
  */
 abstract class Model implements \Iterator {
     /**
@@ -19,8 +41,9 @@ abstract class Model implements \Iterator {
     private static $_instance_cache = array();
 
     const TRANSITION_STABLE = 0;
-    const TRANSITION_UNLINKING = 1;
+    const TRANSITION_BLOCKING = 3;
     const TRANSITION_STORING = 2;
+    const TRANSITION_UNLINKING = 1;
 
     /** @var integer Current transition state of this model instance. */
     private $_transition = self::TRANSITION_STABLE;
@@ -485,22 +508,29 @@ abstract class Model implements \Iterator {
     public final function getColumns() {
         return $this->_cols;
     }
+
+    public function link() {
+
+    }
     
     /**
      * Stores any changes to this model instance to the database.
      * If this is a new instance, it's inserted, otherwise, it's updated.
      */
     public function store() {
+        // Storing is only possible in stable state..
+        if ($this->_transition != self::TRANSITION_STABLE)
+                return;
         // Enter "storing" transition state.
-        if ($this->_transition == self::TRANSITION_UNLINKING) {
-            \trigger_error ("Trying to store a model instance currently transitioning to an unlinked state! Ignoring store request.", \E_USER_WARNING);
-            return;
-        } else if ($this->_transition == self::TRANSITION_STORING)
-            return;
         $this->_transition = self::TRANSITION_STORING;
         // Determine if linking or syncronizing.
         $was_linked = $this->_id > 0;
         $this->beforeStore($was_linked);
+        // If beforeStore resulted in blocking, cancel any further store attempt.
+        if ($this->_transition == self::TRANSITION_BLOCKING) {
+            $this->_transition = self::TRANSITION_STABLE;
+            return;
+        }
         if ($was_linked) {
             // Updating existing row.
             $query = $this->getUpdateSQL();
@@ -531,7 +561,7 @@ abstract class Model implements \Iterator {
             }
         }
         // Exiting "storing" transition state and calling afterStore callback.
-        $this->_transition == self::TRANSITION_STABLE;
+        $this->_transition = self::TRANSITION_STABLE;
         $this->afterStore($was_linked);
     }
     
@@ -548,15 +578,17 @@ abstract class Model implements \Iterator {
 
     /** Unlinks this model instance from the database. */
     public function unlink() {
-        // Can't unlink non linked instances.
-        if ($this->_id < 1)
+        // Can't unlink if unlinking/blocking.
+        if ($this->_transition == self::TRANSITION_UNLINKING || $this->_transition == self::TRANSITION_BLOCKING)
             return;
+        // If currently storing, cancel that operation and block further.
+        $will_block = ($this->_transition == self::TRANSITION_STORING);
+        // If already unlinked, there's nothing more to be done.
+        if ($this->_id < 1) {
+            $this->_transition = $will_block? self::TRANSITION_BLOCKING :self::TRANSITION_STABLE;
+            return;
+        }
         // Enter "unlinking" transition state.
-        if ($this->_transition == self::TRANSITION_STORING) {
-            \trigger_error ("Trying to unlink a model instance currently transitioning to a syncronized/stored state! Ignoring unlink request.", \E_USER_WARNING);
-            return;
-        } else if ($this->_transition == self::TRANSITION_UNLINKING)
-            return;
         $this->_transition = self::TRANSITION_UNLINKING;
         // Prevent a user abort from terminating the script during GC.
         ignore_user_abort(true);
@@ -611,8 +643,8 @@ abstract class Model implements \Iterator {
         // by a previous unlink has been so at the time of invoke.
         foreach ($disconnect_callbacks as $instance)
             $instance->disconnectCallback();
-        // Exiting "unlinking" transition state and calling afterUnlink callback.
-        $this->_transition == self::TRANSITION_STABLE;
+        // Exiting "unlinking" transition state.
+        $this->_transition = $will_block? self::TRANSITION_BLOCKING :self::TRANSITION_STABLE;
         $this->afterUnlink();
     }
 
