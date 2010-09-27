@@ -98,6 +98,37 @@ function base64_alphanum_decode($str) {
 }
 
 /**
+ * Hex encodes the given string.
+ * @param string $str
+ * @return string
+ */
+function hex_encode($str) {
+    $hex_str = "";
+    for ($i = 0; $i < strlen($str); $i++) {
+        $ord = ord($str[$i]);
+        if ($ord < 0x10)
+            $hex_str .= "0";
+        $hex_str .= dechex($ord);
+    }
+    return $hex_str;
+}
+
+/**
+ * Hex decodes the given string.
+ * String corruption, such as odd length or invalid charachers,
+ * will be silently ignored.
+ * @param string $str
+ * @return string
+ */
+function hex_decode($str) {
+    $new_str = "";
+    for ($i = 0; $i < strlen($str); $i += 2)
+        $new_str .= chr(hexdec(substr($str, $i, 2)));
+    return $new_str;
+
+}
+
+/**
 * @desc Returns true if given email address is RFC 2822 compatible.
 */
 function email_validate($email) {
