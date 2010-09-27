@@ -10,8 +10,8 @@
  */
 abstract class BlobPointerType extends \nmvc\core\PointerType {
     /** Constructs this typed field with this column name. */
-    public function __construct($column_name) {
-        parent::__construct($column_name, 'cache\BlobModel');
+    public function __construct($column_name, $disconnect_reaction = "SET NULL") {
+        parent::__construct($column_name, 'cache\BlobModel', $disconnect_reaction);
     }
     
     /*
