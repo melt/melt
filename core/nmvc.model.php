@@ -602,7 +602,7 @@ abstract class Model implements \Iterator {
         $this->_id = -1;
         // Unlink from database.
         $table_name = self::classNameToTableName($name);
-        db\run("DELETE FROM " . table($table_name) . " WHERE id = " . $old_id);
+        db\query("DELETE FROM " . table($table_name) . " WHERE id = " . $old_id);
         // Remove from instance cache.
         unset(self::$_instance_cache[$old_id]);
         // Remove pointers that gets broken by this unlink
@@ -1383,7 +1383,28 @@ EOP;
         $disconnect_callbacks = array();
         $model_classes = self::findAllModels();
         $family_tree = self::getMetaData("family_tree");
-        // Find pointers that
+        // Find intersecting ID's.
+        echo "\nSearching for corrupt (intersected) primary keys...\n\n";
+        foreach ($model_classes as $table_name_a => $model_class_a) {
+            $in_table = array();
+            foreach ($model_classes as $table_name_b => $model_class_b) {
+                if ($table_name_b == $table_name_a)
+                    continue;
+                $in_table[] = "(id IN (SELECT id FROM " . table($table_name_b) . "))";
+            }
+            $rows = db\query("SELECT id FROM " . table($table_name_a) . " WHERE " . implode(" OR ", $in_table));
+            $row_count = db\get_num_rows($rows);
+            if ($row_count == 0)
+                continue;
+            echo "\nFound " . $row_count . " instances of " . $model_class_a . " with their PRIMARY KEY corrupt! Repairing...\n\n";
+            while (false !== ($row = db\next_array($rows))) {
+                $id = intval($row[0]);
+                // Insert the row again to gain new id and delete the old corrupt copy.
+                db\query("INSERT IGNORE INTO " . table($table_name_a) . " SELECT * FROM " . table($table_name_a) . " WHERE id = " . $id);
+                db\query("DELETE FROM " . table($table_name_a) . " WHERE id = " . $id);
+            }
+        }
+        echo "\nSearching for corrupt pointers...\n\n";
         foreach ($model_classes as $table_name => $model_class) {
             $model_columns = $model_class::getParsedColumnArray();
             $pointer_fields = $model_class::getPointerColumns();
