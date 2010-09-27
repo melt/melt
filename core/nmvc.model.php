@@ -1408,6 +1408,7 @@ EOP;
      */
     public static final function repairAllModels() {
         // This maintenance script can run forever.
+        define("NANOMVC_REPAIRING_IN_PROGRESS", 1);
         ignore_user_abort(true);
         set_time_limit(0);
         $cascade_callbacks = array();
