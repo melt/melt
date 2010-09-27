@@ -105,7 +105,7 @@ class PointerType extends \nmvc\AppType {
             if ($this->value > 0) {
                 $target_model = $this->target_model;
                 $this->value = $target_model::selectByID($this->value);
-                if ($this->value === null)
+                if ($this->value === null && !defined("NANOMVC_REPAIRING_IN_PROGRESS"))
                     trigger_error("The database state is corrupt, please run repair. Pointer referencing $target_model has ID set, but target does not exist in database. Setting pointer to NULL.", \E_USER_WARNING);
             } else
                 $this->value = null;
