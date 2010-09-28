@@ -89,6 +89,7 @@ put_configuration_directive('nmvc\core\config\DEVELOPER_KEY', "");
 put_configuration_directive('nmvc\core\config\MAINTENANCE_MODE', true);
 put_configuration_directive('nmvc\core\config\FORCE_ERROR_DISPLAY', false);
 put_configuration_directive('nmvc\core\config\FORCE_ERROR_FLAGS', false);
+put_configuration_directive('nmvc\core\config\PEAR_AUTOLOAD', false);
 // Evaluate developer mode based on configuration and cookies.
 $devkey_is_blank = \nmvc\core\config\DEVELOPER_KEY == "";
 $devkey_matches = isset($_COOKIE['NMVC_DEVKEY']) && ($_COOKIE['NMVC_DEVKEY'] === \nmvc\core\config\DEVELOPER_KEY);

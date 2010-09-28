@@ -189,8 +189,28 @@ function autoload($name) {
     }
 }
 
+/**
+ * The nanoMVC internal autoload function for pear classes.
+ */
+function pear_autoload($name) {
+    $path = APP_DIR . "/vendors/pear/" . str_replace("_", "/", $name) . ".php";
+    if (\file_exists($path)) {
+        require $path;
+        return true;
+    } else
+        return false;
+}
+
+
 // Registers autoload function.
 spl_autoload_register("nmvc\internal\autoload");
+
+// Register pear autoload function if used.
+if (\nmvc\core\config\PEAR_AUTOLOAD) {
+    \spl_autoload_register("nmvc\internal\pear_autoload");
+    // Some pear classes include stuff themselves and requires include path to be set.
+    set_include_path(get_include_path() . PATH_SEPARATOR . APP_DIR . "/vendors/pear/");
+}
 
 // Include the API's of all modules and configure them.
 foreach (get_all_modules() as $module_name => $module_parameters) {
