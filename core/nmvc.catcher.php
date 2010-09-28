@@ -74,10 +74,23 @@ function error_handler($errno, $errstr, $errfile, $errline) {
 
 const INTERNAL_LOCATION = "~Internal Location~";
 
+function remove_cache_headers() {
+    if (\headers_sent())
+        return;
+    // Removes any headers indicating cache status
+    // to prevent exception beeing cached.
+    \header("Cache-Control:", true);
+    \header("Last-Modified:", true);
+    \header("Expires:", true);
+    \header("Pragma:", true);
+    \header("Etag:", true);
+}
+
 function development_crash($type, $variables) {
     if (!\nmvc\core\config\MAINTENANCE_MODE)
         trigger_error("Development Error Caught: " . $message, \E_USER_ERROR);
     \nmvc\request\reset();
+    remove_cache_headers();
     if (!headers_sent()) {
         header("HTTP/1.x 500 Internal Server Error");
         header("Status: 500 Internal Server Error");
@@ -89,6 +102,7 @@ function development_crash($type, $variables) {
 function crash($message, $file, $line, $trace) {
     // Restore output buffer.
     \nmvc\request\reset();
+    remove_cache_headers();
     $errcode = \nmvc\string\random_alphanum_str(6);
     // Log the error.
     $errtrace = "__Stack:\n";
