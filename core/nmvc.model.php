@@ -1578,7 +1578,7 @@ EOP;
         self::setMetaData("family_tree", $family_tree);
         if ($creating_sequence) {
             // Need to create the sequence.
-            db\query("DROP TABLE " . table('core__seq'));
+            db\run("DROP TABLE " . table('core__seq'));
             db\query("CREATE TABLE " . table('core__seq') . " (id BIGINT PRIMARY KEY NOT NULL)");
             db\query("INSERT INTO " . table('core__seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
         }
