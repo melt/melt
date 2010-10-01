@@ -113,6 +113,7 @@ function autoload($name) {
             $class_name = "nmvc\\" . $parts[1] . "\\" . ucfirst($parts[2]);
             $app_overridable_declarable = false;
         }
+        $required_app_override = false;
         $file_name = cased_to_underline($file_name);
         // Using nanoMVC naming rules to find the class.
         if (\nmvc\string\ends_with($class_name, "Controller")) {
@@ -124,6 +125,8 @@ function autoload($name) {
         } else if (\nmvc\string\ends_with($class_name, "Model")) {
             $path .= "/models/" . $subdir . substr($file_name, 0, -6) . "_model.php";
             $must_extend = 'nmvc\AppModel';
+            // Model declared in modules is required to be app overridable.
+            $required_app_override = $app_overridable_declarable;
         } else if (\nmvc\string\ends_with($class_name, "Module")) {
             // Application and application extentions may not have
             // classes ending with "Module".
@@ -150,6 +153,11 @@ function autoload($name) {
             // This is an application override, must extend the _app_overrideable declared class.
             $must_extend = $class_ao_name;
         require $path;
+        if ($required_app_override) {
+            $class_ao_name = $class_name . "_app_overrideable";
+            if (!(class_exists($class_name) && \nmvc\core\is_abstract($class_name)) && !class_exists($class_ao_name))
+                development_crash("invalid_module_model", array("path" => $path, "expected_name" => $class_name));
+        }
         if (!class_exists($class_name) && !interface_exists($class_name)) {
             $trigger_error = true;
             if ($app_overridable_declarable) {
@@ -162,6 +170,7 @@ function autoload($name) {
                     $class_name = $class_ao_name;
                     $pending_app_override = true;
                     $trigger_error = false;
+                    $required_app_override = false;
                 }
             }
             if ($trigger_error)

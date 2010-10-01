@@ -4,7 +4,7 @@
  * Blobs are stored in this separate model and referenced
  * so the data is only fetched when neccessary (when not cached locally).
  */
-class BlobModel extends \nmvc\AppModel {
+abstract class BlobModel_app_overrideable extends \nmvc\AppModel {
     // Blob data.
     public $dta = "cache\BlobType";
     // Extention enables apache to determine mime type.
