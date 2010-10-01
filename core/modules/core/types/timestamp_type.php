@@ -5,7 +5,7 @@ class TimestampType extends \nmvc\AppType {
     public $title = "";
 
     public function getSQLType() {
-        return "int";
+        return "bigint";
     }
     public function getSQLValue() {
         return intval($this->value);

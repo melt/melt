@@ -23,7 +23,7 @@ class TimespanType extends \nmvc\AppType {
         return (isset($token_values[$token]))? $token_values[$token]: false;
     }
     public function getSQLType() {
-        return "int";
+        return "bigint";
     }
     public function getSQLValue() {
         return intval($this->value);
