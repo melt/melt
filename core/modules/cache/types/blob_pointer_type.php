@@ -79,9 +79,9 @@ abstract class BlobPointerType extends \nmvc\core\PointerType {
      * @param string $extention The extention to use for the data. Apache uses this to determine mime type.
      */
     public function setBinaryData($data = null, $extention = ".bin") {
-        if (strlen($extention) == 0 || $extention[0] != ".")
-            throw new \Exception("Extention MUST start with dot!");
         if (is_string($data) && strlen($data) > 0) {
+            if (strlen($extention) == 0 || $extention[0] != ".")
+                trigger_error("Extention MUST start with dot!", \E_USER_ERROR);
             // Prepare storing the binary data in a new blob model.
             $blob_model = BlobModel::insert();
             $blob_model->dta = $data;
