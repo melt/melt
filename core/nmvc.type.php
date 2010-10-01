@@ -43,6 +43,9 @@ abstract class Type {
         $this->key = $column_name;
     }
 
+    /** Event responsible for preparing the SQL value to be stored in the database. */
+    public function prepareSQLValue() {}
+
     /** Returns the data in a SQLized storeable form. */
     abstract public function getSQLValue();
 

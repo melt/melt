@@ -193,6 +193,10 @@ class PointerType extends \nmvc\AppType {
     }
 
     public function getSQLValue() {
+        return $this->getID();
+    }
+
+    public function prepareSQLValue() {
         // Cascade pointers may not be NULL in database so automatically
         // store before returning if memory-only pointer,
         // otherwise trigger error.
@@ -208,8 +212,8 @@ class PointerType extends \nmvc\AppType {
             $this->value->store();
             unset($cascade_store_stack[$target_hash]);
         }
-        return $this->getID();
     }
+
 
     public function setSQLValue($value) {
         $this->value = intval($value);
