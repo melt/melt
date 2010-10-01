@@ -10,7 +10,7 @@ const HTTP_METHOD_HEAD = 2;
  * Note: Relies on a hack that might stop working in future versions.
  */
 function unhook_current_request() {
-    api_misc::ob_reset();
+    \nmvc\request\reset();
     ignore_user_abort(true);
     header("Connection: close");
     header("Content-Encoding: none");
@@ -38,7 +38,7 @@ function make_urlencoded_formdata($data) {
  * @return array An array mapped like this: 0 => Content Type, 1 => Data.
  */
 function make_multipart_formdata($data) {
-    $boundary = api_string::random_hex_str(16);
+    $boundary = \nmvc\string\random_hex_str(16);
     $encoded_data = "";
     // Encoding POST data as multipart/form-data. Otherwise
     foreach ($data as $key => $val) {
@@ -56,7 +56,7 @@ function make_multipart_formdata($data) {
 /**
  * Makes a HTTP request for the given URL and returns the data received.
  * @param string $url Absolute URL to send the HTTP request too.
- * @param HTTP_METHOD $method A api_http::HTTP_METHOD_XXX method for the request.
+ * @param HTTP_METHOD $method A \nmvc\http\HTTP_METHOD_XXX method for the request.
  * @param array $cookies An array of cookies to send with the request.
  * @param string $user_agent Specify something other than null to not use the default nanoMVC user agent.
  * @param boolean $include_common_headers Set to true to send headers assoicated with normal browsers to make the request look more natural.
@@ -65,18 +65,18 @@ function make_multipart_formdata($data) {
  * @return mixed The data and response headers returned by the request like this: 0 => Returned Data, 1 => Response Headers or an error code if the request failed.
  *               Error codes: -1 = Too many redirects (max 8), -2 = Request failed (connection timeout or malformed response)
  */
-function request($url, $method = api_http::HTTP_METHOD_GET, $cookies = array(), $user_agent = null, $include_common_headers = false, $contents = array(), $timeout = 5) {
+function request($url, $method = HTTP_METHOD_GET, $cookies = array(), $user_agent = null, $include_common_headers = false, $contents = array(), $timeout = 5) {
     $methods = array(
         HTTP_METHOD_GET => "GET",
         HTTP_METHOD_POST => "POST",
         HTTP_METHOD_HEAD => "HEAD",
     );
     if (!isset($methods[$method]))
-        trigger_error("Unknown HTTP method! Not part of api_http::HTTP_METHOD_XXX.", \E_USER_ERROR);
+        trigger_error("Unknown HTTP method! Not part of \nmvc\http\HTTP_METHOD_XXX.", \E_USER_ERROR);
     $headers = array();
     // Write user agent.
     if ($user_agent === null)
-        $user_agent = "nmvc/" . nmvc_version;
+        $user_agent = "nmvc/" . \nmvc\internal\VERSION;
     $headers["User-Agent"] = $user_agent;
     // Include common client headers if requested.
     if ($include_common_headers) {
@@ -99,7 +99,7 @@ function request($url, $method = api_http::HTTP_METHOD_GET, $cookies = array(), 
         $content = null;
     // Make request, max 8 redirects.
     for ($i = 0; $i < 8; $i++) {
-        $response = self::raw_request($url, $methods[$method], $headers, $content, $timeout);
+        $response = raw_request($url, $methods[$method], $headers, $content, $timeout);
         if ($response === false)
             return -2;
         $status_code = $response[1];
