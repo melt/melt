@@ -77,7 +77,7 @@ class PictureType extends \nmvc\cache\BlobPointerType {
     }
 
     /**
-    * @desc Returns a string of text describing what picture formats are supported.
+    * Returns a string of text describing what picture formats are supported.
     * @return String "The x,y and z formats are supported or No image formats are supported."
     */
     public function getSupportedFormats() {
@@ -99,6 +99,29 @@ class PictureType extends \nmvc\cache\BlobPointerType {
             return __("The picture formats %s and %s is supported.", $sup[0], $sup[1]);
         case 3:
             return __("The picture formats %s, %s and %s is supported.", $sup[0], $sup[1], $sup[2]);
+        }
+    }
+
+    /**
+     * Like setBinaryData but verifies the data and determines the extention.
+     * If the picture type can not be recognized (incorrect data), this
+     * will effectively unset the current data.
+     * @param string $data Binary picture data.
+     * @return boolean TRUE if data was not null and recognized,
+     * FALSE if data was not recognized and current picture unset.
+     */
+    public function setPictureData($data = null) {
+        if ($data !== null) {
+            $extention = self::imageDetect($data);
+            if ($extention == null)
+                $data = null;
+        }
+        if ($data !== null) {
+            parent::setBinaryData($data, "." . $extention);
+            return true;
+        } else {
+            parent::setBinaryData(null, null);
+            return false;
         }
     }
     
@@ -124,7 +147,8 @@ class PictureType extends \nmvc\cache\BlobPointerType {
             $blob_model = \nmvc\cache\BlobModel::selectByID($this->value);
             if ($blob_model === null)
                 return null;
-            $img = imagecreatefromstring($blob_model->dta);
+            $data = $blob_model->dta;
+            $img = imagecreatefromstring($data);
             if (!$img)
                 return null;
             // Calculate sizing.
