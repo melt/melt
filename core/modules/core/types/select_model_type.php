@@ -4,10 +4,12 @@
  * SelectType, the only built-in pointer type.
  */
 class SelectModelType extends PointerType {
-    /** @var Where condition to filter targets. */
+    /** @var string Where condition to filter targets. */
     public $where = "";
-    /** @var Column in target to use for labeling objects. */
+    /** @var string Column in target to use for labeling objects. */
     public $label_column;
+    /** @var mixed FALSE = prevent dash column, TRUE = always dash column, NULL = auto, based on disconnect reaction. */
+    public $dash_column = null;
 
     public function __construct($column_name, $target_model, $disconnect_reaction = "SET NULL", $label_column = null) {
         parent::__construct($column_name, $target_model, $disconnect_reaction);
@@ -27,8 +29,9 @@ class SelectModelType extends PointerType {
         $current_id = $this->getID();
         $html = "<select name=\"$name\" id=\"$name\">";
         $nothing = __("—");
-        $html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
         $results = forward_static_call(array($this->target_model, 'selectWhere'), $this->where);
+        if (($this->dash_column !== false && ($this->dash_column === true || $this->getDisconnectReaction() != "CASCADE")) || count($results) == 0)
+            $html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
         $selected = ' selected="selected"';
         $out_list = array();
         foreach ($results as $model) {
