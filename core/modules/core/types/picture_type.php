@@ -104,25 +104,22 @@ class PictureType extends \nmvc\cache\BlobPointerType {
 
     /**
      * Like setBinaryData but verifies the data and determines the extention.
-     * If the picture type can not be recognized (incorrect data), this
-     * will effectively unset the current data.
+     * If the picture type can not be recognized (incorrect data),
+     * the set will be canceled and FALSE returned.
      * @param string $data Binary picture data.
-     * @return boolean TRUE if data was not null and recognized,
-     * FALSE if data was not recognized and current picture unset.
+     * @return boolean TRUE if data was NULL or recognized,
+     * FALSE if data was not recognized.
      */
     public function setPictureData($data = null) {
         if ($data !== null) {
             $extention = self::imageDetect($data);
             if ($extention == null)
-                $data = null;
-        }
-        if ($data !== null) {
+                return false;
             parent::setBinaryData($data, "." . $extention);
             return true;
-        } else {
-            parent::setBinaryData(null, null);
-            return false;
         }
+        parent::setBinaryData(null, null);
+        return $data === null;
     }
     
     public function getUrl($max_width = 0, $max_height = 0, $file_name = null) {
