@@ -840,7 +840,7 @@ abstract class Model implements \Iterator {
         $where = trim($where);
         if (strlen($where) > 0)
             $where = " AND $where";
-        $where = "(" . implode(" = $id OR ", $ptr_fields) . " = $id)" . $where;
+        $where = "(\$" . implode(" = $id OR \$", $ptr_fields) . " = $id)" . $where;
         return call_user_func(array($child_model, "selectWhere"), $where, $offset, $limit, $order);
     }
 
@@ -862,7 +862,7 @@ abstract class Model implements \Iterator {
         $where = trim($where);
         if (strlen($where) > 0)
             $where = " AND $where";
-        $where = "(" . implode(" = $id OR ", $ptr_fields) . " = $id)" . $where;
+        $where = "(\$" . implode(" = $id OR \$", $ptr_fields) . " = $id)" . $where;
         return $child_model::count($where);
     }
 
