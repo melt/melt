@@ -870,7 +870,7 @@ abstract class Model implements \Iterator {
     private function getChildPointers($child_model_name) {
         $model_name = get_class($this);
         $ptr_fields = array();
-        foreach($child_model_name::getColumnNames() as $col_name) {
+        foreach ($child_model_name::getColumnNames() as $col_name) {
             if (substr($col_name, -3) == "_id" &&
             is($model_name, $child_model_name::getTargetModel($col_name)))
                 $ptr_fields[] = $col_name;
