@@ -632,7 +632,7 @@ abstract class Model implements \Iterator {
                 if ($disconnect_reaction == "CASCADE")
                     $cascade_callbacks[] = $instance;
                 else if ($disconnect_reaction == "CALLBACK")
-                    $disconnect_callbacks[] = $instance;
+                    $disconnect_callbacks[] = array($instance, $child_column);
             }
         }
         // Now handling the broken pointers according to configuration.
@@ -641,8 +641,8 @@ abstract class Model implements \Iterator {
         // Custom callbacks after cascade, this allows us to guarantee
         // that any models that should have been cascade deleted
         // by a previous unlink has been so at the time of invoke.
-        foreach ($disconnect_callbacks as $instance)
-            $instance->disconnectCallback();
+        foreach ($disconnect_callbacks as $callback)
+            $callback[0]->disconnectCallback($callback[1]);
         // Exiting "unlinking" transition state.
         $this->_transition = $will_block? self::TRANSITION_BLOCKING :self::TRANSITION_STABLE;
         $this->afterUnlink();
@@ -1468,9 +1468,11 @@ EOP;
                         }
                         // Index reactions.
                         if ($disconnect_reaction == "CASCADE")
-                            $cascade_callbacks = array_merge($cascade_callbacks, $instances);
-                        else if ($disconnect_reaction == "CALLBACK")
-                            $disconnect_callbacks = array_merge($cascade_callbacks, $instances);
+                            $cascade_callbacks += $instances;
+                        else if ($disconnect_reaction == "CALLBACK") {
+                            foreach ($instances as $id => $instance)
+                                $disconnect_callbacks[$id] = array($instance, $ptr_name);
+                        }
                     }
                 }
                 // The cascade reaction also implies that the ID is not NULL.
@@ -1480,7 +1482,7 @@ EOP;
                     if (count($instances) == 0)
                         continue;
                     echo "\nFound " . count($instances) . " instances of " . $model_class . " with their CASCADE pointer " . $ptr_name . " unset! Marking them for cascade unlinking...\n\n";
-                    $cascade_callbacks = array_merge($cascade_callbacks, $instances);
+                    $cascade_callbacks += $instances;
                 }
             }
             // Since this routine can be memory intensive, collecting cycles here.
@@ -1491,8 +1493,8 @@ EOP;
         foreach ($cascade_callbacks as $instance)
             $instance->unlink();
         gc_collect_cycles();
-        foreach ($disconnect_callbacks as $instance)
-            $instance->disconnectCallback();
+        foreach ($disconnect_callbacks as $callback)
+            $callback[0]->disconnectCallback($callback[1]);
     }
 
     private static function validateCoreSeq() {
