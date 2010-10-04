@@ -179,7 +179,7 @@ function go_back() {
     if (substr($referer, 0, $blen) == APP_ROOT_URL)
         redirect($referer);
     else
-        redirect(make_local_url('/'));
+        redirect(url('/'));
 }
 
 
