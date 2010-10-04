@@ -25,11 +25,15 @@ class SelectModelType extends PointerType {
     }
     private $denied_ids = array();
 
+    protected function getWhereFilter() {
+        return $this->where;
+    }
+
     public function getInterface($name) {
         $current_id = $this->getID();
         $html = "<select name=\"$name\" id=\"$name\">";
         $nothing = __("—");
-        $results = forward_static_call(array($this->target_model, 'selectWhere'), $this->where);
+        $results = forward_static_call(array($this->target_model, 'selectWhere'), $this->getWhereFilter());
         if (($this->dash_column !== false && ($this->dash_column === true || $this->getDisconnectReaction() != "CASCADE")) || count($results) == 0)
             $html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
         $selected = ' selected="selected"';
@@ -58,9 +62,9 @@ class SelectModelType extends PointerType {
             return;
         }
         // If this is an invalid ID, set to null.
-        $where = trim($this->where);
+        $where = trim($this->getWhereFilter());
         if ($where != "")
-            $where .= " AND ";
+            $where = "($where) AND ";
         $where .= "id = $value";
         $count = forward_static_call(array($this->target_model, 'count'), $where);
         if ($count != 1)
