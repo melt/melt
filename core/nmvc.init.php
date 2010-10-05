@@ -17,8 +17,6 @@ if (function_exists("date_default_timezone_set"))
 // Using UTF-8 for everything.
 iconv_set_encoding("internal_encoding", "UTF-8");
 iconv_set_encoding("output_encoding", "UTF-8");
-// Start session.
-session_start();
 // Start output buffering.
 ob_start();
 // Walk down from the script filename to get the app dir.

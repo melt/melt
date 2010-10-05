@@ -1,7 +1,7 @@
 <?php namespace nmvc\cache;
 
 /**
- * Blob type - only designed to be used inside cache module.
+ * Blob type - only designed to be used internally.
  */
 class BlobType extends \nmvc\AppType {
     public function getSQLType() {

@@ -11,4 +11,5 @@ require "nmvc.type.php";
 require "nmvc.init.php";
 require "nmvc.loader.php";
 require "nmvc.catcher.php";
+require "nmvc.session.php";
 require "nmvc.routing.php";
