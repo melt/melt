@@ -282,12 +282,16 @@ function is($class, $base_class) {
  * Reads an uploaded file with the specified form name.
  * @param string $form_name Name of input form component.
  * @param string $file_name Returns the original remote file name.
+ * @param boolean $only_path Set to true to only return uploaded file
+ * location instead of loading content into memory (and returning it).
  * @return string NULL if there are no such uploaded file,
+ * otherwise the contents of the uploaded file or path to uploaded
+ * file (depending on $only_path).
  */
-function get_uploaded_file_contents($form_name, &$file_name = null) {
-    if (isset($_FILES[$name]) && is_uploaded_file(@$_FILES[$name]['tmp_name'])) {
-        $file_name = @$_FILES[$name]['name'];
-        return \file_get_contents($_FILES[$name]['tmp_name']);
+function get_uploaded_file($form_name, &$file_name = null, $only_path = false) {
+    if (isset($_FILES[$form_name]) && is_uploaded_file(@$_FILES[$form_name]['tmp_name'])) {
+        $file_name = @$_FILES[$form_name]['name'];
+        return $only_path? \realpath($_FILES[$form_name]['tmp_name']): \file_get_contents($_FILES[$form_name]['tmp_name']);
     }
     return null;
 }
