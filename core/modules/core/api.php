@@ -279,6 +279,20 @@ function is($class, $base_class) {
 }
 
 /**
+ * Reads an uploaded file with the specified form name.
+ * @param string $form_name Name of input form component.
+ * @param string $file_name Returns the original remote file name.
+ * @return string NULL if there are no such uploaded file,
+ */
+function get_uploaded_file_contents($form_name, &$file_name = null) {
+    if (isset($_FILES[$name]) && is_uploaded_file(@$_FILES[$name]['tmp_name'])) {
+        $file_name = @$_FILES[$name]['name'];
+        return \file_get_contents($_FILES[$name]['tmp_name']);
+    }
+    return null;
+}
+
+/**
  * This function throws an E_USER_WARNING error if the application is in
  * developer mode, and proceeds to print all arguments that where
  * passed to it.
