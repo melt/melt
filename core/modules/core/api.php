@@ -291,7 +291,7 @@ function is($class, $base_class) {
 function get_uploaded_file($form_name, &$file_name = null, $only_path = false) {
     if (isset($_FILES[$form_name]) && is_uploaded_file(@$_FILES[$form_name]['tmp_name'])) {
         $file_name = @$_FILES[$form_name]['name'];
-        return $only_path? \realpath($_FILES[$form_name]['tmp_name']): \file_get_contents($_FILES[$form_name]['tmp_name']);
+        return $only_path? $_FILES[$form_name]['tmp_name']: \file_get_contents($_FILES[$form_name]['tmp_name']);
     }
     return null;
 }
