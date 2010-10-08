@@ -65,8 +65,11 @@ abstract class Type {
     }
 
     /**
-     * @desc Should return an interface component that handles modification of the data in a form.
+     * Should return any amount of interface components that handles
+     * modification of the data in a form.
      * @param string $name The HTML name/id of the component.
+     * @return mixed An array of components, a string of one component
+     * or null/false for no component.
      */
     abstract public function getInterface($name);
 
