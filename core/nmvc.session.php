@@ -27,4 +27,10 @@ if (\substr(REQ_URL, 0, 6) == "/core/")
 });
 \session_start();
 // Make sure sessions are written before we loose object instancing capability.
-\register_shutdown_function('session_write_close');
+\register_shutdown_function(function() {
+    // Move write close to the end of shutdown function chain.
+    // This enables other shutdown functions to modify session data.
+    register_shutdown_function(function() {
+        \session_write_close();
+    });
+});
