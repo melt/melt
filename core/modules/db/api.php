@@ -229,6 +229,8 @@ function sync_table_layout_with_model($table_name, $parsed_col_array) {
     $columns = array();
     // Check names and fetches types.
     foreach ($parsed_col_array as $name => $column) {
+        if ($column->is_volatile)
+            continue;
         verify_keyword($name);
         $columns[strtolower($name)] = $column->getSQLType();
     }

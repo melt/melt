@@ -164,12 +164,18 @@ abstract class Model implements \Iterator {
                 continue;
             $column_construct_args = array();
             $column_attributes = array();
+            $is_volatile = false;
             if (!is_array($column_args)) {
                 $type_class_name = $column_args;
             } else {
                 // Read the first value, which should be it's type class.
                 reset($column_args);
                 $type_class_name = current($column_args);
+                if ($type_class_name == VOLATILE_FIELD) {
+                    unset($column_args[key($column_args)]);
+                    $type_class_name = current($column_args);
+                    $is_volatile = true;
+                }
                 if (!is_string($type_class_name))
                     trigger_error("Invalid type: '$model_name.\$$column_name' does not specify a type class.", \E_USER_ERROR);
                 unset($column_args[key($column_args)]);
@@ -207,6 +213,7 @@ abstract class Model implements \Iterator {
             }
             // Call the constructor.
             $type_handler = $type_reflector->newInstanceArgs($column_construct_args);
+            $type_handler->is_volatile = $is_volatile;
             foreach ($column_attributes as $key => $attribute) {
                 if (!property_exists(get_class($type_handler), $key))
                     trigger_error("Invalid model column: $model_name.\$$column_name - The type '$type_class_name' does not have an attribute named '$key'.", \E_USER_ERROR);
@@ -485,20 +492,28 @@ abstract class Model implements \Iterator {
     /**
      * Returns a list of the column names.
      * Note: Does not return the implicit ID column.
+     * @param boolean $include_volatile Set to false to not include volatile
+     * fields.
      * @return array An array of the column names in the specified model.
      */
-    public static final function getColumnNames() {
+    public static final function getColumnNames($include_volatile = true) {
         $name = get_called_class();
         static $columns_name_cache = array();
-        if (isset($columns_name_cache[$name]))
-            return $columns_name_cache[$name];
+        if (isset($columns_name_cache[$include_volatile][$name]))
+            return $columns_name_cache[$include_volatile][$name];
         $columns = array();
         foreach (get_class_vars($name) as $colname => $default) {
             if ($default === null || $colname[0] == '_')
                 continue;
+            if (!$include_volatile && is_array($default)) {
+                reset($default);
+                if (current($default) == VOLATILE_FIELD)
+                    continue;
+            }
             $columns[$colname] = $colname;
         }
-        return $columns_name_cache[$name] = $columns;
+        $columns_name_cache[$include_volatile][$name] = $columns;
+        return $columns;
     }
 
     /**
@@ -697,6 +712,8 @@ abstract class Model implements \Iterator {
         foreach (static::getParsedColumnArray() as $col_name => $column) {
             if (!($column instanceof core\PointerType))
                 continue;
+            if ($column->is_volatile)
+                continue;
             if (!$as_id_fields)
                 $col_name = substr($col_name, 0, -3);
             $ret[$col_name] = $column->getTargetModel();
@@ -711,7 +728,7 @@ abstract class Model implements \Iterator {
     public static function translateFieldToColumn($col_name, $error_on_missing = true) {
         if ($col_name == "id")
             return $col_name;
-        $columns = static::getParsedColumnArray();
+        $columns = static::getColumnNames(false);
         if (array_key_exists($col_name, $columns))
             return $col_name;
         $id_companion = $col_name . "_id";
@@ -727,12 +744,14 @@ abstract class Model implements \Iterator {
         $table_name = self::classNameToTableName($name);
         static $key_list_cache = array();
         if (!isset($key_list_cache[$table_name])) {
-            $key_list = implode(',', $this->getColumnNames());
+            $key_list = implode(',', $this->getColumnNames(false));
             $key_list_cache[$table_name] = $key_list;
         } else
             $key_list = $key_list_cache[$table_name];
         $value_list = array();
         foreach ($this->getColumns() as $colname => $column) {
+            if ($column->is_volatile)
+                continue;
             $column->prepareSQLValue();
             $value = $column->getSQLValue();
             if ($value === null || $value === "")
@@ -755,6 +774,8 @@ abstract class Model implements \Iterator {
         $value_list = array();
         foreach ($this->getColumns() as $colname => $column) {
             if (!$column->hasChanged())
+                continue;
+            if ($column->is_volatile)
                 continue;
             $column->prepareSQLValue();
             $value = $column->getSQLValue();
@@ -790,7 +811,7 @@ abstract class Model implements \Iterator {
             trigger_error("Model '$base_name' is out of sync with database.", \E_USER_ERROR);
         foreach ($family_tree[$base_name] as $table_name) {
             $model_class_name = self::tableNameToClassName($table_name);
-            $return_data = $model_class_name::findDataForSelf($model_class_name::getColumnNames(), "WHERE id = $id");
+            $return_data = $model_class_name::findDataForSelf($model_class_name::getColumnNames(false), "WHERE id = $id");
             if (count($return_data) > 0)
                 return $model_class_name::instanceFromData($id, reset($return_data));
         }
@@ -811,6 +832,8 @@ abstract class Model implements \Iterator {
         $instance->_id = $id;
         $value = reset($data_row);
         foreach ($instance->getColumns() as $column) {
+            if ($column->is_volatile)
+                continue;
             $column->setSQLValue($value);
             $column->setSyncPoint();
             $value = next($data_row);
@@ -870,7 +893,7 @@ abstract class Model implements \Iterator {
     private function getChildPointers($child_model_name) {
         $model_name = get_class($this);
         $ptr_fields = array();
-        foreach ($child_model_name::getColumnNames() as $col_name) {
+        foreach ($child_model_name::getColumnNames(false) as $col_name) {
             if (substr($col_name, -3) == "_id" &&
             is($model_name, $child_model_name::getTargetModel($col_name)))
                 $ptr_fields[] = $col_name;
@@ -944,7 +967,7 @@ abstract class Model implements \Iterator {
             trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
         foreach ($family_tree[$name] as $table_name) {
             $model_class_name = self::tableNameToClassName($table_name);
-            $result_array = $model_class_name::findDataForSelf($model_class_name::getColumnNames(), $sql_select_param);
+            $result_array = $model_class_name::findDataForSelf($model_class_name::getColumnNames(false), $sql_select_param);
             foreach ($result_array as $id => $result_row)
                 $out_array[$id] = $model_class_name::instanceFromData($id, $result_row);
         }
@@ -1119,6 +1142,8 @@ EOP;
                 $column = static::translateFieldToColumn($column, false);
             }
         }
+        if (count($columns_to_select) == 0)
+            trigger_error("Selecting zero columns is not allowed. (Redundant)", \E_USER_ERROR);
         $sql_select_columns = ($supress_id? "": string\from_index(0) . ".id,") . implode(",", $columns_to_select);
         $sql_select_columns = static::transformSemanticColumnQuery($sql_select_columns, $columns_data);
         // Transform any semantic column references to hard SQL ones.
@@ -1550,7 +1575,7 @@ EOP;
             $parsed_col_array = $model_class::getParsedColumnArray();
             db\sync_table_layout_with_model($table_name, $parsed_col_array);
             // Record pointers for pointer map.
-            $columns = $model_class::getColumnNames();
+            $columns = $model_class::getColumnNames(false);
             foreach ($parsed_col_array as $col_name => $col_type) {
                 if (substr($col_name, -3) != "_id")
                     continue;

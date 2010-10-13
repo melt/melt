@@ -8,6 +8,8 @@ abstract class Type {
     protected $value = null;
     /** @var Model The parent of this type instance. */
     public $parent = null;
+    /** @var boolean True if field is volatile. */
+    public $is_volatile = false;
     /** @var mixed The original value that was set from SQL. */
     protected $original_value = null;
 

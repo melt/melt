@@ -110,3 +110,4 @@ define("REQ_URL", substr(read_server_var("REDIRECT_SCRIPT_URL", "REDIRECT_URL"),
 define("REQ_URL_DIR", dirname(REQ_URL));
 define("REQ_URL_BASE", basename(REQ_URL));
 define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
+define("VOLATILE_FIELD", "VOLATILE_FIELD");
