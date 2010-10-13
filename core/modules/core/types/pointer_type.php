@@ -110,6 +110,9 @@ class PointerType extends \nmvc\AppType {
             } else
                 $this->value = null;
         }
+        // Return null object instead of null in special cases where linked and unset cascade to prevent fatal errors etc.
+        if ($this->value == null && $this->disconnect_reaction == "CASCADE" && $this->parent->isLinked())
+            return new NullObject();
         return $this->value;
     }
 
