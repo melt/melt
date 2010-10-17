@@ -212,6 +212,57 @@ function require_shared_data($entry_name) {
 }
 
 /**
+ * Generates a classic UL menu navigation structure and returns it as HTML.
+ * This function is integrated with the userx access system and will skip
+ * menu items that the user does not have access too.
+ * @see userx\RestrictedController::_canAccess
+ * @param string $current_css_class What 'current' menu items (li's) should use.
+ * @param array $menu_structure A menu structure that consists of labels mapped
+ * to an URL and a current matching regex (without modifiers), separated by ",".
+ * @param array $current_tokens Array that will have the current path tokens
+ * appended onto it.
+ * @param array $parent_output Used internally. Set this to null.
+ * @return string
+ */
+function generate_ul_navigation($menu_structure, $current_css_class = "current", &$current_tokens = array(), &$parent_output = null) {
+    $has_match = false;
+    $first_url = null;
+    $has_userx_module = \nmvc\core\module_loaded("userx");
+    if ($parent_output === null)
+        $output = '<ul class="nav">';
+    else
+        $output = "<ul>";
+    foreach ($menu_structure as $label => $path_match) {
+        $label = escape($label);
+        $match_here = false;
+        $child_tree = "";
+        if (\is_array($path_match)) {
+            list($match_here, $url_here) = generate_ul_navigation($path_match, $current_css_class, $current_tokens, $child_tree);
+        } else {
+            $match_regex_start = strpos($path_match, ",");
+            $match_regex = substr($path_match, $match_regex_start + 1);
+            $match_here = preg_match("#$match_regex#", REQ_URL) == 1;
+            $url_here = substr($path_match, 0, $match_regex_start);
+            if ($match_here)
+                array_merge(array($label), $current_tokens);
+        }
+        $has_match = $has_match || $match_here;
+        if ($has_userx_module && !\nmvc\userx\RestrictedController::canAccess($url_here, \nmvc\userx\get_user()))
+            continue;
+        if ($first_url === null)
+            $first_url = $url_here;
+        $url_here = url($url_here);
+        $current = $match_here? 'class="' . $current_css_class . '"': '';
+        $output .= "<li $current><a href=\"$url_here\">$label</a>$child_tree</li>";
+    }
+    $output .= "</ul>";
+    if ($parent_output === null)
+        return $output;
+    $parent_output = $output;
+    return array($has_match, $first_url);
+}
+
+/**
  * Returns true if given class or object implements the given interface.
  * @param mixed $class
  * @param string $interface
