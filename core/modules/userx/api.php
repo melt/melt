@@ -224,19 +224,3 @@ function get_username_login_attempt() {
     } else
         return @$_COOKIE["LAST_USER"];
 }
-
-/**
- * Permissions Aware URL generation.
- * Returns ?unauthorized if not authorized.
- * @see request\url()
- * @param string $local_url Local URL to convert.
- */
-function pa_url($local_url, $get = null) {
-    if (RestrictedController::canAccess($local_url, get_user()))
-        return url($local_url, $get);
-    else
-        return "?unauthorized";
-}
-
-// Import some functions to the global namespace.
-include __DIR__ . "/imports.php";
