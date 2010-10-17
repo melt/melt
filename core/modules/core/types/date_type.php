@@ -1,4 +1,4 @@
-<?php namespace nmvc\rapid;
+<?php namespace nmvc\core;
 
 /**
  * A date selector which uses jquery-ui to display a date picker.

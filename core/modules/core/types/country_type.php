@@ -1,4 +1,4 @@
-<?php namespace nmvc\rapid;
+<?php namespace nmvc\core;
 
 class CountryType extends \nmvc\AppType {
     public function getSQLType() {

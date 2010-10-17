@@ -1,4 +1,4 @@
-<?php namespace nmvc\rapid;
+<?php namespace nmvc\core;
 
 class EnumCopyType extends \nmvc\core\TextType {
     /** @var Where condition to filter targets. */

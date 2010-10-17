@@ -1,4 +1,4 @@
-<?php namespace nmvc\rapid;
+<?php namespace nmvc\core;
 
 /**
  * NanoMVC wrapper for reCAPTCHA.
