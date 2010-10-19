@@ -1,18 +1,18 @@
-<?php namespace nmvc\qmi2;
+<?php namespace nmvc\qmi;
 
 /**
  * Prints a generic interface. A generic example of how output from
- * qmi2\ModelInterface::attachFields() can be handled.
- * @param array $html_components Output from qmi2\ModelInterface::attachFields()
+ * qmi\ModelInterface::attachFields() can be handled.
+ * @param array $html_components Output from qmi\ModelInterface::attachFields()
  * @param array $labels Field names mapped to their respective labels.
  * @return void
  */
 function print_interface($html_components, $labels, $as_table = false) {
     $data = compact("html_components", "labels");
     if ($as_table)
-        \nmvc\View::render("/qmi2/interface", $data, false, false);
+        \nmvc\View::render("/qmi/interface", $data, false, false);
     else
-        \nmvc\View::render("/qmi2/table_interface", $data, false, false);
+        \nmvc\View::render("/qmi/table_interface", $data, false, false);
 }
 
 
@@ -43,5 +43,5 @@ function get_action_link($model = null, $action = "delete", $url = null, $argume
     if ($url == null)
         $url = url(REQ_URL);
     $qmi_data = \nmvc\string\simple_crypt(gzcompress(serialize(array($id, $model_name, $action, $url, array_values($arguments))), 9));
-    return url("/qmi2/actions/set/$qmi_data");
+    return url("/qmi/actions/set/$qmi_data");
 }

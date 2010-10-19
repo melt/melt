@@ -17,7 +17,7 @@ class BinaryType extends \nmvc\AppType {
     public function getSQLValue() {
         if ($this->varbinary_size !== null)
             $this->value = substr($this->value, 0, $this->varbinary_size);
-        return strfy($this->value);
+        return \nmvc\db\strfy($this->value);
     }
 
     public function get() {
@@ -27,7 +27,7 @@ class BinaryType extends \nmvc\AppType {
     public function set($value) {
         $this->value = $value;
         if ($this->varbinary_size !== null)
-            $this->value = substr($this->value, 0, $this->varbinary_size);
+            $this->value = \substr($this->value, 0, $this->varbinary_size);
     }
 
     public function getInterface($name) {

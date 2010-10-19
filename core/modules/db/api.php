@@ -47,7 +47,7 @@ function strfy($string, $max_length = null) {
         $string = iconv_substr($string, 0, $max_length);
     // Have to connect for mysql_real_escape_string to work.
     if (!defined("NANOMVC_DB_LINK"))
-        run(";");
+        run("");
     return '"' . mysql_real_escape_string($string) . '"';
 }
 
@@ -64,10 +64,30 @@ function like_pattern_strfy($string, $max_length = null) {
         $string = iconv_substr($string, 0, $max_length);
     // Have to connect for mysql_real_escape_string to work.
     if (!defined("NANOMVC_DB_LINK"))
-        run(";");
+        run("");
     $string = mysql_real_escape_string($string);
     return \str_replace(array('%', '_'), array('\%', '\_'), $string);
 }
+
+/**
+ * Takes a PHP value and converts it to a SQL query value token.
+ * @param mixed $php_value
+ * @return string SQL query value token, ready for concatenation.
+ */
+function php_value_to_sql($php_value) {
+    if (\is_null($php_value))
+        return "0";
+    else if (!\is_scalar($php_value)) {
+        trigger_error("Cannot represent non scalar values in sql!", \E_USER_WARNING);
+        return "0";
+    } else if (\is_string($php_value))
+        return strfy($php_value);
+    else if (\is_bool($php_value))
+        return $php_value? "1": "0";
+    else
+        return (string) $php_value;
+}
+
 
 /**
  * @desc Queries the database, and throws specified error on failure.
@@ -140,6 +160,8 @@ function run($query) {
         $initialized = true;
         query("USE " . config\NAME);
     }
+    if ($query == "")
+        return true;
     if (defined("OUTPUT_MYSQL_QUERIES")) {
         echo $query . "\r\n";
         ob_flush();
@@ -339,13 +361,9 @@ function verify_keyword($word) {
     trigger_error("The identifier name you used '$word' was detected to be reserved by the list '$err'. Using that identifier should be avoided as it can break SQL queries now or in the future. Please choose another name.", \E_USER_ERROR);
 }
 
-/** Unlocks all locked tables/models. */
-function unlock() {
-    run("UNLOCK TABLES");
-}
-
 /**
- * Convenience function for prefixing tables.
+ * Convenience function for prefixing and quoting table names
+ * when building queries.
  * @param string $table_name
  * @return string
  */
@@ -353,9 +371,7 @@ function table($table_name) {
     static $cache = array();
     if (isset($cache[$table_name]))
         return $cache[$table_name];
-    // Convert backslashes to forwardslashes as backslashes can mess up queries.
-    $escaped_table_name = str_replace("\\", "__", $table_name);
-    return $cache[$table_name] = '`' . config\PREFIX . $escaped_table_name . '`';
+    return $cache[$table_name] = '`' . config\PREFIX . $table_name . '`';
 }
 
 // Import some functions to the global namespace.

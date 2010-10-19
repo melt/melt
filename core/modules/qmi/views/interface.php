@@ -1,4 +1,4 @@
-<?php namespace nmvc\qmi2; ?>
+<?php namespace nmvc\qmi; ?>
 <?php foreach ($this->html_components as $comp_name => $component): ?>
     <?php list($interface, $html_id) = $component; ?>
     <p>

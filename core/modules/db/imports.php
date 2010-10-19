@@ -1,23 +1,20 @@
 <?php
 
 /**
- * This function properly escapes and quotes any string you insert,
- * making it ready to be directly inserted into your SQL queries.
- * @example Input: a 'test' Output: "a \'test\'"
- * @param string $string
- * @param integer $max_length Maximum length of string in charachers.
- * Only use this parameter if string contains UTF-8 text and not binary data.
- * @return string The escaped and quoted string you inputed.
+ * Starts building an inner selection query expression.
+ * @param string $first_field The first field name in the selector.
+ * @return nmvc\db\SelectQuery
  */
-function strfy($string, $max_length = null) {
-    return \nmvc\db\strfy($string, $max_length);
+function expr($first_field) {
+    $query = new \nmvc\db\SelectQuery();
+    return $query->where($first_field);
 }
 
 /**
- * Convenience function for prefixing tables.
- * @param string $table_name
- * @return string
+ * Signifies a field in a selection query.
+ * @param string $field_name
+ * @return \nmvc\db\ModelField
  */
-function table($table_name) {
-    return \nmvc\db\table($table_name);
+function field($field_name) {
+    return new \nmvc\db\ModelField($field_name);
 }

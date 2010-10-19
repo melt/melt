@@ -13,7 +13,7 @@ class GroupSelectorType extends \nmvc\AppType {
         $value = strval($this->value);
         $html = "<select name=\"$name\" id=\"$name\">";
         $selected = ' selected="selected"';
-        foreach (GroupModel::selectWhere() as $group_id => $group) {
+        foreach (GroupModel::select() as $group_id => $group) {
             $s = ($value == $group_id)? $selected: null;
             $html .= "<option$s value=\"$group_id\">" . $group->name . "</option>";
         }

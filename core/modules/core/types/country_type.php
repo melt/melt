@@ -6,7 +6,7 @@ class CountryType extends \nmvc\AppType {
     }
 
     public function getSQLValue() {
-        return strfy($this->value);
+        return \nmvc\db\strfy($this->value);
     }
 
     public function getInterface($name) {

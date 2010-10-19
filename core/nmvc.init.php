@@ -1,7 +1,7 @@
 <?php namespace nmvc\internal;
 
 // Core constants.
-const VERSION = "1.7.5-dev";
+const VERSION = "2.0.0-dev";
 define("APP_CORE_DIR", dirname(__FILE__));
 // Standard function to restore the working dir to the core directory.
 function restore_workdir() {

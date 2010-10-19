@@ -4,8 +4,6 @@
  * SelectType, the only built-in pointer type.
  */
 class SelectModelType extends PointerType {
-    /** @var string Where condition to filter targets. */
-    public $where = "";
     /** @var string Column in target to use for labeling objects. */
     public $label_column;
     /** @var mixed FALSE = prevent dash column, TRUE = always dash column, NULL = auto, based on disconnect reaction. */
@@ -13,27 +11,23 @@ class SelectModelType extends PointerType {
 
     public function __construct($column_name, $target_model, $disconnect_reaction = "SET NULL", $label_column = null) {
         parent::__construct($column_name, $target_model, $disconnect_reaction);
-        $this->label_column = $label_column;
     }
 
     /**
-    * @desc The id's set here will not be selectable and treated as invalid.
-    *       Useful to prevent the select from pointing to its own model.
-    */
-    public function denyIds(array $ids) {
-        $this->denied_ids = array_merge($this->denied_ids, $ids);
-    }
-    private $denied_ids = array();
-
-    protected function getWhereFilter() {
-        return $this->where;
+     * Responsible for returning selection of model instances to
+     * display in dropdown.
+     * @return \nmvc\db\SelectQuery
+     */
+    protected function getSelection() {
+        $target_model = $this->target_model;
+        return $target_model::select();
     }
 
     public function getInterface($name) {
         $current_id = $this->getID();
         $html = "<select name=\"$name\" id=\"$name\">";
         $nothing = __("—");
-        $results = forward_static_call(array($this->target_model, 'selectWhere'), $this->getWhereFilter());
+        $results = $this->getSelection()->all();
         if (($this->dash_column !== false && ($this->dash_column === true || $this->getDisconnectReaction() != "CASCADE")) || count($results) == 0)
             $html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
         $selected = ' selected="selected"';
@@ -44,8 +38,6 @@ class SelectModelType extends PointerType {
             else
                 $label = strip_tags((string) $model);
             $id = $model->getID();
-            if (in_array($id, $this->denied_ids))
-                continue;
             $s = ($current_id == $id)? $selected: null;
             $out_list[$label] = "<option$s value=\"$id\">$label</option>";
         }

@@ -40,6 +40,6 @@ abstract class UniversialReferenceType extends \nmvc\AppType {
     }
 
     public function getSQLValue() {
-        return strfy(serialize($this->value));
+        return \nmvc\db\strfy(serialize($this->value));
     }
 }

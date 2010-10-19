@@ -1,4 +1,4 @@
-<?php namespace nmvc\qmi2;
+<?php namespace nmvc\qmi;
 
 class ActionsController extends \nmvc\AppController {
     /**

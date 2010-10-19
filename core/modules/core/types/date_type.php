@@ -32,7 +32,7 @@ class DateType extends \nmvc\AppType {
     }
 
     public function getSQLValue() {
-        return strfy($this->get());
+        return \nmvc\db\strfy($this->get());
     }
 
     public function getInterface($name) {

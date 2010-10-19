@@ -15,7 +15,7 @@ class TextType extends \nmvc\AppType {
     }
     
     public function getSQLValue() {
-        return strfy($this->value, $this->varchar_size);
+        return \nmvc\db\strfy($this->value, $this->varchar_size);
     }
     
     public function getInterface($name) {

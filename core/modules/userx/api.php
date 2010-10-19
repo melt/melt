@@ -83,7 +83,7 @@ function logout($redirect = true) {
         if (isset($_COOKIE["REMBR_USR_KEY"])) {
             // Unset this key, whomever it belongs too.
             if (strlen($_COOKIE["REMBR_USR_KEY"]) == 16) {
-                $user = UserModel::selectFirst("user_remember_key = " . strfy($_COOKIE['REMBR_USR_KEY']));
+                $user = UserModel::select()->where("user_remember_key")->is($_COOKIE['REMBR_USR_KEY'])->first();
                 if ($user !== null) {
                     $user->user_remember_key = "";
                     $user->store();
@@ -136,13 +136,13 @@ function get_user() {
     // Automatic login handler.
     if (isset($_POST['username']) && isset($_POST['password'])) {
         // Handle login attempt.
-        $username = strfy($_POST['username'], 512);
+        $username = $_POST['username'];
         $cleartext_password = $_POST['password'];
         if (config\MULTIPLE_IDENTITIES) {
-            $user_identity = UserIdentityModel::selectFirst("username = $username");
+            $user_identity = UserIdentityModel::select()->where("username")->is($username)->first();
             $user = ($user_identity !== null)? $user_identity->user: null;
         } else
-            $user = UserModel::selectFirst("username = $username");
+            $user = UserModel::select()->where("username")->is($username)->first();
         if ($user !== null) {
             $hashed_password = $user->password;
             if (validate_password($hashed_password, $cleartext_password)) {
@@ -195,7 +195,7 @@ function get_user() {
         if (!isset($_COOKIE['REMBR_USR_KEY']))
             return $auth_user = null;
         $time = time();
-        $auth_user = UserModel::selectFirst("user_remember_key = " . strfy($_COOKIE['REMBR_USR_KEY']) . " AND user_remember_key_expires > $time");
+        $auth_user = UserModel::select()->where("user_remember_key")->is($_COOKIE['REMBR_USR_KEY'])->and("user_remember_key_expires")->isMoreThan($time)->first();
         if ($auth_user === null) {
             setcookie("REMBR_USR_KEY", "", 0, config\COOKIE_HOST !== null? config\COOKIE_HOST: APP_ROOT_PATH);
             return null;

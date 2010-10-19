@@ -26,7 +26,7 @@
  * unlink() - No effect.
  *
  */
-abstract class Model implements \Iterator {
+abstract class Model {
     /**
      * Identifier of this data set or <= 0 if unlinked.
      * @var int
@@ -224,18 +224,6 @@ abstract class Model implements \Iterator {
         }
         $parsed_model_cache[$model_name] = $parsed_col_array;
         return $parsed_col_array;
-    }
-
-    /**
-     * Creates a new unlinked model instance.
-     * @deprecated
-     * @return Model A new unlinked model instance.
-     */
-    public static function insert() {
-        $name = get_called_class();
-        if (core\is_abstract($name))
-            trigger_error("'$name' is an abstract class and therefore can't be inserted/created/instantized.", \E_USER_ERROR);
-        return new $name();
     }
 
     /** @var boolean Set to true when loading and not inserting. */
@@ -468,27 +456,6 @@ abstract class Model implements \Iterator {
             return get_class($this) . " #" . $this->id;
     }
 
-    /** Allows foreach iteration on models. */
-    public function rewind() {
-        return reset($this->_cols);
-    }
-
-    public function current() {
-        return current($this->_cols);
-    }
-
-    public function key() {
-        return key($this->_cols);
-    }
-
-    public function next() {
-        return next($this->_cols);
-    }
-
-    public function valid() {
-        return current($this->_cols) !== false;
-    }
-
     /**
      * Returns a list of the column names.
      * Note: Does not return the implicit ID column.
@@ -524,10 +491,6 @@ abstract class Model implements \Iterator {
         return $this->_cols;
     }
 
-    public function link() {
-
-    }
-    
     /**
      * Stores any changes to this model instance to the database.
      * If this is a new instance, it's inserted, otherwise, it's updated.
@@ -571,7 +534,7 @@ abstract class Model implements \Iterator {
                 if (!$instance->isLinked())
                     continue;
                 $table_name = self::classNameToTableName(get_class($instance));
-                db\query("UPDATE " . table($table_name) . " SET `$ptr_field` = $id WHERE id = " . $instance->_id);
+                db\query("UPDATE " . db\table($table_name) . " SET `$ptr_field` = $id WHERE id = " . $instance->_id);
                 $instance->type($ptr_field)->setSyncPoint();
             }
         }
@@ -617,7 +580,7 @@ abstract class Model implements \Iterator {
         $this->_id = -1;
         // Unlink from database.
         $table_name = self::classNameToTableName($name);
-        db\query("DELETE FROM " . table($table_name) . " WHERE id = " . $old_id);
+        db\query("DELETE FROM " . db\table($table_name) . " WHERE id = " . $old_id);
         // Remove from instance cache.
         unset(self::$_instance_cache[$old_id]);
         // Remove pointers that gets broken by this unlink
@@ -630,11 +593,11 @@ abstract class Model implements \Iterator {
         if (isset($pointer_map[$name]))
         foreach ($pointer_map[$name] as $pointer) {
             list($child_model, $child_column) = $pointer;
-            $instances = $child_model::selectWhere("$child_column = $old_id");
+            $instances = $child_model::select()->where($child_column)->is($old_id)->all();
             if (count($instances) == 0)
                 continue;
             $table_name = self::classNameToTableName($child_model);
-            db\query("UPDATE " . table($table_name) . " SET `$child_column` = 0 WHERE $child_column = $old_id");
+            db\query("UPDATE " . db\table($table_name) . " SET `$child_column` = 0 WHERE $child_column = $old_id");
             foreach ($instances as $instance) {
                 // Reflect the broken pointer in memory too as a state where
                 // pointers also gets broken in memory on unlink is more
@@ -761,12 +724,12 @@ abstract class Model implements \Iterator {
         }
         $value_list = implode(',', $value_list);
         if (!db\config\USE_TRIGGER_SEQUENCING) {
-            db\run("UPDATE " . table('core\seq') . " SET id = LAST_INSERT_ID(id + 1)");
+            db\run("UPDATE " . db\table('core\seq') . " SET id = LAST_INSERT_ID(id + 1)");
             $id = "LAST_INSERT_ID()";
         } else {
             $id = 0;
         }
-        return "INSERT INTO " . table($table_name) . " (id, $key_list) VALUES ($id, $value_list)";
+        return "INSERT INTO " . db\table($table_name) . " (id, $key_list) VALUES ($id, $value_list)";
     }
 
     private function getUpdateSQL() {
@@ -788,7 +751,7 @@ abstract class Model implements \Iterator {
             return null;
         $value_list = implode(',', $value_list);
         $id = intval($this->_id);
-        return "UPDATE " . table($table_name) . " SET $value_list WHERE id = $id";
+        return "UPDATE " . db\table($table_name) . " SET $value_list WHERE id = $id";
     }
 
     /**
@@ -800,7 +763,7 @@ abstract class Model implements \Iterator {
         $id = intval($id);
         if ($id <= 0)
             return null;
-        $base_name = get_called_class();
+        $base_name = \get_called_class();
         $model = @self::$_instance_cache[$id];
         if ($model !== null)
             return ($model instanceof $base_name)? $model: null;
@@ -811,11 +774,57 @@ abstract class Model implements \Iterator {
             trigger_error("Model '$base_name' is out of sync with database.", \E_USER_ERROR);
         foreach ($family_tree[$base_name] as $table_name) {
             $model_class_name = self::tableNameToClassName($table_name);
-            $return_data = $model_class_name::findDataForSelf($model_class_name::getColumnNames(false), "WHERE id = $id");
-            if (count($return_data) > 0)
-                return $model_class_name::instanceFromData($id, reset($return_data));
+            $columns = $model_class_name::getColumnNames(false);
+            $query = "SELECT " . implode(",", $columns) . ",id FROM " . db\table(self::classNameToTableName($model_class_name)) . " WHERE id = $id";
+            $result = db\query($query);
+            $row = db\next_array($result);
+            if ($row !== false)
+                return $model_class_name::instanceFromData(intval(end($row)), $row);
         }
         return null;
+    }
+
+    /**
+     * Returns/begins a selection query for this model.
+     * @param mixed $fields Array of fields or single field to limit selection.
+     * Note that this is ignored when instancing selection. It is only useful
+     * when fetching data matrix directly or selecting in subqueries.
+     * @return db\SelectQuery
+     */
+    public static function select($fields = null) {
+        if ($fields !== null && !is_array($fiels))
+            $fields = array($fields);
+        return new db\SelectQuery(\get_called_class(), $fields);
+    }
+
+    /**
+     * Returns/begins a selection query for a child model of this model.
+     * @param string $child_model_name Class name of child model.
+     * @param mixed $fields Array of fields or single field to limit selection.
+     * Note that this is ignored when instancing selection. It is only useful
+     * when fetching data matrix directly or selecting in subqueries.
+     */
+    public final function selectChildren($child_model_name, $fields = null) {
+        $ptr_fields = $this->getChildPointers($child_model_name);
+        $id = $this->getID();
+        $select_query = new db\SelectQuery($child_model_name, $fields);
+        foreach ($ptr_fields as $ptr_field)
+            $select_query->or($ptr_field)->is($id);
+        return $select_query;
+    }
+
+    /** Returns the name of the child pointer fields. */
+    private static function getChildPointers($child_model_name) {
+        $model_name = \get_called_class();
+        $ptr_fields = array();
+        foreach ($child_model_name::getColumnNames(false) as $col_name) {
+            if (substr($col_name, -3) == "_id" &&
+            is($model_name, $child_model_name::getTargetModel($col_name)))
+                $ptr_fields[] = $col_name;
+        }
+        if (count($ptr_fields) == 0)
+            trigger_error("Invalid child model: '" . $child_model_name . "'. Does not contain pointer(s) to the model '$model_name'.", \E_USER_ERROR);
+        return $ptr_fields;
     }
 
     /**
@@ -825,7 +834,7 @@ abstract class Model implements \Iterator {
     private static function instanceFromData($id, $data_row) {
         if (isset(self::$_instance_cache[$id]))
             return self::$_instance_cache[$id];
-        $model_class_name = get_called_class();
+        $model_class_name = \get_called_class();
         self::$_skip_initialize = true;
         $instance = new $model_class_name();
         self::$_skip_initialize = false;
@@ -843,123 +852,12 @@ abstract class Model implements \Iterator {
     }
 
     /**
-    * @desc Returns an array of all children of the specified child model. (Instances that point to this instance.)
-    *       Will throw an exception if the specified child model does not point to this model.
-    * @desc For security reasons, use db\strfy() to escape and quote
-    *       any strings you want to build your sql query from.
-    * @param String $child_model Name of the child model that points to this model.
-    * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
-    * @param Integer $offset (OFFSET xyz) The offset from the begining to select results from.
-    * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
-    * @param String $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
-    * @return Array An array of the selected model instances.
-    */
-    public final function selectChildren($child_model, $where = "", $offset = 0, $limit = 0, $order = "") {
-        $ptr_fields = $this->getChildPointers($child_model);
-        $id = $this->getID();
-        // New models have no ID.
-        if ($id <= 0)
-            return array();
-        $where = trim($where);
-        if (strlen($where) > 0)
-            $where = " AND $where";
-        $where = "(\$" . implode(" = $id OR \$", $ptr_fields) . " = $id)" . $where;
-        return call_user_func(array($child_model, "selectWhere"), $where, $offset, $limit, $order);
-    }
-
-    /**
-     * Returns the number of children of the specified child model.
-     * (Instances that point to this instance.)
-     * Will throw an exception if the specified child model does not point
-     * to this model. For security reasons, use db\strfy() to escape and quote
-     * any strings you want to build your sql query from.
-     * @param string $chold_model Name of the child model that points
-     * to this model.
-     * @param string $where (WHERE xyz) If specified, any number of where
-     * conditionals to filter out rows.
-     * @return integer Count of child models.
-     */
-    public final function countChildren($child_model, $where = "") {
-        $ptr_fields = $this->getChildPointers($child_model);
-        $id = $this->getID();
-        $where = trim($where);
-        if (strlen($where) > 0)
-            $where = " AND $where";
-        $where = "(\$" . implode(" = $id OR \$", $ptr_fields) . " = $id)" . $where;
-        return $child_model::count($where);
-    }
-
-    /** Returns the name of the child pointer fields. */
-    private function getChildPointers($child_model_name) {
-        $model_name = get_class($this);
-        $ptr_fields = array();
-        foreach ($child_model_name::getColumnNames(false) as $col_name) {
-            if (substr($col_name, -3) == "_id" &&
-            is($model_name, $child_model_name::getTargetModel($col_name)))
-                $ptr_fields[] = $col_name;
-        }
-        if (count($ptr_fields) == 0)
-            trigger_error("Invalid child model: '" . $child_model_name . "'. Does not contain pointer(s) to the model '$model_name'.", \E_USER_ERROR);
-        return $ptr_fields;
-    }
-
-    /**
-     * This function selects the first model instance that matches the specified
-     * $where clause. If there are no match, it returns NULL.
-     * For security reasons, use db\strfy() to escape and quote
-     * @desc any strings you want to build your sql query from.
-     * @param string $where (WHERE xyz) If specified, any ammount of
-     * conditionals to filter out the row.
-     * @param string $order (ORDER BY xyz) Specify this to get the results in
-     * a certain order, like 'description ASC'.
-     * @return Model The model instance that matches or NULL if there
-     * are no match.
-     */
-    public static function selectFirst($where, $order = "") {
-        $match = self::selectWhere($where, 0, 1, $order);
-        if (count($match) == 0)
-            return null;
-        reset($match);
-        return current($match);
-    }
-
-    /**
-     * This function returns an array of model instances that is selected by the given SQL arguments.
-     * For security reasons, use db\strfy() to escape and quote
-     * any strings you want to build your sql query from.
-     * @param string $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
-     * @param integer $offset (OFFSET xyz) The offset from the begining to select results from.
-     * @param integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
-     * @param string $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
-     * @return array An array of the selected model instances.
-     */
-    public static function selectWhere($where = "", $offset = 0, $limit = 0, $order = "") {
-        $offset = intval($offset);
-        $limit = intval($limit);
-        if ($where != "")
-            $where = " WHERE " . $where;
-        if ($limit != 0)
-            $limit = " LIMIT " . $offset . "," . $limit;
-        else if ($offset != 0)
-            $limit = " LIMIT " . $offset . ",18446744073709551615";
-        else
-            $limit = "";
-        if ($order != "")
-            $order = " ORDER BY " . $order;
-        return self::selectFreely($where . $order . $limit);
-    }
-
-
-    /**
-     * This function returns an array of model instances that matches the
-     * given SQL commands.
-     * For security reasons, use db\strfy() to escape and quote
-     * any strings you want to build your sql query from.
-     * @param string $sql_select_param SQL command(s) that will be appended
-     * after the SELECT query for free selection.
+     * This function returns an array of model instances from
+     * the given select query.
+     * @param string $select_query
      * @return array An array of the selected model instances.
     */
-    public static function selectFreely($sql_select_param) {
+    public static function getInstancesForSelection(db\SelectQuery $select_query) {
         $name = get_called_class();
         $family_tree = self::getMetaData("family_tree");
         $out_array = array();
@@ -967,104 +865,101 @@ abstract class Model implements \Iterator {
             trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
         foreach ($family_tree[$name] as $table_name) {
             $model_class_name = self::tableNameToClassName($table_name);
-            $result_array = $model_class_name::findDataForSelf($model_class_name::getColumnNames(false), $sql_select_param);
-            foreach ($result_array as $id => $result_row)
+            $columns = $model_class_name::getColumnNames(false);
+            $columns[] = "id";
+            $select_query->setSelectFields($columns);
+            $result_array = $model_class_name::getDataForSelection($select_query);
+            foreach ($result_array as $result_row) {
+                $id = \intval(\end($result_row));
                 $out_array[$id] = $model_class_name::instanceFromData($id, $result_row);
+            }
         }
         return $out_array;
     }
 
-    /**
-     * Finding data. Compiles the data in an index based array matrix instead
-     * of instancing for performance. Use -> referencing in column selection
-     * or match conditions.
-     * @param string $where Filter conditions to match columns with.
-     * @param integer $offset Offset of data to start selecting from.
-     * @param integer $limit Limit of data rows to select.
-     * @param string $order (ORDER BY xyz) Specify this to get the results in a certain order, like 'description ASC'.
-     * @return array An matrix of returned data.
-     */
-    public static function findData($columns_to_select, $where = "", $offset = 0, $limit = 0, $order = "") {
-        // Compile and transform filter query.
-        if ($where != "")
-            $where = " WHERE " . $where;
-        if ($order != "")
-            $order = " ORDER BY " . $order;
-        $filter_query = $where . $order;
-        // Compile limit query.
-        $offset = intval($offset);
-        $limit = intval($limit);
-        if ($limit != 0)
-            $limit_query = " LIMIT " . $offset . "," . $limit;
-        else if ($offset != 0)
-            $limit_query = " OFFSET " . $offset;
-        else
-            $limit_query = "";
-        return static::findDataFreely($columns_to_select, $filter_query . " " . $limit_query);
-    }
 
     /**
-     * Finding data. Compiles the data in an index based array matrix instead
-     * of instancing for performance. Use -> referencing in column selection
-     * or match conditions.
-     * @param array $columns_to_select Columns to return in result.
-     * @param string $sql_select_params mySQL select parameters.
-     * @return array An matrix of returned data.
+     * Finds and returns the data for the given select query.
+     * @param string $select_query
+     * @return mixed
      */
-    public static function findDataFreely($columns_to_select, $sql_select_params) {
-        // Select for all child tables.
-        $name = get_called_class();
-        $family_tree = self::getMetaData("family_tree");
-        if (!isset($family_tree[$name]))
-            trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
-        $return_data = array();
-        foreach ($family_tree[$name] as $table_name) {
-            $model_class_name = self::tableNameToClassName($table_name);
-            $result_array = $model_class_name::findDataForSelf($columns_to_select, $sql_select_params);
-            $return_data = array_merge($return_data, $result_array);
+    public static function getDataForSelection(db\SelectQuery $select_query) {
+        $query = static::buildSelectQuery($select_query);
+        $result = db\query($query);
+        if ($select_query->getIsCounting()) {
+            $row = db\next_array($result);
+            return \intval($row[0]);
         }
+        $return_data = array();
+        while (false !== ($row = db\next_array($result)))
+            $return_data[] = $row;
         return $return_data;
     }
 
+    private static function getColumnPrototype($column_name) {
+        $column_name = static::translateFieldToColumn($column_name);
+        if ($column_name != "id") {
+            $prototype_types = static::getParsedColumnArray();
+            $prototype_type = $prototype_types[$column_name];
+            return array($column_name, $prototype_type);
+        } else {
+            return array("id", null);
+        }
+
+    }
+
     /**
-     * Registers a semantic pointer and returns the data array for it.
-     * @return array
+     * Registers a semantic pointer in context of called model class and
+     * returns the data for it. Used when building selection queries.
+     * Automatically generates left join for column if required.
+     * @param string $column_name Semantic column name (without starting $)
+     * @param array $columns_data Contains pointers mapped to (col_sql_ref, target_model, table_join_alias, left_join, prototype_type).
+     * @param integer $alias_offset Current alias offset (for table aliases to prevent column name collision).
+     * @return array Data array for column.
      */
-    private static function registerSemanticColumn($column_name, &$columns_data) {
+    public static function registerSemanticColumn($column_name, &$columns_data, &$alias_offset) {
         if (isset($columns_data[$column_name]))
             return $columns_data[$column_name];
-        $base_model_alias = string\from_index(0);
-        if (false === strpos($column_name, "->")) {
-            $col_sql_ref = $base_model_alias . '.' . static::translateFieldToColumn($column_name);
-            $columns_data[$column_name] = array($col_sql_ref, null, null, null);
+        if (!\array_key_exists("", $columns_data)) {
+            // Register base model alias.
+            $columns_data[""] = array(null, \get_called_class(), string\from_index($alias_offset), null, null);
+            $alias_offset++;
+        }
+        $base_model_alias = $columns_data[""][2];
+        if (false === \strpos($column_name, "->")) {
+            list($column_name, $prototype_type) = self::getColumnPrototype($column_name);
+            $col_sql_ref = $base_model_alias . '.' . $column_name;
+            $columns_data[$column_name] = array($col_sql_ref, null, null, null, $prototype_type);
             return $columns_data[$column_name];
         }
-        $ref_columns = explode("->", $column_name);
-        $parent_class = get_called_class();
-        $parent_alias = $base_model_alias;
+        $ref_columns = \explode("->", $column_name);
+        $parent_class = \get_called_class();
         $parent_pointer_column = $ref_columns[0];
         $parent_pointer = $cur_pointer = $ref_columns[0];
-        // (col_sql_ref, target_model, table_join_alias, left_join).
-        reset($ref_columns);
-        while (false !== $ref_column = next($ref_columns)) {
+        $parent_alias = $base_model_alias;
+        \reset($ref_columns);
+        while (false !== $ref_column = \next($ref_columns)) {
             if (substr($parent_pointer_column, -3) == "_id")
-                trigger_error("Syntax error in semantic query: Remove '_id' suffix when resolving pointer colum with the arrow operator.", \E_USER_ERROR);
+                \trigger_error("Syntax error in semantic query: Remove '_id' suffix when resolving pointer colum with the arrow operator.", \E_USER_ERROR);
             $parent_pointer_column .= "_id";
             if (!array_key_exists($parent_pointer_column, $parent_class::getPointerColumns()))
-                trigger_error("Syntax error in semantic query: The pointer column '$parent_pointer_column' is not declared for '$parent_class'!", \E_USER_ERROR);
+                \trigger_error("Syntax error in semantic query: The pointer column '$parent_pointer_column' is not declared for '$parent_class'!", \E_USER_ERROR);
             if (!isset($columns_data[$parent_pointer][1])) {
                 $cur_target_model = $columns_data[$parent_pointer][1] = $parent_class::getTargetModel($parent_pointer_column);
-                $cur_alias = $columns_data[$parent_pointer][2] = string\from_index(count($columns_data));
+                $cur_alias = $columns_data[$parent_pointer][2] = string\from_index($alias_offset);
+                $alias_offset++;
                 $target_table = self::classNameToTableName($cur_target_model);
-                $columns_data[$parent_pointer][3] = "LEFT JOIN " . table($target_table) . " AS $cur_alias ON $cur_alias.id = $parent_alias.$parent_pointer_column";
+                $columns_data[$parent_pointer][3] = "LEFT JOIN " . db\table($target_table) . " AS $cur_alias ON $cur_alias.id = $parent_alias.$parent_pointer_column";
             } else {
                 $cur_target_model = $columns_data[$parent_pointer][1];
                 $cur_alias = $columns_data[$parent_pointer][2];
             }
             $cur_pointer .= "->" . $ref_column;
             if (!isset($columns_data[$cur_pointer])) {
-                $col_sql_ref = $cur_alias . '.' . $cur_target_model::translateFieldToColumn($ref_column);
-                $columns_data[$cur_pointer] = array($col_sql_ref, null, null, null);
+                $column_name = static::translateFieldToColumn($ref_column);
+                list($column_name, $prototype_type) = self::getColumnPrototype($ref_column);
+                $col_sql_ref = $cur_alias . '.' . $column_name;
+                $columns_data[$cur_pointer] = array($col_sql_ref, null, null, null, $prototype_type);
             }
             $parent_class = $cur_target_model;
             $parent_alias = $cur_alias;
@@ -1075,96 +970,70 @@ abstract class Model implements \Iterator {
     }
 
     /**
-     * Transforms any semantic columns in the query to raw SQL references.
-     * @return string
+     * Builds a selection query in context of called model class.
      */
-    private static function transformSemanticColumnQuery($query, &$columns_data) {
-        // If query doesn't contain any dollars, there's no semantic column pointers.
-        if (false === strpos($query, '$'))
-            return $query;
-        // Tokenize query, break out column pointers.
-        $string_extracting_pattern = <<<EOP
-#([^"']+)|("(\\.|[^"])*"|'(\\.|[^'])*')#
-EOP;
-        $column_extract_pattern = <<<EOP
-#(\\$[a-zA-Z][a-zA-Z0-9_>-]*)|([^\\$]+)|\\$#
-EOP;
-        preg_match_all($string_extracting_pattern, $query, $matches, PREG_SET_ORDER);
-        $translated_query = '';
-        foreach ($matches as $match) {
-            $other_blob = $match[1];
-            if (strlen($other_blob) == 0) {
-                // Just pass string blobs on.
-                $string_blob = $match[2];
-                $translated_query .= $string_blob;
-                continue;
-            }
-            preg_match_all($column_extract_pattern, $other_blob, $tokens, PREG_SET_ORDER);
-            foreach ($tokens as $token) {
-                if (isset($token[2]) && strlen($token[2]) > 0) {
-                    // Just pass non-semantic column reference tokens on.
-                    $translated_query .= $token[2];
-                    continue;
-                }
-                // Replace the semantic column reference with a sql reference.
-                $col_token = $token[1];
-                $column_name = substr($col_token, 1);
-                $column_data = static::registerSemanticColumn($column_name, $columns_data);
-                $translated_query .= $column_data[0];
-            }
-        }
-        return $translated_query;
-    }
-
-    /**
-     * Finding data just for the model it was called on. (Used internally.)
-     * Compiles the data in an index based array matrix instead
-     * of instancing for performance. Use -> referencing in column selection
-     * or match conditions.
-     * @param array $columns_to_select Columns to return in result.
-     * @param string $sql_select_params mySQL select parameters.
-     * @param bool $supress_id Set to true to supress the ID column and not return any ID in result.
-     * @return array An matrix of returned data.
-     */
-    protected static function findDataForSelf($columns_to_select, $sql_select_params, $supress_id = false) {
-        // SELECT a.per_module, a.peak, b.shortcode, c.name FROM `consumption` AS a LEFT JOIN `media` AS b ON b.id = a.media_id
-        $alias_offset = 1;
-        // Contains pointers mapped to (col_sql_ref, target_model, table_join_alias, left_join).
-        $columns_data = array();
-        // Register all semantic columns.
-        foreach ($columns_to_select as &$column) {
-            if ($column[0] != '$' && strpos($column, '(') === false) {
-                $column_data = static::registerSemanticColumn($column, $columns_data);
+    private static function buildSelectQuery(db\SelectQuery $select_query, $columns_data = array(), $alias_offset = 1) {
+        if ($select_query->getIsCounting()) {
+            $columns_sql = "COUNT(*)";
+        } else {
+            $select_fields = $select_query->getSelectFields();
+            if (!\is_array($select_fields) || \count($select_fields) == 0)
+                \trigger_error("Selecting zero columns is not allowed. (Redundant)", \E_USER_ERROR);
+            // Register/process all semantic columns.
+            foreach ($select_fields as &$column) {
+                $column_data = static::registerSemanticColumn($column, $columns_data, $alias_offset);
                 $column = $column_data[0];
-            } else {
-                // Do not check if column exists, can be a viritual mySQL
-                // column like COUNT(*) for example.
-                $column = static::translateFieldToColumn($column, false);
+            }
+            $columns_sql = \implode(",", $select_fields);
+        }
+        $from_model = $select_query->getFromModel();
+        if ($from_model === null)
+            \trigger_error("Given select query does not have an associated model.", \E_USER_ERROR);
+        $select_tokens = $select_query->getSelectSQLTokens();
+        $sql_select_expr = "";
+        if (\count($select_tokens) > 0) {
+            $current_field_prototype_type = null;
+            $alias_offset = 0;
+            foreach ($select_tokens as $token) {
+                if (\is_string($token)) {
+                    $sql_select_expr .= " " . $token;
+                } else if ($token instanceof db\ModelField) {
+                    $column_data = $from_model::registerSemanticColumn($token->getName(), $columns_data, $alias_offset);
+                    $sql_select_expr .= " " . $column_data[0];
+                    $current_field_prototype_type = $column_data[4];
+                } else if ($token instanceof db\ModelFieldValue) {
+                    if ($current_field_prototype_type !== null) {
+                        $current_field_prototype_type->set($token->getValue());
+                        $sql_select_expr .= " " . $current_field_prototype_type->getSQLValue();
+                    } else {
+                        $sql_select_expr .= " " . intval($token->getValue());
+                    }
+                } else if ($token instanceof db\SelectQuery) {
+                    // Inner selection.
+                    $sql_select_expr .= " (";
+                    $inner_columns_data = array();
+                    $sql_select_expr .= static::buildSelectQuery($token, $inner_columns_data, $alias_offset);
+                    $sql_select_expr .= ")";
+                }
             }
         }
-        if (count($columns_to_select) == 0)
-            trigger_error("Selecting zero columns is not allowed. (Redundant)", \E_USER_ERROR);
-        $sql_select_columns = ($supress_id? "": string\from_index(0) . ".id,") . implode(",", $columns_to_select);
-        $sql_select_columns = static::transformSemanticColumnQuery($sql_select_columns, $columns_data);
-        // Transform any semantic column references to hard SQL ones.
-        $sql_select_params = static::transformSemanticColumnQuery($sql_select_params, $columns_data);
         // Compile left joins.
-        $left_joins = array();
-        foreach ($columns_data as $column_data) {
-            $left_join = $column_data[3];
+        $left_joins_sql = array();
+        foreach ($columns_data as $column_datas) {
+            $left_join = $column_datas[3];
             if ($left_join != null)
-                $left_joins[] = $left_join;
+                $left_joins_sql[] = $left_join;
         }
-        $left_joins = implode(" ", $left_joins);
+        $left_joins_sql = \implode(" ", $left_joins_sql);
         // Evaluate the from_name which can be a table or a view that defines a partition.
-        $class_name = get_called_class();
+        $class_name = \get_called_class();
         static $from_names = array();
-        if (!array_key_exists($class_name, $from_names)) {
+        if (!\array_key_exists($class_name, $from_names)) {
             $partition_filter = $class_name::getDatabasePartitionFilter();
-            $table_name = table(self::classNameToTableName($class_name));
+            $table_name = db\table(self::classNameToTableName($class_name));
             if ($partition_filter !== null) {
-                $from_name = \nmvc\db\config\PREFIX . "nprt/" . substr($table_name, 1, -1) . "/" . substr(sha1($partition_filter, false), 0, 8);
-                $result = db\next_array(db\query("SELECT count(*) FROM `INFORMATION_SCHEMA`.`VIEWS` WHERE `TABLE_SCHEMA` = " . strfy(\nmvc\db\config\NAME) . " AND `TABLE_NAME` = '$from_name';"));
+                $from_name = \nmvc\db\config\PREFIX . "nprt/" . \substr($table_name, 1, -1) . "/" . \substr(\sha1($partition_filter, false), 0, 8);
+                $result = db\next_array(db\query("SELECT count(*) FROM `INFORMATION_SCHEMA`.`VIEWS` WHERE `TABLE_SCHEMA` = " . db\strfy(\nmvc\db\config\NAME) . " AND `TABLE_NAME` = '$from_name';"));
                 $from_name = "`$from_name`";
                 $view_exists = $result[0] != 0;
                 if (!$view_exists)
@@ -1174,135 +1043,12 @@ EOP;
             $from_names[$class_name] = $from_name;
         } else
             $from_name = $from_names[$class_name];
-        // Comple the rest of the query.
-        $main_alias = string\from_index(0);
-        $found_rows_inject = self::$_have_pending_row_count? "SQL_CALC_FOUND_ROWS": "";
-        $query = "SELECT $found_rows_inject $sql_select_columns FROM $from_name AS $main_alias $left_joins $sql_select_params";
-        $result = db\query($query);
-        if (self::$_have_pending_row_count) {
-            $found_rows_result = db\next_array(db\query("SELECT FOUND_ROWS()"));
-            self::$_found_row_count += intval($found_rows_result[0]);
-        }
-        $return_data = array();
-        if (!$supress_id) while (false !== ($row = db\next_array($result)))
-            $return_data[$row[0]] = array_splice($row, 1);
-        else while (false !== ($row = db\next_array($result)))
-            $return_data[] = $row;
-        return $return_data;
+        $main_alias = $columns_data[""][2];
+        if ($select_query->getIsCalcFoundRows())
+            $columns_sql .= " SQL_CALC_FOUND_ROWS";
+        return "SELECT $columns_sql FROM $from_name AS $main_alias $left_joins_sql $sql_select_expr";
     }
-
-    private static $_have_pending_row_count = false;
-    private static $_found_row_count;
-
-    /**
-     * Will start counting how many results would have been returned
-     * without limit statements. This can decreese the performance of
-     * queries greatly so make sure you call stopCountNolimit() when
-     * you are done counting.
-     * @return void
-     */
-    public static function startCountNolimit() {
-        self::$_have_pending_row_count = true;
-        self::$_found_row_count = 0;
-    }
-
-    /**
-     * Returns the number of results that would have been returned
-     * without limit statements, and stops counting.
-     * @return integer
-     */
-    public static function stopCountNolimit() {
-        self::$_have_pending_row_count = false;
-        return self::$_found_row_count;
-    }
-
-    /**
-     * This function unlinks the model instance with the given ID.
-     * @param integer $id The ID of the model instance to unlink.
-     * @return bool TRUE if model instance was found and unlinked,
-     * otherwise FALSE.
-     */
-    public static function unlinkByID($id) {
-        $instance = forward_static_call(array('nmvc\Model', "selectByID"), $id);
-        if ($instance !== null) {
-            $instance->unlink();
-            return true;
-        } else
-            return false;
-    }
-    /**
-     * This function unlinks the selection of instances that matches the given SQL commands.
-     * For security reasons, use db\strfy() to escape and quote
-     * any strings you want to build your SQL query from.
-     * @param String $sqldata SQL command(s) that will be appended after the DELETE query for free selection.
-     * @return integer Number of model instances found and unlinked.
-     */
-    public static function unlinkFreely($sqldata) {
-        $instances = forward_static_call(array('nmvc\Model', "selectFreely"), $sqldata);
-        foreach ($instances as $instance)
-            $instance->unlink();
-        return count($instances);
-    }
-
-    /**
-     * This function removes the selection of fields that matches the
-     * given SQL arguments.
-     * For security reasons, use db\strfy() to escape and quote
-     * any strings you want to build your sql query from.
-     * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
-     * @param Integer $offset (OFFSET xyz) The offset from the begining to select results from.
-     * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
-     * @return integer Number of model instances found and unlinked.
-     */
-    public static function unlinkWhere($where = "", $offset = 0, $limit = 0) {
-        $instances = forward_static_call(array('nmvc\Model', "selectWhere"), $where, $offset, $limit);
-        foreach ($instances as $instance)
-            $instance->unlink();
-        return count($instances);
-    }
-
-    /**
-     * Removes all children of the specified child model.
-     * Instances with a pointer which points to this instance.
-     * Will throw an exception if the specified child model does not point
-     * to this model.
-     * For security reasons, use db\strfy() to escape and quote
-     * any strings you want to build your sql query from.
-     * @param String $chold_model Name of the child model that points to this model.
-     * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
-     * @param Integer $offset (OFFSET xyz) The offset from the begining to unlink results from.
-     * @param Integer $limit (LIMIT offset,xyz) If you want to limit the number of results, specify this.
-     * @return integer Number of model instances found and unlinked.
-     */
-    public final function unlinkChildren($child_model, $where = "", $offset = 0, $limit = 0) {
-        $instances = $this->selectChildren($child_model, $where, $offset, $limit);
-        foreach ($instances as $instance)
-            $instance->unlink();
-        return count($instances);
-    }
-
-    /**
-    * @desc This function counts the number of model instances that matches given SQL arguments.
-    * @desc For security reasons, use db\strfy() to escape and quote
-    * @desc any strings you want to build your sql query from.
-    * @param String $where (WHERE xyz) If specified, any number of where conditionals to filter out rows.
-    * @return Integer Number of matched rows.
-    */
-    public static function count($where = "") {
-        if (trim($where) != "")
-            $where = " WHERE " . $where;
-        $family_tree = self::getMetaData("family_tree");
-        $count = 0;
-        $name = get_called_class();
-        if (!isset($family_tree[$name]))
-            trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
-        foreach ($family_tree[$name] as $table_name) {
-            $rows = static::findDataForSelf(array("COUNT(*)"), $where, true);
-            $count += intval($rows[0][0]);
-        }
-        return $count;
-    }
-
+    
     protected static function tableNameToClassName($table_name) {
         static $cache = array();
         if (!isset($cache[$table_name])) {
@@ -1314,11 +1060,17 @@ EOP;
         return $cache[$table_name];
     }
 
+    /**
+     * This function defines how model class names
+     * are translated into table names.
+     * @param string $class_name
+     * @return string
+     */
     protected static function classNameToTableName($class_name) {
         static $cache = array();
         if (!isset($cache[$class_name])) {
-            // Remove nmvc prefix and Model suffix.
             $table_name = string\cased_to_underline(substr($class_name, 5, -5));
+            $table_name = str_replace("\\", "__", $table_name);
             $cache[$class_name] = $table_name;
         }
         return $cache[$class_name];
@@ -1339,7 +1091,7 @@ EOP;
     protected static function getMetaData($key) {
         if (isset(self::$_metadata_cache[$key]))
             return self::$_metadata_cache[$key];
-        $result = db\query("SELECT v FROM " . table('core__metadata') . " WHERE k = " . strfy($key));
+        $result = db\query("SELECT v FROM " . db\table('core__metadata') . " WHERE k = " . db\strfy($key));
         $result = db\next_array($result);
         if ($result !== false)
             $result = unserialize($result[0]);
@@ -1349,7 +1101,7 @@ EOP;
 
     protected static function setMetaData($key, $value) {
         self::$_metadata_cache[$key] = $value;
-        db\run("REPLACE INTO " . table('core__metadata') . " (k,v) VALUES (" . strfy($key) . "," . strfy(serialize($value)) . ")");
+        db\run("REPLACE INTO " . db\table('core__metadata') . " (k,v) VALUES (" . db\strfy($key) . "," . db\strfy(serialize($value)) . ")");
     }
 
     /**
@@ -1412,14 +1164,14 @@ EOP;
         $found_count = 0;
         foreach ($model_classes as $table_name => $model_class) {
             $column_names = $model_class::getColumnNames();
-            $description = db\query("DESCRIBE " . table($table_name));
+            $description = db\query("DESCRIBE " . db\table($table_name));
             while (false !== ($column = db\next_assoc($description))) {
                 $field_name = $column["Field"];
                 if ($field_name == "id")
                     continue;
                 // Purify dirty column.
                 if (!\array_key_exists($field_name, $column_names)) {
-                    db\query("ALTER TABLE " . table($table_name) . " DROP COLUMN `" . $field_name . "`");
+                    db\query("ALTER TABLE " . db\table($table_name) . " DROP COLUMN `" . $field_name . "`");
                     $found_count++;
                 }
             }
@@ -1449,9 +1201,9 @@ EOP;
             foreach ($model_classes as $table_name_b => $model_class_b) {
                 if ($table_name_b == $table_name_a)
                     continue;
-                $in_table[] = "(id IN (SELECT id FROM " . table($table_name_b) . "))";
+                $in_table[] = "(id IN (SELECT id FROM " . db\table($table_name_b) . "))";
             }
-            $rows = db\query("SELECT id FROM " . table($table_name_a) . " WHERE " . implode(" OR ", $in_table));
+            $rows = db\query("SELECT id FROM " . db\table($table_name_a) . " WHERE " . implode(" OR ", $in_table));
             $row_count = db\get_num_rows($rows);
             if ($row_count == 0)
                 continue;
@@ -1459,8 +1211,8 @@ EOP;
             while (false !== ($row = db\next_array($rows))) {
                 $id = intval($row[0]);
                 // Insert the row again to gain new id and delete the old corrupt copy.
-                db\query("INSERT IGNORE INTO " . table($table_name_a) . " SELECT * FROM " . table($table_name_a) . " WHERE id = " . $id);
-                db\query("DELETE FROM " . table($table_name_a) . " WHERE id = " . $id);
+                db\query("INSERT IGNORE INTO " . db\table($table_name_a) . " SELECT * FROM " . db\table($table_name_a) . " WHERE id = " . $id);
+                db\query("DELETE FROM " . db\table($table_name_a) . " WHERE id = " . $id);
             }
         }
         echo "\nSearching for corrupt pointers...\n\n";
@@ -1475,7 +1227,7 @@ EOP;
                 if (!isset($family_tree[$target_model]))
                     trigger_error("Model '$target_model' is out of sync with database.", \E_USER_ERROR);
                 foreach ($family_tree[$target_model] as $table_name)
-                    $query[] = "($ptr_name NOT IN (SELECT id FROM " . table($table_name) . "))";
+                    $query[] = "($ptr_name NOT IN (SELECT id FROM " . db\table($table_name) . "))";
                 if (count($query) > 0) {
                     $query = implode(" OR ", $query);
                     $instances = $model_class::selectFreely("WHERE $ptr_name > 0 AND ($query)");
@@ -1484,7 +1236,7 @@ EOP;
                         echo "\nFound " . count($instances) . " instances of " . $model_class . " with their " . $ptr_name . " pointer broken! Repairing...\n\n";
                         // Remove pointers from database (nullify).
                         $table_name = self::classNameToTableName($model_class);
-                        db\query("UPDATE " . table($table_name) . " SET `$ptr_name` = 0 WHERE id IN (" . implode(",", array_keys($instances)) . ")");
+                        db\query("UPDATE " . db\table($table_name) . " SET `$ptr_name` = 0 WHERE id IN (" . implode(",", array_keys($instances)) . ")");
                         // Reflect the broken pointers in memory.
                         foreach ($instances as $instance) {
                             $column = $instance->_cols[$ptr_name];
@@ -1503,7 +1255,7 @@ EOP;
                 // The cascade reaction also implies that the ID is not NULL.
                 // Unlink all models with NULL cascade marked pointers.
                 if ($disconnect_reaction == "CASCADE") {
-                    $instances = $model_class::selectWhere("$ptr_name <= 0");
+                    $instances = $model_class::select()->where($ptr_name)->isntMoreThan(0)->all();
                     if (count($instances) == 0)
                         continue;
                     echo "\nFound " . count($instances) . " instances of " . $model_class . " with their CASCADE pointer " . $ptr_name . " unset! Marking them for cascade unlinking...\n\n";
@@ -1524,7 +1276,7 @@ EOP;
 
     private static function validateCoreSeq() {
         // Validate that seq has correct structure.
-        $core_seq = db\query("DESCRIBE " . table('core__seq'));
+        $core_seq = db\query("DESCRIBE " . db\table('core__seq'));
         $column_desc = db\next_assoc($core_seq);
         if ($column_desc === null)
             return false;
@@ -1553,16 +1305,16 @@ EOP;
         ignore_user_abort(true);
         set_time_limit(0);
         // Clear nanomvc partitioning views as they need to be recreated when adding fields.
-        $result = db\query("SELECT TABLE_NAME FROM `INFORMATION_SCHEMA`.`VIEWS` WHERE `TABLE_SCHEMA` = " . strfy(\nmvc\db\config\NAME) . " AND `TABLE_NAME` LIKE '" . db\config\PREFIX . "nprt/%';");
+        $result = db\query("SELECT TABLE_NAME FROM `INFORMATION_SCHEMA`.`VIEWS` WHERE `TABLE_SCHEMA` = " . db\strfy(db\config\NAME) . " AND `TABLE_NAME` LIKE '" . db\config\PREFIX . "nprt/%';");
         while (false !== ($row = db\next_array($result)))
-            db\query("DROP VIEW " . table($row[0]));
+            db\query("DROP VIEW " . db\table($row[0]));
         // Clear metadata.
-        db\run("DROP TABLE " . table('core__metadata'));
-        db\run("CREATE TABLE " . table('core__metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
+        db\run("DROP TABLE " . db\table('core__metadata'));
+        db\run("CREATE TABLE " . db\table('core__metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");
         $creating_sequence = !in_array(db\config\PREFIX . 'core__seq', db\get_all_tables());
         if (!$creating_sequence) {
             // Validate that seq still has one row.
-            $result = db\query("SELECT count(*) FROM " . table('core__seq'));
+            $result = db\query("SELECT count(*) FROM " . db\table('core__seq'));
             $row = db\next_array($result);
             $creating_sequence = ($row[0][0] != 1);
             if (!$creating_sequence)
@@ -1584,7 +1336,7 @@ EOP;
             }
             // If creating sequence, record max.
             if ($creating_sequence) {
-                $max_result = db\next_array(db\query("SELECT MAX(id) FROM " . table($table_name)));
+                $max_result = db\next_array(db\query("SELECT MAX(id) FROM " . db\table($table_name)));
                 $max_result = intval($max_result[0]);
                 if ($sequence_max < $max_result)
                     $sequence_max = $max_result;
@@ -1607,9 +1359,9 @@ EOP;
         self::setMetaData("family_tree", $family_tree);
         if ($creating_sequence) {
             // Need to create the sequence.
-            db\run("DROP TABLE " . table('core__seq'));
-            db\query("CREATE TABLE " . table('core__seq') . " (id BIGINT PRIMARY KEY NOT NULL)");
-            db\query("INSERT INTO " . table('core__seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
+            db\run("DROP TABLE " . db\table('core__seq'));
+            db\query("CREATE TABLE " . db\table('core__seq') . " (id BIGINT PRIMARY KEY NOT NULL)");
+            db\query("INSERT INTO " . db\table('core__seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
         }
     }
 }

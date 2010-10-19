@@ -1,9 +1,9 @@
 <?php namespace nmvc\core;
 
 class EnumCopyType extends \nmvc\core\TextType {
-    /** @var Where condition to filter targets. */
-    private $where = "";
-    /** @var Targeting options. */
+    /** @var \nmvc\db\SelectQuery Target model selection. */
+    private $selection = "";
+    /* Targeting options. */
     private $label_column;
     private $target_model;
 
@@ -14,7 +14,7 @@ class EnumCopyType extends \nmvc\core\TextType {
             trigger_error("Attempted to declare a pointer pointing to a non existing model '$target_model'.");
         $this->target_model = $target_model;
         $this->label_column = $label_column;
-        $this->where = $where;
+        $this->selection = $target_model::select();
     }
 
     public function getInterface($name) {
@@ -22,7 +22,7 @@ class EnumCopyType extends \nmvc\core\TextType {
         $html = "<select name=\"$name\" id=\"$name\">";
         $nothing = __("—");
         $html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
-        $results = forward_static_call(array($this->target_model, 'selectWhere'), $this->where);
+        $results = $this->selection->all();
         $selected = ' selected="selected"';
         foreach ($results as $model) {
             if (isset($model->{$this->label_column}))
@@ -44,7 +44,7 @@ class EnumCopyType extends \nmvc\core\TextType {
             return;
         }
         // If this is an invalid ID, set to null.
-        $where = trim($this->where);
+        $where = trim($this->selection);
         if ($where != "")
             $where .= " AND ";
         $selected = forward_static_call(array($this->target_model, 'selectById'), $value);

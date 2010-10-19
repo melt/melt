@@ -1,4 +1,4 @@
-<?php namespace nmvc\qmi2;
+<?php namespace nmvc\qmi;
 
 /**
  * An interface to a model.
@@ -32,7 +32,7 @@ class ModelInterface {
 
     /**
      * Returns an instance key that identifies an instance as it is
-     * stored in the database and not as qmi2\getInstanceKey
+     * stored in the database and not as qmi\getInstanceKey
      * (as represented in-memory).
      */
     private static function getDatabaseInstanceKey(\nmvc\Model $instance) {
@@ -47,8 +47,8 @@ class ModelInterface {
     private function getMemoryInstanceKey(\nmvc\Model $instance = null) {
         if ($instance === null)
             return null;
-        $instance_key = spl_object_hash($instance);
-        if (!in_array($instance_key, $this->instances))
+        $instance_key = \spl_object_hash($instance);
+        if (!\array_key_exists($instance_key, $this->instances))
             $this->instances[$instance_key] = $instance;
         return $instance_key;
     }
@@ -58,7 +58,7 @@ class ModelInterface {
      */
     private function instanceAdded(\nmvc\Model $instance = null) {
         $instance_key = spl_object_hash($instance);
-        return in_array($instance_key, $this->instances);
+        return \array_key_exists($instance_key, $this->instances);
     }
 
     /**
@@ -66,7 +66,7 @@ class ModelInterface {
      * to the interface that will be stored after successful validation.
      * Neither the source model, nor the target model
      * is required to be linked at the time of calling this function.
-     * If they aren't qmi2 will automatically insert and store them,
+     * If they aren't qmi will automatically insert and store them,
      * then link them afterwards.
      * @param \nmvc\Model $source_model Relation source. The model with the
      * pointer.
@@ -131,7 +131,7 @@ class ModelInterface {
      * Attaches an array of changes that should be stored for this instance
      * on validation success. The array is field name => new value mapped.
      * The field names must be pointer types. Relations should be attached
-     * using qmi2\ModelInterface::attachRelation().
+     * using qmi\ModelInterface::attachRelation().
      * @param Model $instance
      * @param array $values
      * @return void
@@ -150,7 +150,7 @@ class ModelInterface {
 
     /**
      * This function loops trough all attributes for the given instance
-     * and calls qmi2\attachChange() for every non stored change.
+     * and calls qmi\attachChange() for every non stored change.
      * Additionally, if it finds pointers that have changed,
      * those relations will be automatically attached.
      * Relations to unlinked models are also counted as changes.
@@ -181,10 +181,10 @@ class ModelInterface {
     /**
      * This function attaches the specified fields on the instance
      * to this model interface and returns HTML interfaces for each of them.
-     * qmi2\ModelInterface::attachChanges() is also
+     * qmi\ModelInterface::attachChanges() is also
      * automatically called for the given instance, so you can model changes
      * directly on the instanc before generating the form.
-     * See qmi2\print_interface() for an example on how to treat the output.
+     * See qmi\print_interface() for an example on how to treat the output.
      * @param \nmvc\Model $instance Model instance to interface.
      * @param array $fields Names of the fields to get interfaces for.
      * @param string $component_css_class CSS class used for each and

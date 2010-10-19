@@ -5,11 +5,11 @@ if (\substr(REQ_URL, 0, 6) == "/core/")
 \session_set_save_handler(function() {}, function() {
 },function($id) {
     // Read.
-    $session_data = \nmvc\core\SessionDataModel::selectFirst("session_key = " . strfy($id));
+    $session_data = \nmvc\core\SessionDataModel::select()->where("session_key")->is($id)->first();
     return $session_data !== null? $session_data->session_data: null;
 }, function($session_key, $binary_session_data) {
     // Write.
-    $session_data = \nmvc\core\SessionDataModel::selectFirst("session_key = " . strfy($session_key));
+    $session_data = \nmvc\core\SessionDataModel::select()->where("session_key")->is($session_key)->first();
     if ($session_data === null) {
         $session_data = new \nmvc\core\SessionDataModel();
         $session_data->session_key = $session_key;
@@ -18,12 +18,12 @@ if (\substr(REQ_URL, 0, 6) == "/core/")
     $session_data->store();
 }, function($id) {
     // Destroy.
-    \nmvc\core\SessionDataModel::unlinkWhere("session_key = " . strfy($id));
+    \nmvc\core\SessionDataModel::select()->where("session_key")->is($id)->unlink();
 }, function($maxlifetime) {
     // GC.
     $maxlifetime = intval($maxlifetime);
     $time = time();
-    \nmvc\core\SessionDataModel::unlinkWhere("($time - last_store_attempt) > $maxlifetime");
+    \nmvc\core\SessionDataModel::select()->where("last_store_attempt").lessThan($time - $maxlifetime)->unlink();
 });
 \session_start();
 // Make sure sessions are written before we loose object instancing capability.

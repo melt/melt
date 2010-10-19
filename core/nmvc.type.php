@@ -13,7 +13,10 @@ abstract class Type {
     /** @var mixed The original value that was set from SQL. */
     protected $original_value = null;
 
-    /** Returns the value from the last sync point. */
+    /**
+     * Returns the value from the last sync point.
+     * @return mixed
+     */
     public function getSyncPoint() {
         return $this->original_value;
     }
@@ -21,46 +24,46 @@ abstract class Type {
     /**
      * Called to indicate that the type was synced so
      * that it can measure changes made from this point.
+     * @return void
      */
     public function setSyncPoint() {
         $this->original_value = $this->value;
     }
 
-    /** Returns TRUE if this type has changed since the last syncronization. */
+    /**
+     * Returns TRUE if this type has changed since the last syncronization.
+     * @return boolean
+     */
     public function hasChanged() {
         return $this->original_value != $this->value;
     }
 
-    /** @desc Returns the value of this typed field. */
+    /**
+     * Returns the value of this typed field.
+     * @return mixed
+     */
     public function get() {
         return $this->value;
     }
-    /** Sets the value of this typed field. */
+    /**
+     * Sets the value of this typed field.
+     * @param mixed $value
+     * @return void
+     */
     public function set($value) {
         $this->value = $value;
     }
 
-    /** Constructs this typed field with this column name. */
+    /**
+     * Constructs this typed field with this column name.
+     */
     public function __construct($column_name) {
         $this->key = $column_name;
     }
 
-    /** Event responsible for preparing the SQL value to be stored in the database. */
-    public function prepareSQLValue() {}
-
-    /** Returns the data in a SQLized storeable form. */
-    abstract public function getSQLValue();
-
-    public function setSQLValue($value) {
-        $this->value = $value;
-    }
-
-    /** Should return the SQL type that this input is stored in. */
-    abstract public function getSQLType();
-
     /**
-     * HTML representation of type instance.
-     * Just prints the value by default.
+     * Responsible for HTML representation of type instance.
+     * @return string HTML
      */
     public function __toString() {
         return escape($this->value);
@@ -82,4 +85,33 @@ abstract class Type {
      * @param string $name The HTML name of the component.
      */
     abstract public function readInterface($name);
+
+    /**
+     * Event responsible for preparing the SQL value
+     * to be stored in the database.
+     */
+    public function prepareSQLValue() {}
+
+    /**
+     * Responsible for converting internal value of this type into SQL token
+     * in an injective, deterministic manner.
+     * @return string SQL token
+     */
+    abstract public function getSQLValue();
+
+    /**
+     * Responsible for setting the type from a SQL result.
+     * @param mixed $value
+     * @return void
+     */
+    public function setSQLValue($value) {
+        $this->value = $value;
+    }
+
+    /**
+     * Responsible for returning the MySQL type that this type uses for
+     * database storage of its value.
+     * @return string MySQL type (e.g. BIGINT)
+     */
+    abstract public function getSQLType();
 }

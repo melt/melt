@@ -11,7 +11,7 @@ abstract class GroupPermissionModel_app_overrideable extends \nmvc\AppModel {
     public $group_id = array('core\SelectModelType', 'userx\GroupModel');
 
     public static function getPermission($controller, GroupModel $group) {
-        $permission = self::selectFirst("controller = " . strfy($controller) . " AND group_id = " . $group->id);
+        $permission = self::select()->where("controller")->is($controller)->and("group_id")->is($group->id)->first();
         if ($permission === null)
             return "Deny";
         return $permission->permission;

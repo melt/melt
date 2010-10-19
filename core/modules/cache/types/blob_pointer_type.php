@@ -117,7 +117,7 @@ abstract class BlobPointerType extends \nmvc\core\PointerType {
             return null;
         // Returns the tag for the blob I'm pointing to.
         // Uses SQL querying to prevent loading BLOB into memory.
-        $result = \nmvc\db\query("SELECT tag,ext,one_way_key FROM " . table('cache\blob') . " WHERE id = " . intval($this->value));
+        $result = \nmvc\db\query("SELECT tag,ext,one_way_key FROM " . \nmvc\db\table(BlobModel::getTableName()) . " WHERE id = " . intval($this->value));
         $result = \nmvc\db\next_array($result);
         if (!is_array($result))
             return null;
