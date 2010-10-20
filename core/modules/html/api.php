@@ -11,6 +11,7 @@ function write($head, $body) {
 
 /** Escapes given string so it can be safely printed in HTML. */
 function escape($string) {
+    $string = (string) $string;
     $ret = htmlspecialchars($string, ENT_COMPAT, 'UTF-8');
     if ($string != "" && $ret == "") {
         // Invalid UTF-8. Gusss that string is iso-8859-1.
