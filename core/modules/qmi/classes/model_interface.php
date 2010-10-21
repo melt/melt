@@ -1,28 +1,66 @@
 <?php namespace nmvc\qmi;
 
 /**
- * An interface to a model.
- * Designed to be used directly in the view.
+ * An interface to one or more model instances.
  */
 class ModelInterface {
     private $instances = array();
     private $components = array();
     private $setters = array();
     private $autolinks = array();
-    private $final_callback = null;
+    private $interface_name = null;
     private $success_url;
     private $creating = true;
+    private $default_style;
 
     /**
-     * Constructs this interface. Prints a HTML form start tag.
+     *
+     * @param string $interface_name Name of interface (it's identifier).
+     * Used for selecting validation and components to return for models.
+     * Also used for selecting callback.
+     * @param string $default_style
+     * @param string $success_url Where default handler should redirect
+     * interface on success.
      */
-    public function __construct($success_url = null, $extra_attributes = array()) {
-        // Initialize interface data
+    public function __construct($interface_name, $default_style = "default", $success_url = null) {
+        if (!\preg_match('#^\w+(\\\\\w+)?$#', $interface_name))
+            \trigger_error(__CLASS__ . " error: Unexpected \$interface_name format: $interface_name", \E_USER_ERROR);
+        $this->interface_name = $interface_name;
+        $this->default_style = (string) $default_style;
         $this->success_url = is_null($success_url)? url(REQ_URL): $success_url;
+    }
+
+    /**
+     * Returns form start tag for interface.
+     */
+    public function startForm($extra_attributes = array()) {
         $attributes = array();
         foreach ($extra_attributes as $key => $value)
             $attributes = "$key=\"" . escape($value) .'"';
-        echo '<form enctype="multipart/form-data" action="' . url(REQ_URL) . '" method="post" ' . implode(" ", $attributes) . '>';
+        return '<form enctype="multipart/form-data" action="' . url(REQ_URL) . '" method="post" ' . implode(" ", $attributes) . '>';
+    }
+
+    /**
+     * Finalizes interface data and returns it ina a hidden input tag
+     * and a closing form tag.
+     */
+    public function finalizeForm($auto_submit = true, $auto_delete = false) {
+        // Convert instance object references to id|class references.
+        foreach ($this->instances as &$instance)
+            $instance = array($instance->getID(), get_class($instance), $instance->isVolatile());
+        $qmi_data = \nmvc\string\simple_crypt(gzcompress(serialize(array($this->success_url, $this->instances, $this->components, $this->setters, array_values($this->autolinks), $this->interface_name))));
+        $html = '<div><input type="hidden" name="_qmi" value="' . $qmi_data . '" />';
+        if ($auto_submit) {
+            $msg = $this->creating? __("Create"): __("Save Changes");
+            $html .= '<input type="submit" value="' . $msg . '" />';
+        }
+        if ($auto_delete && !$this->creating) {
+            $delete = __("Delete");
+            $html .= '<input name="_qmi_auto_delete_button" type="submit" value="'
+            . $delete . '" onclick="javascript: return confirm(\'Are you sure?\');" />';
+        }
+        $html .= '</div></form>';
+        return $html;
     }
 
     public static function _clearInvalidData() {
@@ -35,7 +73,7 @@ class ModelInterface {
      * stored in the database and not as qmi\getInstanceKey
      * (as represented in-memory).
      */
-    private static function getDatabaseInstanceKey(\nmvc\Model $instance) {
+    public static function getDatabaseInstanceKey(\nmvc\Model $instance) {
         // This is unique because class names cannot start with numbers.
         return ($instance->id > 0? $instance->id: "0")  . get_class($instance);
     }
@@ -54,7 +92,7 @@ class ModelInterface {
     }
 
     /**
-     * @returns bool
+     * @return boolean
      */
     private function instanceAdded(\nmvc\Model $instance = null) {
         $instance_key = spl_object_hash($instance);
@@ -179,22 +217,26 @@ class ModelInterface {
     }
 
     /**
-     * This function attaches the specified fields on the instance
-     * to this model interface and returns HTML interfaces for each of them.
-     * qmi\ModelInterface::attachChanges() is also
-     * automatically called for the given instance, so you can model changes
-     * directly on the instanc before generating the form.
-     * See qmi\print_interface() for an example on how to treat the output.
-     * @param \nmvc\Model $instance Model instance to interface.
-     * @param array $fields Names of the fields to get interfaces for.
-     * @param string $component_css_class CSS class used for each and
-     * every one of the divs outputted as components.
-     * @param string $invalid_span_css_class CSS class used in HTML
-     * for "invalid" spans added if resubmitting form.
-     * @return array Component items attached to the fields of the form
-     * array(html interface, unique key).
+     * This function attaches the fields the given model specifies
+     * for the interface name this ModelInterface was constructed with.
+     * It then fetches the html components for that model instance and
+     * renders them using the specified html style.
+     * @param UserInterfaceProvider $instance Model instance to interface.
+     * @param string $field_set_name Identifier of field set to pass
+     * to uiGetInterface.
+     * @param string $style Set to non null to override style used to render
+     * interface. Is used to find the renderering view at the path
+     * /qmi2/{$style}
+     * @param array $additional_view_data
+     * @return string HTML for interface.
      */
-    public function attachFields(\nmvc\Model $instance, $fields = array(), $component_css_class = "qmi_component", $invalid_span_css_class = "qmi_invalid_label") {
+    public function getInterface(UserInterfaceProvider $instance, $field_set_name = null, $style = null, $additional_view_data = array()) {
+        if (!($instance instanceof \nmvc\Model))
+            \trigger_error('\$instance must be instance of model!', \E_USER_ERROR);
+        if ($style !== null && !\is_string($style))
+            \trigger_error('\$style must be string or null!', \E_USER_ERROR);
+        if (!\is_array($additional_view_data))
+            \trigger_error('\$additional_view_data must be array!', \E_USER_ERROR);
         if ($instance->isLinked())
             $this->creating = false;
         $html_components = array();
@@ -212,104 +254,71 @@ class ModelInterface {
                 register_shutdown_function(array(__CLASS__, "_clearInvalidData"));
             }
         }
-        // Adding all components.
-        foreach ($fields as $field_name) {
+        // Loop trough fields in interface.
+        $ui_fields = $instance->uiGetInterface($this->interface_name, $field_set_name);
+        if (!is_array($ui_fields))
+            \trigger_error("No '" . $this->interface_name . "', '$field_set_name' interface returned by " . \get_class($instance) . ". (Undeclared?)", \E_USER_ERROR);
+        foreach (\array_keys($ui_fields) as $field_name) {
+            if (\strlen($field_name) == 0 || $field_name[0] == "_")
+                continue;
             if (!$instance->hasField($field_name))
-                trigger_error("'$field_name' is not a valid field/column name!", \E_USER_ERROR);
+                \trigger_error("Error in interface '" . $this->interface_name . "' for " . \get_class($instance) . ": '$field_name' is not a valid field/column name!", \E_USER_ERROR);
             if (substr($field_name, -3) == "_id")
-                trigger_error("Field syntax '$field_name' is reserved for id access. Pointer fields must be passed without '_id' suffix.", \E_USER_ERROR);
+                \trigger_error("Error in interface '" . $this->interface_name . "' for " . \get_class($instance) . ": Field syntax '$field_name' is reserved for id access. Pointer fields must be passed without '_id' suffix.", \E_USER_ERROR);
             // Generate the html key/id.
-            $component_html_key = "n" . \nmvc\string\random_alphanum_str(7);
+            $component_id = "n" . \nmvc\string\random_alphanum_str(7);
             // Generate the component interface.
             if (isset($invalidation_data['values'][$field_name]))
                 $instance->$field_name = $invalidation_data['values'][$field_name];
-            $component_interface = $instance->type($field_name)->getInterface($component_html_key);
+            $component_interface = $instance->type($field_name)->getInterface($component_id);
             // If an interface(s) was returned, output it.
-            if (is_string($component_interface) && strlen($component_interface) > 0)
+            if (\is_string($component_interface) && \strlen($component_interface) > 0)
                 $component_interfaces = array($component_interface);
-            else if (is_array($component_interface))
-                $component_interfaces = array_values($component_interface);
+            else if (\is_array($component_interface))
+                $component_interfaces = \array_values($component_interface);
             else
                 $component_interfaces = array();
-            foreach ($component_interfaces as $key => $component_interface) {
+            foreach ($component_interfaces as $index => $component_interface) {
                 // Append error label if one is specified.
-                if (isset($invalidation_data['errors'][$field_name])) {
-                    $component_interface .= "<span class=\"$invalid_span_css_class\">"
-                    . $invalidation_data['errors'][$field_name]
-                    . "</span>";
-                }
-                // Returning the interface.
-                $component_interface = "<div class=\"$component_css_class\">"
-                . $component_interface . "</div>";
-                $html_components_key = ($key == 0)? $field_name: $field_name . "_" . $key;
-                $html_components[$html_components_key] = array($component_interface, $component_html_key);
+                $component_error = isset($invalidation_data['errors'][$field_name])? $invalidation_data['errors'][$field_name]: null;
+                // Prefix "_" prevents collision with other fields when using types with multiple interfaces.
+                $html_components_key = ($index == 0)? $field_name:  "_" . $field_name . "_" . ($index + 1);
+                $field_label = isset($ui_fields[$html_components_key])? $ui_fields[$html_components_key]: null;
+                if ($component_error != null)
+                    $component_error = escape($component_error);
+                $html_components[$html_components_key] = new HtmlComponent($component_interface, $field_label, $component_error, $component_id);
             }
             // Registering the component.
-            $this->components[$component_html_key] = array($instance_key, $field_name);
+            $this->components[$component_id] = array($instance_key, $field_name);
         }
-        return $html_components;
+        // Find the style for the interface.
+        if ($style == null && isset($ui_fields["_style"]))
+            $style = $ui_fields["_style"];
+        if ($style == null)
+            $style = $this->default_style;
+        if (\strlen($style) == 0)
+            \trigger_error("Style is empty!", \E_USER_ERROR);
+        // Render the actual interface.
+        return \nmvc\View::render("/qmi/" . $style . "_interface", \array_merge($additional_view_data, array("components" => $html_components)));
     }
-
+    
     /**
-     * Sets the final callback for the model interface.
-     * The final callback will be ran after the success methods.
-     * @param callback $callback A classic callback (not closure) that will be invoked on completion.
-     * @param array $arguments
-     * @return void
-     */
-    public function setFinalCallback($callback, $arguments = array()) {
-        if (!\is_callable($callback) || \is_object($callback))
-            \trigger_error(__METHOD__ . " got non-callable/non-serializable callback!", \E_USER_ERROR);
-        if (!\is_array($arguments))
-            \trigger_error(__METHOD__ . " got non array \$arguments argument!", \E_USER_ERROR);
-        $this->final_callback = array($callback, $arguments);
-    }
-
-    /**
-     * Sets the final callback for the model interface.
-     * @return string
-     */
-    public function getFinalCallback() {
-        return $this->final_callback;
-    }
-
-    /**
-     * Ends the interface. Prints a html form end tag.
-     */
-    public function finalize($auto_submit = true, $auto_delete = false) {
-        // Convert instance object references to id|class references.
-        foreach ($this->instances as &$instance)
-            $instance = array($instance->getID(), get_class($instance));
-        $qmi_data = \nmvc\string\simple_crypt(gzcompress(serialize(array($this->success_url, $this->instances, $this->components, $this->setters, array_values($this->autolinks), $this->final_callback))));
-        echo '<div><input type="hidden" name="_qmi" value="' . $qmi_data . '" />';
-        if ($auto_submit) {
-            $msg = $this->creating? __("Create"): __("Save Changes");
-            echo '<input type="submit" value="' . $msg . '" />';
-        }
-        if ($auto_delete && !$this->creating) {
-            $delete = __("Delete");
-            echo '<input name="_qmi_auto_delete_button" type="submit" value="'
-            . $delete . '" onclick="javascript: return confirm(\'Are you sure?\');" />';
-        }
-        echo '</div></form>';
-    }
-
-    /**
-     * Do not call directly.
+     * Handles post data returned from a generated interface.
+     * @return array
      */
     public static function _interface_callback() {
-        $qmi_data = \nmvc\string\simple_decrypt(@$_POST['_qmi']);
+        if (!\array_key_exists("_qmi", $_POST))
+            return;
+        $qmi_data = \nmvc\string\simple_decrypt($_POST["_qmi"]);
         if ($qmi_data === false) {
             \nmvc\messenger\redirect_message(REQ_URL, __("The action failed, your session might have timed out. Please try again."));
             return;
         }
-        list($success_url, $instance_keys, $components, $setters, $autolinks, $final_callback) = unserialize(gzuncompress($qmi_data));
-        // Array mapping old instance keys to new db keys.
-        $instance_db_keys = array();
+        list($success_url, $instance_keys, $components, $setters, $autolinks, $interface_name) = unserialize(gzuncompress($qmi_data));
         // Fetch all instances and translate all instance keys to their new spl object hashes.
         $instances = array();
         foreach ($instance_keys as $old_instance_key => $instance_values) {
-            list($id, $name) = $instance_values;
+            list($id, $name, $is_volatile) = $instance_values;
             if ($id > 0) {
                 $instance = $name::selectByID($id);
                 if ($instance === null) {
@@ -317,16 +326,14 @@ class ModelInterface {
                     return;
                 }
             } else
-                $instance = $name::insert();
+                $instance = new $name($is_volatile);
             $instances[$old_instance_key] = $instance;
-            $instance_db_keys[$old_instance_key] = self::getDatabaseInstanceKey($instance);
         }
-        $iid = null;
+        $instance_fields = array();
         if (isset($_POST['_qmi_auto_delete_button'])) {
-            // Deleting everything.
-            foreach ($instances as $instance)
-                $instance->unlink();
+            $is_deleting = true;
         } else {
+            $is_deleting = false;
             // Process all setters.
             foreach ($setters as $setter) {
                 list($instance_key, $field_name, $value) = $setter;
@@ -339,66 +346,30 @@ class ModelInterface {
                 $target_model = $target_model_key !== null? $instances[$target_model_key]: null;
                 $pointer_model->$pointer_field_name = $target_model;
             }
-            $instance_fields = array();
             // Read all components from post data (overwriting setters).
             foreach ($components as $component_name => $component) {
                 list($instance_key, $field_name) = $component;
                 $instances[$instance_key]->type($field_name)->readInterface($component_name);
                 $instance_fields[$instance_key][$field_name] = 1;
             }
-            // Validate all instances.
-            $invalidation_data = array();
-            foreach ($instances as $instance_key => $instance) {
-                $ret = $instance->validate();
-                // Validation not returning array = validation success.
-                if (!is_array($ret))
-                    continue;
-                // No components for instance = validation success.
-                if (!isset($instance_fields[$instance_key]))
-                    continue;
-                // Not interested in invalid fields we have not created interfaces for.
-                $ret = array_intersect_key($ret, $instance_fields[$instance_key]);
-                // Empty array = validation success.
-                if (count($ret) == 0)
-                    continue;
-                // Store this invalidation data so it can be forwarded.
-                $instance_db_key = $instance_db_keys[$instance_key];
-                $invalidation_data[$instance_db_key]['errors'] = $ret;
-            }
-            if (count($invalidation_data) > 0) {
-                // Fetch all interface values and return them.
-                foreach ($instances as $instance_key => $instance)
-                foreach ($instance as $field_name => $component) {
-                    $value = $component->get();
-                    if (is_object($value))
-                        $value = $component->getSQLValue();
-                    $instance_db_key = $instance_db_keys[$instance_key];
-                    $invalidation_data[$instance_db_key]['values'][$field_name] = $value;
-                }
-                // Store invalid and reload this URL.
-                $_SESSION['qmi_invalid'] = $invalidation_data;
-                \nmvc\messenger\redirect_message(REQ_URL, __("Validation failed. Please check your input."));
-            }
-            // Store all instances.
-            foreach ($instances as $instance_key => $instance) {
-                $instance->store();
-                if ($iid === null)
-                    $iid = $instance->getID();
-            }
         }
-        if ($final_callback !== null) {
-            // Invoke final callback if set.
-            list($callback, $arguments) = $final_callback;
-            // Compile instances as first parameter in arguments.
-            $callback_instances = array();
-            foreach ($instances as $instance)
-                $callback_instances[\get_class($instance)][] = $instance;
-            \array_unshift($arguments, $callback_instances);
-            call_user_func_array($callback, $arguments);
+        // Extract callback from interface name.
+        $pos = \strpos($interface_name, '\\');
+        if ($pos !== false) {
+            $callback_module = \substr($interface_name, 0, $pos);
+            $callback_method = \substr($interface_name, $pos + 1);
+        } else {
+            $callback_module = 'qmi';
+            $callback_method = $interface_name;
         }
-        // Redirect to the success url and don't display success message (overkill).
-        \nmvc\request\reset();
-        $success_url = str_replace("{id}", $iid, $success_url);
-        \nmvc\request\redirect($success_url);
+        $callback_method = "ic_$callback_method";
+        $callback_class = 'nmvc\\' . $callback_module . '\\InterfaceCallback';
+        if (!\class_exists($callback_class))
+            \trigger_error(__METHOD__ . " error: The callback class '$callback_class' does not exist!", \E_USER_ERROR);
+        if (!is($callback_class, 'nmvc\qmi\InterfaceCallback'))
+            \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not an interface callback!", \E_USER_ERROR);
+        $callback_class = new $callback_class($interface_name, $instances, $instance_fields, $is_deleting, $success_url);
+        $callback_class->$callback_method();
+        \trigger_error(__METHOD__ . " error: The callback '$callback_class::$callback_method' did not redirect request!", \E_USER_ERROR);
     }
 }

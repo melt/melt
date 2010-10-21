@@ -1,13 +1,14 @@
 <?php namespace nvmc\internal;
-// Disable sessions for core features.
-if (\substr(REQ_URL, 0, 6) == "/core/")
-    return;
 \session_set_save_handler(function() {}, function() {
 },function($id) {
+    if (REQ_IS_CORE)
+        return \serialize(array());
     // Read.
     $session_data = \nmvc\core\SessionDataModel::select()->where("session_key")->is($id)->first();
     return $session_data !== null? $session_data->session_data: null;
 }, function($session_key, $binary_session_data) {
+    if (REQ_IS_CORE)
+        return;
     // Write.
     $session_data = \nmvc\core\SessionDataModel::select()->where("session_key")->is($session_key)->first();
     if ($session_data === null) {
@@ -17,13 +18,17 @@ if (\substr(REQ_URL, 0, 6) == "/core/")
     $session_data->session_data = $binary_session_data;
     $session_data->store();
 }, function($id) {
+    if (REQ_IS_CORE)
+        return;
     // Destroy.
     \nmvc\core\SessionDataModel::select()->where("session_key")->is($id)->unlink();
 }, function($maxlifetime) {
+    if (REQ_IS_CORE)
+        return;
     // GC.
     $maxlifetime = intval($maxlifetime);
     $time = time();
-    \nmvc\core\SessionDataModel::select()->where("last_store_attempt").lessThan($time - $maxlifetime)->unlink();
+    \nmvc\core\SessionDataModel::select()->where("last_store_attempt")->isLessThan($time - $maxlifetime)->unlink();
 });
 \session_start();
 // Make sure sessions are written before we loose object instancing capability.

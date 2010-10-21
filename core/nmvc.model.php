@@ -26,7 +26,7 @@
  * unlink() - No effect.
  *
  */
-abstract class Model {
+abstract class Model implements \IteratorAggregate, \Countable {
     /**
      * Identifier of this data set or <= 0 if unlinked.
      * @var int
@@ -39,6 +39,10 @@ abstract class Model {
     private $_columns_cache = null;
     /** @var array Cache of all fetched instances.  */
     private static $_instance_cache = array();
+    /** @var boolean Volatile model instances will ignore store and unlink
+     * requests so their changes cannot be saved, nor can they
+     * be linked/unlinked. */
+    private $_is_volatile = false;
 
     const TRANSITION_STABLE = 0;
     const TRANSITION_BLOCKING = 3;
@@ -137,14 +141,6 @@ abstract class Model {
     protected abstract function disconnectCallback($pointer_name);
 
     /**
-     * Validates the current data. If invalid, returns an array of all fields
-     * name => reason mapped, otherwise, returns an empty array.
-     * Designed to be overriden.
-     * @return array All invalid fields, name => reason mapped.
-     */
-    public abstract function validate();
-
-    /**
      * Returns a parsed column array for this model.
      * @return array
      */
@@ -177,7 +173,7 @@ abstract class Model {
                     $is_volatile = true;
                 }
                 if (!is_string($type_class_name))
-                    trigger_error("Invalid type: '$model_name.\$$column_name' does not specify a type class.", \E_USER_ERROR);
+                    \trigger_error("Invalid type: '$model_name.\$$column_name' does not specify a type class.", \E_USER_ERROR);
                 unset($column_args[key($column_args)]);
                 foreach ($column_args as $attr_key => $attr_value) {
                     if (is_integer($attr_key))
@@ -188,16 +184,16 @@ abstract class Model {
             }
             $type_class_name = 'nmvc\\' . $type_class_name;
             if (!class_exists($type_class_name) || core\is_abstract($type_class_name))
-                trigger_error("Invalid model column: $model_name.\$$column_name - Type '$type_class_name' is undefined or abstract.", \E_USER_ERROR);
+                \trigger_error("Invalid model column: $model_name.\$$column_name - Type '$type_class_name' is undefined or abstract.", \E_USER_ERROR);
             if (!is_subclass_of($type_class_name, 'nmvc\Type'))
-                trigger_error("Invalid model column: $model_name.\$$column_name - The specified type '$type_class_name' is not a nmvc\\Type.", \E_USER_ERROR);
+                \trigger_error("Invalid model column: $model_name.\$$column_name - The specified type '$type_class_name' is not a nmvc\\Type.", \E_USER_ERROR);
             // Core pointer name convention check.
             $ends_with_id = string\ends_with($column_name, "_id");
             $is_pointer_type = is($type_class_name, 'nmvc\core\PointerType');
             if ($ends_with_id && !$is_pointer_type)
-                trigger_error("Invalid model column: $model_name.\$$column_name. The field ends with '_id' which is a reserved suffix for pointer type fields.", \E_USER_ERROR);
+                \trigger_error("Invalid model column: $model_name.\$$column_name. The field ends with '_id' which is a reserved suffix for pointer type fields.", \E_USER_ERROR);
             else if (!$ends_with_id && $is_pointer_type)
-                trigger_error("Invalid model column: $model_name.\$$column_name. Pointer type fields must end with '_id'.", \E_USER_ERROR);
+                \trigger_error("Invalid model column: $model_name.\$$column_name. Pointer type fields must end with '_id'.", \E_USER_ERROR);
             // Reflect the type constructor.
             $type_reflector = new \ReflectionClass($type_class_name);
             // The first argument is always the Type name.
@@ -209,14 +205,14 @@ abstract class Model {
             $min_args = $constr_reflector->getNumberOfRequiredParameters();
             if ($tot_args < $min_args || $tot_args > $max_args) {
                 $tot_args--; $max_args--; $min_args--;
-                trigger_error("Invalid model column: $model_name.\$$column_name - You supplied $tot_args arguments and the constructor of '$type_class_name' takes $min_args to $max_args arguments!", \E_USER_ERROR);
+                \trigger_error("Invalid model column: $model_name.\$$column_name - You supplied $tot_args arguments and the constructor of '$type_class_name' takes $min_args to $max_args arguments!", \E_USER_ERROR);
             }
             // Call the constructor.
             $type_handler = $type_reflector->newInstanceArgs($column_construct_args);
             $type_handler->is_volatile = $is_volatile;
             foreach ($column_attributes as $key => $attribute) {
                 if (!property_exists(get_class($type_handler), $key))
-                    trigger_error("Invalid model column: $model_name.\$$column_name - The type '$type_class_name' does not have an attribute named '$key'.", \E_USER_ERROR);
+                    \trigger_error("Invalid model column: $model_name.\$$column_name - The type '$type_class_name' does not have an attribute named '$key'.", \E_USER_ERROR);
                 $type_handler->$key = $attribute;
             }
             // Cache this untouched type instance and clone it to other new instances.
@@ -226,13 +222,28 @@ abstract class Model {
         return $parsed_col_array;
     }
 
-    /** @var boolean Set to true when loading and not inserting. */
+    /**
+     * Returns true if this model instance is volatile.
+     * Volatile model instances will ignore store and unlink
+     * requests so their changes cannot be saved, nor can they
+     * be linked/unlinked.
+     * @return boolean
+     */
+    public function isVolatile() {
+        return $this->_is_volatile;
+    }
+
+    /** @var boolean Is set to true when loading and not inserting. */
     private static $_skip_initialize = false;
 
     /**
      * Creates a new instance of this model.
+     * @param boolean $volatile Wheather model instance should be volatile
+     * or not. All model instances that are only ment to carry data and
+     * not be stored should be constructed volatile.
      */
-    public final function __construct() {
+    public final function __construct($volatile = false) {
+        $this->_is_volatile = $volatile;
         // Copies all columns into this model.
         $this->_cols = static::getParsedColumnArray();
         foreach ($this->_cols as $column_name => &$type_instance) {
@@ -320,7 +331,7 @@ abstract class Model {
                 else if (is_object($value) || is_null($value))
                     $type->set($value);
                 else
-                    trigger_error("Setting pointer by unexpected type " . gettype($value) . " (expected null or object) Ignoring.", \E_USER_NOTICE);
+                    \trigger_error("Setting pointer by unexpected type " . gettype($value) . " (expected null or object) Ignoring.", \E_USER_NOTICE);
             };
         } else if (!isset($this->_cols[$name])) {
             $closure = "Trying to access non existing field '$name'.";
@@ -330,7 +341,7 @@ abstract class Model {
             // ->xyz_id can only set id. cast value to integer.
             $closure = function($columns, $value) use ($name) {
                 if (is_object($value))
-                    trigger_error("Setting pointer by unexpected type " . gettype($value) . " (expected non object integer id) Ignoring.", \E_USER_NOTICE);
+                    \trigger_error("Setting pointer by unexpected type " . gettype($value) . " (expected non object integer id) Ignoring.", \E_USER_NOTICE);
                 else
                     $columns[$name]->set($value);
             };
@@ -377,7 +388,7 @@ abstract class Model {
     public function __get($name) {
         $get_closure = $this->resolveGetClosure($name);
         if (is_string($get_closure))
-            trigger_error($get_closure, \E_USER_NOTICE);
+            \trigger_error($get_closure, \E_USER_NOTICE);
         else
             return $get_closure($this->_cols, $this->_id);
     }
@@ -394,7 +405,7 @@ abstract class Model {
     public function  __set($name,  $value) {
         $set_closure = $this->resolveSetClosure($name);
         if (is_string($set_closure)) {
-            trigger_error($set_closure, \E_USER_NOTICE);
+            \trigger_error($set_closure, \E_USER_NOTICE);
             return;
         }
         $set_closure($this->_cols, $value);
@@ -404,7 +415,7 @@ abstract class Model {
     public function type($name) {
         $type_closure = $this->resolveTypeClosure($name);
         if (is_string($type_closure)) {
-            trigger_error($type_closure, \E_USER_NOTICE);
+            \trigger_error($type_closure, \E_USER_NOTICE);
             return;
         }
         return $type_closure($this->_cols);
@@ -416,7 +427,7 @@ abstract class Model {
             return (string) $this->getID();
         $type_closure = $this->resolveTypeClosure($name);
         if (is_string($type_closure)) {
-            trigger_error($type_closure, \E_USER_NOTICE);
+            \trigger_error($type_closure, \E_USER_NOTICE);
             return;
         }
         if (substr($name, -3) !== "_id")
@@ -454,6 +465,26 @@ abstract class Model {
             return __("Not Set");
         else
             return get_class($this) . " #" . $this->id;
+    }
+
+    /**
+     * Returns the field count of this model instance.
+     * (Not including id field.)
+     * @return integer
+     */
+    public function count() {
+        return \count($this->_cols);
+    }
+
+
+    /**
+     * Returns an iterator that iterates over
+     * the fields in this model instance.
+     * (Not including id field.)
+     * @return \ArrayIterator
+     */
+    public function getIterator() {
+        return new \ArrayIterator($this->_cols);
     }
 
     /**
@@ -496,9 +527,12 @@ abstract class Model {
      * If this is a new instance, it's inserted, otherwise, it's updated.
      */
     public function store() {
+        // Volatile models cannot be stored.
+        if ($this->_is_volatile)
+            return;
         // Storing is only possible in stable state..
         if ($this->_transition != self::TRANSITION_STABLE)
-                return;
+            return;
         // Enter "storing" transition state.
         $this->_transition = self::TRANSITION_STORING;
         // Determine if linking or syncronizing.
@@ -556,6 +590,9 @@ abstract class Model {
 
     /** Unlinks this model instance from the database. */
     public function unlink() {
+        // Volatile models cannot be unlinked.
+        if ($this->_is_volatile)
+            return;
         // Can't unlink if unlinking/blocking.
         if ($this->_transition == self::TRANSITION_UNLINKING || $this->_transition == self::TRANSITION_BLOCKING)
             return;
@@ -652,10 +689,10 @@ abstract class Model {
         $model_name = get_called_class();
         $columns_array = static::getParsedColumnArray();
         if (!isset($columns_array[$pointer_name]))
-            trigger_error("'$pointer_name' is not a column of '$model_name'.", \E_USER_ERROR);
+            \trigger_error("'$pointer_name' is not a column of '$model_name'.", \E_USER_ERROR);
         $column = $columns_array[$pointer_name];
         if (!($column instanceof core\PointerType))
-            trigger_error("'$model_name.$pointer_name' is not a pointer column.", \E_USER_ERROR);
+            \trigger_error("'$model_name.$pointer_name' is not a pointer column.", \E_USER_ERROR);
         return $column->getTargetModel();
     }
 
@@ -698,7 +735,7 @@ abstract class Model {
         if (array_key_exists($id_companion, $columns))
             return $id_companion;
         if ($error_on_missing)
-            trigger_error("The field $col_name does not exist on " . get_called_class(), \E_USER_ERROR);
+            \trigger_error("The field $col_name does not exist on " . get_called_class(), \E_USER_ERROR);
         return $col_name;
     }
 
@@ -718,13 +755,13 @@ abstract class Model {
             $column->prepareSQLValue();
             $value = $column->getSQLValue();
             if ($value === null || $value === "")
-                trigger_error(get_class($column) . "::getSQLValue() returned null or zero-length string! This is an invalid SQL value.", \E_USER_ERROR);
+                \trigger_error(get_class($column) . "::getSQLValue() returned null or zero-length string! This is an invalid SQL value.", \E_USER_ERROR);
             $value_list[] = $value;
             $column->setSyncPoint();
         }
         $value_list = implode(',', $value_list);
         if (!db\config\USE_TRIGGER_SEQUENCING) {
-            db\run("UPDATE " . db\table('core\seq') . " SET id = LAST_INSERT_ID(id + 1)");
+            db\run("UPDATE " . db\table('core__seq') . " SET id = LAST_INSERT_ID(id + 1)");
             $id = "LAST_INSERT_ID()";
         } else {
             $id = 0;
@@ -743,7 +780,7 @@ abstract class Model {
             $column->prepareSQLValue();
             $value = $column->getSQLValue();
             if ($value === null || $value === "")
-                trigger_error(get_class($column) . "::getSQLValue() returned null or zero-length string! This is an invalid SQL value.", \E_USER_ERROR);
+                \trigger_error(get_class($column) . "::getSQLValue() returned null or zero-length string! This is an invalid SQL value.", \E_USER_ERROR);
             $value_list[] = "`$colname`=$value";
             $column->setSyncPoint();
         }
@@ -771,7 +808,7 @@ abstract class Model {
         if ($family_tree === null)
             $family_tree = self::getMetaData("family_tree");
         if (!isset($family_tree[$base_name]))
-            trigger_error("Model '$base_name' is out of sync with database.", \E_USER_ERROR);
+            \trigger_error("Model '$base_name' is out of sync with database.", \E_USER_ERROR);
         foreach ($family_tree[$base_name] as $table_name) {
             $model_class_name = self::tableNameToClassName($table_name);
             $columns = $model_class_name::getColumnNames(false);
@@ -792,7 +829,7 @@ abstract class Model {
      * @return db\SelectQuery
      */
     public static function select($fields = null) {
-        if ($fields !== null && !is_array($fiels))
+        if ($fields !== null && !is_array($fields))
             $fields = array($fields);
         return new db\SelectQuery(\get_called_class(), $fields);
     }
@@ -823,7 +860,7 @@ abstract class Model {
                 $ptr_fields[] = $col_name;
         }
         if (count($ptr_fields) == 0)
-            trigger_error("Invalid child model: '" . $child_model_name . "'. Does not contain pointer(s) to the model '$model_name'.", \E_USER_ERROR);
+            \trigger_error("Invalid child model: '" . $child_model_name . "'. Does not contain pointer(s) to the model '$model_name'.", \E_USER_ERROR);
         return $ptr_fields;
     }
 
@@ -858,15 +895,20 @@ abstract class Model {
      * @return array An array of the selected model instances.
     */
     public static function getInstancesForSelection(db\SelectQuery $select_query) {
-        $name = get_called_class();
+        $from_model = $select_query->getFromModel();
+        if ($from_model === null)
+            \trigger_error("Selection query has no source/from model set.", \E_USER_ERROR);
+        // Clone select query to prevent/isolate side effects.
+        $select_query = clone $select_query;
         $family_tree = self::getMetaData("family_tree");
         $out_array = array();
-        if (!isset($family_tree[$name]))
-            trigger_error("Model '$name' is out of sync with database.", \E_USER_ERROR);
-        foreach ($family_tree[$name] as $table_name) {
+        if (!isset($family_tree[$from_model]))
+            \trigger_error("Model '$from_model' is out of sync with database.", \E_USER_ERROR);
+        foreach ($family_tree[$from_model] as $table_name) {
             $model_class_name = self::tableNameToClassName($table_name);
             $columns = $model_class_name::getColumnNames(false);
             $columns[] = "id";
+            $select_query->setFromModel($model_class_name);
             $select_query->setSelectFields($columns);
             $result_array = $model_class_name::getDataForSelection($select_query);
             foreach ($result_array as $result_row) {
@@ -884,6 +926,8 @@ abstract class Model {
      * @return mixed
      */
     public static function getDataForSelection(db\SelectQuery $select_query) {
+        if ($select_query->getFromModel() === null)
+            \trigger_error("Selection query has no source/from model set.", \E_USER_ERROR);
         $query = static::buildSelectQuery($select_query);
         $result = db\query($query);
         if ($select_query->getIsCounting()) {
@@ -896,16 +940,83 @@ abstract class Model {
         return $return_data;
     }
 
-    private static function getColumnPrototype($column_name) {
-        $column_name = static::translateFieldToColumn($column_name);
-        if ($column_name != "id") {
-            $prototype_types = static::getParsedColumnArray();
-            $prototype_type = $prototype_types[$column_name];
-            return array($column_name, $prototype_type);
+    /**
+     * Builds a selection query in context of called model class.
+     */
+    private static function buildSelectQuery(db\SelectQuery $select_query, $columns_data = array(), $alias_offset = 1) {
+        if ($select_query->getIsCounting()) {
+            $columns_sql = "COUNT(*)";
         } else {
-            return array("id", null);
+            $select_fields = $select_query->getSelectFields();
+            if (!\is_array($select_fields) || \count($select_fields) == 0)
+                \trigger_error("Selecting zero columns is not allowed. (Redundant)", \E_USER_ERROR);
+            // Register/process all semantic columns.
+            foreach ($select_fields as &$column) {
+                $column_data = static::registerSemanticColumn($column, $columns_data, $alias_offset);
+                $column = $column_data[0];
+            }
+            $columns_sql = \implode(",", $select_fields);
         }
-
+        $from_model = $select_query->getFromModel();
+        if ($from_model === null)
+            \trigger_error("Given select query does not have an associated model.", \E_USER_ERROR);
+        $select_tokens = $select_query->getSelectSQLTokens();
+        $sql_select_expr = "";
+        if (\count($select_tokens) > 0) {
+            $current_field_prototype_type = null;
+            $alias_offset = 0;
+            foreach ($select_tokens as $token) {
+                if (\is_string($token)) {
+                    $sql_select_expr .= " " . $token;
+                } else if ($token instanceof db\ModelField) {
+                    $column_data = $from_model::registerSemanticColumn($token->getName(), $columns_data, $alias_offset);
+                    $sql_select_expr .= " " . $column_data[0];
+                    $current_field_prototype_type = $column_data[4];
+                } else if ($token instanceof db\ModelFieldValue) {
+                    if ($current_field_prototype_type !== null) {
+                        $current_field_prototype_type->set($token->getValue());
+                        $sql_select_expr .= " " . $current_field_prototype_type->getSQLValue();
+                    } else {
+                        $sql_select_expr .= " " . intval($token->getValue());
+                    }
+                } else if ($token instanceof db\SelectQuery) {
+                    // Inner selection.
+                    $sql_select_expr .= " (";
+                    $inner_columns_data = array();
+                    $sql_select_expr .= static::buildSelectQuery($token, $inner_columns_data, $alias_offset);
+                    $sql_select_expr .= ")";
+                }
+            }
+        }
+        // Compile left joins.
+        $left_joins_sql = array();
+        foreach ($columns_data as $column_datas) {
+            $left_join = $column_datas[3];
+            if ($left_join != null)
+                $left_joins_sql[] = $left_join;
+        }
+        $left_joins_sql = \implode(" ", $left_joins_sql);
+        // Evaluate the from_name which can be a table or a view that defines a partition.
+        static $from_names = array();
+        if (!\array_key_exists($from_model, $from_names)) {
+            $partition_filter = $from_model::getDatabasePartitionFilter();
+            $table_name = db\table(self::classNameToTableName($from_model));
+            if ($partition_filter !== null) {
+                $from_name = \nmvc\db\config\PREFIX . "nprt/" . \substr($table_name, 1, -1) . "/" . \substr(\sha1($partition_filter, false), 0, 8);
+                $result = db\next_array(db\query("SELECT count(*) FROM `INFORMATION_SCHEMA`.`VIEWS` WHERE `TABLE_SCHEMA` = " . db\strfy(\nmvc\db\config\NAME) . " AND `TABLE_NAME` = '$from_name';"));
+                $from_name = "`$from_name`";
+                $view_exists = $result[0] != 0;
+                if (!$view_exists)
+                    db\query("CREATE VIEW $from_name AS SELECT * FROM $table_name WHERE $partition_filter", "The where_condition returned from getDatabasePartitionFilter() is invalid or database does not support creating views.");
+            } else
+                $from_name = $table_name;
+            $from_names[$from_model] = $from_name;
+        } else
+            $from_name = $from_names[$from_model];
+        $main_alias = $columns_data[""][2];
+        if ($select_query->getIsCalcFoundRows())
+            $columns_sql .= " SQL_CALC_FOUND_ROWS";
+        return "SELECT $columns_sql FROM $from_name AS $main_alias $left_joins_sql $sql_select_expr";
     }
 
     /**
@@ -969,92 +1080,22 @@ abstract class Model {
         return $columns_data[$column_name];
     }
 
-    /**
-     * Builds a selection query in context of called model class.
-     */
-    private static function buildSelectQuery(db\SelectQuery $select_query, $columns_data = array(), $alias_offset = 1) {
-        if ($select_query->getIsCounting()) {
-            $columns_sql = "COUNT(*)";
+    private static function getColumnPrototype($column_name) {
+        $column_name = static::translateFieldToColumn($column_name);
+        if ($column_name != "id") {
+            $prototype_types = static::getParsedColumnArray();
+            $prototype_type = $prototype_types[$column_name];
+            return array($column_name, $prototype_type);
         } else {
-            $select_fields = $select_query->getSelectFields();
-            if (!\is_array($select_fields) || \count($select_fields) == 0)
-                \trigger_error("Selecting zero columns is not allowed. (Redundant)", \E_USER_ERROR);
-            // Register/process all semantic columns.
-            foreach ($select_fields as &$column) {
-                $column_data = static::registerSemanticColumn($column, $columns_data, $alias_offset);
-                $column = $column_data[0];
-            }
-            $columns_sql = \implode(",", $select_fields);
+            return array("id", null);
         }
-        $from_model = $select_query->getFromModel();
-        if ($from_model === null)
-            \trigger_error("Given select query does not have an associated model.", \E_USER_ERROR);
-        $select_tokens = $select_query->getSelectSQLTokens();
-        $sql_select_expr = "";
-        if (\count($select_tokens) > 0) {
-            $current_field_prototype_type = null;
-            $alias_offset = 0;
-            foreach ($select_tokens as $token) {
-                if (\is_string($token)) {
-                    $sql_select_expr .= " " . $token;
-                } else if ($token instanceof db\ModelField) {
-                    $column_data = $from_model::registerSemanticColumn($token->getName(), $columns_data, $alias_offset);
-                    $sql_select_expr .= " " . $column_data[0];
-                    $current_field_prototype_type = $column_data[4];
-                } else if ($token instanceof db\ModelFieldValue) {
-                    if ($current_field_prototype_type !== null) {
-                        $current_field_prototype_type->set($token->getValue());
-                        $sql_select_expr .= " " . $current_field_prototype_type->getSQLValue();
-                    } else {
-                        $sql_select_expr .= " " . intval($token->getValue());
-                    }
-                } else if ($token instanceof db\SelectQuery) {
-                    // Inner selection.
-                    $sql_select_expr .= " (";
-                    $inner_columns_data = array();
-                    $sql_select_expr .= static::buildSelectQuery($token, $inner_columns_data, $alias_offset);
-                    $sql_select_expr .= ")";
-                }
-            }
-        }
-        // Compile left joins.
-        $left_joins_sql = array();
-        foreach ($columns_data as $column_datas) {
-            $left_join = $column_datas[3];
-            if ($left_join != null)
-                $left_joins_sql[] = $left_join;
-        }
-        $left_joins_sql = \implode(" ", $left_joins_sql);
-        // Evaluate the from_name which can be a table or a view that defines a partition.
-        $class_name = \get_called_class();
-        static $from_names = array();
-        if (!\array_key_exists($class_name, $from_names)) {
-            $partition_filter = $class_name::getDatabasePartitionFilter();
-            $table_name = db\table(self::classNameToTableName($class_name));
-            if ($partition_filter !== null) {
-                $from_name = \nmvc\db\config\PREFIX . "nprt/" . \substr($table_name, 1, -1) . "/" . \substr(\sha1($partition_filter, false), 0, 8);
-                $result = db\next_array(db\query("SELECT count(*) FROM `INFORMATION_SCHEMA`.`VIEWS` WHERE `TABLE_SCHEMA` = " . db\strfy(\nmvc\db\config\NAME) . " AND `TABLE_NAME` = '$from_name';"));
-                $from_name = "`$from_name`";
-                $view_exists = $result[0] != 0;
-                if (!$view_exists)
-                    db\query("CREATE VIEW $from_name AS SELECT * FROM $table_name WHERE $partition_filter", "The where_condition returned from getDatabasePartitionFilter() is invalid or database does not support creating views.");
-            } else
-                $from_name = $table_name;
-            $from_names[$class_name] = $from_name;
-        } else
-            $from_name = $from_names[$class_name];
-        $main_alias = $columns_data[""][2];
-        if ($select_query->getIsCalcFoundRows())
-            $columns_sql .= " SQL_CALC_FOUND_ROWS";
-        return "SELECT $columns_sql FROM $from_name AS $main_alias $left_joins_sql $sql_select_expr";
     }
     
     protected static function tableNameToClassName($table_name) {
         static $cache = array();
         if (!isset($cache[$table_name])) {
-            $base_offs = strrpos($table_name, '\\');
-            $base_offs++;
-            $cls_name = 'nmvc\\' . substr($table_name, 0, $base_offs) . string\underline_to_cased(substr($table_name, $base_offs)) . "Model";
+            $table_name = str_replace("__", "\\", $table_name);
+            $cls_name = 'nmvc\\' . string\underline_to_cased($table_name) . "Model";
             $cache[$table_name] = $cls_name;
         }
         return $cache[$table_name];
@@ -1133,12 +1174,12 @@ abstract class Model {
                 if ($has_module) {
                     $module_name = basename(dirname(dirname($model_filename)));
                     $cls_name = $module_name . "\\" . $cls_name;
-                    $table_name = $module_name . "\\" . $table_name;
+                    $table_name = $module_name . "__" . $table_name;
                 }
                 $cls_name = "nmvc\\" . $cls_name . "Model";
                 // Expect model to be declared after require.
                 if (!class_exists($cls_name))
-                    trigger_error("Found model file that didn't declare it's expected model: $cls_name", \E_USER_ERROR);
+                    \trigger_error("Found model file that didn't declare it's expected model: $cls_name", \E_USER_ERROR);
                 // Ignore models that are abstract.
                 if (core\is_abstract($cls_name))
                     continue;
@@ -1187,7 +1228,6 @@ abstract class Model {
      */
     public static final function repairAllModels() {
         // This maintenance script can run forever.
-        define("NANOMVC_REPAIRING_IN_PROGRESS", 1);
         ignore_user_abort(true);
         set_time_limit(0);
         $cascade_callbacks = array();
@@ -1225,7 +1265,7 @@ abstract class Model {
                 $disconnect_reaction = $model_columns[$ptr_name]->getDisconnectReaction();
                 $query = array();
                 if (!isset($family_tree[$target_model]))
-                    trigger_error("Model '$target_model' is out of sync with database.", \E_USER_ERROR);
+                    \trigger_error("Model '$target_model' is out of sync with database.", \E_USER_ERROR);
                 foreach ($family_tree[$target_model] as $table_name)
                     $query[] = "($ptr_name NOT IN (SELECT id FROM " . db\table($table_name) . "))";
                 if (count($query) > 0) {

@@ -160,10 +160,6 @@ function info($topic, $body) {
 * @param string $url URL to redirect to (eg. http://example/page)
 */
 function redirect($url) {
-    // Makes sure session data is writen (to disk). This fixes
-    // a bug where session data not gets written in time for it to be read
-    // by a concurent proccess/thread that handles the new redirected request.
-    session_write_close();
     reset();
     header("Location: " . $url);
     exit;

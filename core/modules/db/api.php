@@ -323,7 +323,7 @@ function sync_table_layout_with_columns($table_name, $columns) {
         return;
     query(
         "CREATE TRIGGER " . $trigger . " BEFORE INSERT ON " . table($table_name)
-        . " FOR EACH ROW BEGIN UPDATE " . table('core\seq') . " SET id = "
+        . " FOR EACH ROW BEGIN UPDATE " . table('core__seq') . " SET id = "
         . " LAST_INSERT_ID(id+1); SET @last_insert = LAST_INSERT_ID(); SET "
         . " NEW.id = @last_insert; END;",
         "Adding trigger failed. Probably due to lack of TRIGGER permission or "

@@ -1,12 +1,6 @@
 <?php return array(
     /** Time before logged in sessions time out. */
     "SESSION_TIMEOUT_MINUTES" => false,
-    /** Local URL where timeout sessions should be refered to. */
-    "SESSION_TIMEOUT_URL" => false,
-    /** Local URL where logged in users should be sent. */
-    "LOGIN_URL" => '/',
-    /** Local URL where logged out users should be sent. */
-    "LOGOUT_URL" => '/',
     /** Days to remember a user that checks 'remember me'. */
     "REMEMBER_ME_DAYS" => 356,
     /** Use a soft 403 to redirect to login with warning instead of HTTP 403 crashing. */
@@ -24,6 +18,10 @@
     "SHELL_LOGIN" => false,
     /** Normally userx uses the current host for the session cookie and other
      * cookies it uses. Setting this to a string instead of null will however
-     * use that value as host instead.  */
+     * use that value as host instead. */
     "COOKIE_HOST" => null,
+    /** Enabling this results in: If user is denied due to login failure,
+     * saving the deny path so user can be redirected there after successful
+     * login. */
+    "LAST_DENY_AUTOREDIRECT" => true,
 );

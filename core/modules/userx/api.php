@@ -14,7 +14,7 @@ function hash_password($cleartext_password) {
         return $salt . sha1($salt . $cleartext_password, false);
     } else if (config\HASHING_ALGORITHM == "md5") {
         $salt = \nmvc\string\random_hex_str(32);
-        return $salt . md5($salt . $cleartext_password, false);
+        return $salt . \md5($salt . $cleartext_password, false);
     } else
         trigger_error("The configured hashing algorithm '" . config\HASHING_ALGORITHM . "' is not supported.", \E_USER_ERROR);
 }
@@ -64,21 +64,85 @@ function validate_password($hashed_password, $cleartext_password) {
 function deny() {
     if (config\SOFT_403) {
         $user = get_user();
-        if ($user === null)
+        if ($user === null) {
+            if (config\LAST_DENY_AUTOREDIRECT)
+                $_SESSION['userx\LAST_DENY_PATH'] = APP_ROOT_URL . \substr(REQ_URL, 1);
             \nmvc\messenger\redirect_message(config\LOGOUT_URL, __("Access denied. You are not logged in."), "bad");
-        else
+        } else {
             \nmvc\messenger\redirect_message(config\LOGIN_URL, __("Access denied. Insufficient permissions."), "bad");
+        }
     } else
         \nmvc\request\show_xyz(403);
     exit;
 }
 
 /**
- * Will terminate this shell.
+ * Sets cookie with respect to current host
+ * and userx cookie host configuration.
+ * @param string $name
+ * @param string $value
+ * @param integer $expires
+ * @return void
  */
-function logout($redirect = true) {
-    if (!isset($_SESSION['auth']['shells']) || count($_SESSION['auth']['shells']) == 0) {
-        unset($_SESSION['auth']);
+function set_host_aware_cookie($name, $value, $expires = 0) {
+    setcookie($name, $value, $expires, "/", config\COOKIE_HOST !== null? config\COOKIE_HOST: APP_ROOT_PATH);
+}
+
+/**
+ * Sets cookie with respect to current host
+ * and userx cookie host configuration.
+ * @param string $name
+ * @return void
+ */
+function unset_host_aware_cookie($name) {
+    setcookie($name, "", 0, "/", config\COOKIE_HOST !== null? config\COOKIE_HOST: APP_ROOT_PATH);
+}
+
+/**
+ * Attempts to login with the specified username and cleartext password.
+ * Returns true if login was successful.
+ * @param string $username
+ * @param string $cleartext_password
+ * @param boolean $remember_session
+ * @return boolean
+ */
+function login_challenge($username, $cleartext_password, $remember_session = false) {
+    if (config\MULTIPLE_IDENTITIES) {
+        $user_identity = UserIdentityModel::select()->where("username")->is($username)->first();
+        $user = ($user_identity !== null)? $user_identity->user: null;
+    } else
+        $user = UserModel::select()->where("username")->is($username)->first();
+    if ($user !== null) {
+        $hashed_password = $user->type("password")->getStoredHashedValue();
+        if (validate_password($hashed_password, $cleartext_password)) {
+            $user->last_login_time = time();
+            $user->type("last_login_ip")->setToRemoteAddr();
+            if ($remember_session) {
+                $user_remember_key = \nmvc\string\random_hex_str(16);
+                $user->user_remember_key = $user_remember_key;
+                $user->user_remember_key_expires = $expires = time() + 60 * 60 * 24 * intval(config\REMEMBER_ME_DAYS);
+                // Remember user, allowing auto-login for time period configured.
+                set_host_aware_cookie("REMBR_USR_KEY", $user_remember_key, $expires);
+            } else if (isset($_COOKIE["REMBR_USR_KEY"]))
+                unset_host_aware_cookie("REMBR_USR_KEY");
+            $user->store();
+            // Remember username for two years.
+            set_host_aware_cookie("LAST_USER", $username, time() + 60 * 60 * 24 * 365 * 2);
+            // Replace any current shell with this shell.
+            logout(false);
+            login($user);
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Ends the current logged in shell.
+ */
+function logout() {
+    if (!isset($_SESSION['userx\auth']['shells']) || count($_SESSION['userx\auth']['shells']) == 0) {
+        unset($_SESSION['userx\auth']);
         // Make sure remember keys are forgotten when logging out.
         if (isset($_COOKIE["REMBR_USR_KEY"])) {
             // Unset this key, whomever it belongs too.
@@ -89,14 +153,10 @@ function logout($redirect = true) {
                     $user->store();
                 }
             }
-            setcookie("REMBR_USR_KEY", "", 0, config\COOKIE_HOST !== null? config\COOKIE_HOST: APP_ROOT_PATH);
+            unset_host_aware_cookie("REMBR_USR_KEY");
         }
-        if ($redirect)
-            \nmvc\messenger\redirect_message(config\LOGOUT_URL, __("You are now logged out."), "good");
     } else {
-        $_SESSION['auth']['user'] = array_pop($_SESSION['auth']['shells']);
-        if ($redirect)
-            \nmvc\messenger\redirect_message(config\LOGOUT_URL, __("You logged out but are still logged in with your previous user."), "good");
+        $_SESSION['userx\auth']['user'] = array_pop($_SESSION['userx\auth']['shells']);
     }
 }
 
@@ -105,23 +165,19 @@ function logout($redirect = true) {
  * shell if SHELL_LOGIN is enabled, otherwise the new session will replace
  * the current.
  * @param UserModel $user User to login as.
- * @param string $url Login or full url to redirect to afterwards.
  */
-function login(UserModel $user, $url = "/", $login_message = null) {
+function login(UserModel $user) {
     if (!config\SHELL_LOGIN)
-        unset($_SESSION['auth']);
-    $_SESSION['auth']['timeout'] = time() + config\SESSION_TIMEOUT_MINUTES * 60;
-    if (isset($_SESSION['auth']['user'])) {
-        if (!isset($_SESSION['auth']['shells']))
-            $_SESSION['auth']['shells'] = array();
-        else if (count($_SESSION['auth']['shells']) > 64)
-            \nmvc\messenger\redirect_message($url, __("Login failed! Your login shell depth is too high (max 64)!"));
-        array_push($_SESSION['auth']['shells'], $_SESSION['auth']['user']);
+        unset($_SESSION['userx\auth']);
+    $_SESSION['userx\auth']['timeout'] = time() + config\SESSION_TIMEOUT_MINUTES * 60;
+    if (isset($_SESSION['userx\auth']['user'])) {
+        if (!isset($_SESSION['userx\auth']['shells']))
+            $_SESSION['userx\auth']['shells'] = array();
+        else if (count($_SESSION['userx\auth']['shells']) > 64)
+            \nmvc\messenger\redirect_message(REQ_URL, __("Login failed! Your login shell depth is too high (max 64)!"));
+        array_push($_SESSION['userx\auth']['shells'], $_SESSION['userx\auth']['user']);
     }
-    $_SESSION['auth']['user'] = $user->getID();
-    if ($login_message === null)
-        $login_message = __("You are now logged in.");
-    \nmvc\messenger\redirect_message($url, $login_message, "good");
+    $_SESSION['userx\auth']['user'] = $user->getID();
 }
 
 /**
@@ -133,94 +189,38 @@ function get_user() {
     static $auth_user = false;
     if ($auth_user !== false)
         return $auth_user;
-    // Automatic login handler.
-    if (isset($_POST['username']) && isset($_POST['password'])) {
-        // Handle login attempt.
-        $username = $_POST['username'];
-        $cleartext_password = $_POST['password'];
-        if (config\MULTIPLE_IDENTITIES) {
-            $user_identity = UserIdentityModel::select()->where("username")->is($username)->first();
-            $user = ($user_identity !== null)? $user_identity->user: null;
-        } else
-            $user = UserModel::select()->where("username")->is($username)->first();
-        if ($user !== null) {
-            $hashed_password = $user->password;
-            if (validate_password($hashed_password, $cleartext_password)) {
-                $user->last_login_time = time();
-                $user->type("last_login_ip")->setToRemoteAddr();
-                if (isset($_POST['remember_me'])) {
-                    $user_remember_key = \nmvc\string\random_hex_str(16);
-                    $user->user_remember_key = $user_remember_key;
-                    $user->user_remember_key_expires = $expires = time() + 60 * 60 * 24 * intval(config\REMEMBER_ME_DAYS);
-                    // Remember user, allowing auto-login for time period configured.
-                    setcookie("REMBR_USR_KEY", $user_remember_key, $expires, config\COOKIE_HOST !== null? config\COOKIE_HOST: APP_ROOT_PATH);
-                }
-                $user->store();
-                // Remember username for two years.
-                setcookie("LAST_USER", $user->username, time() + 60 * 60 * 24 * 365 * 2, config\COOKIE_HOST !== null? config\COOKIE_HOST: APP_ROOT_PATH);
-                // Replace any current shell with this shell.
-                logout(false);
-                login($user, config\LOGIN_URL);
-            }
-        }
-        $_SESSION['userx\last_username_attempt'] = substr($_POST['username'], 0, 64);
-        \nmvc\messenger\push_message(__("Invalid username or password!"));
-        \nmvc\request\go_back();
-    }
-    if (isset($_SESSION['auth'])) {
+    if (isset($_SESSION['userx\auth'])) {
         // Check if the user has timed out.
-        if (time() > intval(@$_SESSION['auth']['timeout'])) {
+        if (time() > intval(@$_SESSION['userx\auth']['timeout'])) {
             // It doesn't matter how many shells are stacked,
             // if the top user times out - all users time out.
-            unset($_SESSION['auth']);
+            unset($_SESSION['userx\auth']);
             // Forward user to timeout page.
-            \nmvc\messenger\redirect_message(config\SESSION_TIMEOUT_URL, __("Your session expired due to inactivity. You need to log in again."));
+            \nmvc\messenger\redirect_message(REQ_URL, __("Your session expired due to inactivity. You need to log in again."));
         }
         // Get the user and cache it.
-        $_SESSION['auth']['timeout'] = time() + config\SESSION_TIMEOUT_MINUTES * 60;
-        $auth_user = UserModel::selectByID(intval($_SESSION['auth']['user']));
+        $_SESSION['userx\auth']['timeout'] = time() + config\SESSION_TIMEOUT_MINUTES * 60;
+        $auth_user = UserModel::selectByID(intval($_SESSION['userx\auth']['user']));
         if ($auth_user === null) {
             // Account does not exist, just redirect.
-            logout(false);
-            \nmvc\request\redirect(url(config\SESSION_TIMEOUT_URL));
+            logout();
+            \nmvc\request\redirect(REQ_URL);
         }
         // Call prototyped login session validation.
         $error = $auth_user->sessionValidate();
         if ($error != "") {
-            logout(false);
-            \nmvc\messenger\redirect_message(config\LOGOUT_URL, $error);
+            logout();
+            \nmvc\messenger\redirect_message(REQ_URL, $error);
         }
-    } else {
-        // Check if the user has a remembered login key.
-        if (!isset($_COOKIE['REMBR_USR_KEY']))
-            return $auth_user = null;
-        $time = time();
-        $auth_user = UserModel::select()->where("user_remember_key")->is($_COOKIE['REMBR_USR_KEY'])->and("user_remember_key_expires")->isMoreThan($time)->first();
-        if ($auth_user === null) {
-            setcookie("REMBR_USR_KEY", "", 0, config\COOKIE_HOST !== null? config\COOKIE_HOST: APP_ROOT_PATH);
-            return null;
-        } else {
-            // Replace any current shell with this shell.
-            logout(false);
-            login($auth_user, config\LOGIN_URL, __("Remember login active. You where automatically logged in."));
+        if (config\LAST_DENY_AUTOREDIRECT) {
+            // Handle autoredirection.
+            if ($auth_user !== null && isset($_SESSION['userx\LAST_DENY_PATH'])) {
+                $path = $_SESSION['userx\LAST_DENY_PATH'];
+                unset($_SESSION['userx\LAST_DENY_PATH']);
+                \nmvc\request\redirect($path);
+            }
         }
-    }
-    return $auth_user;
-}
-
-/**
- * Returns the username of the current login attempt.
- */
-function get_username_login_attempt() {
-    if (isset($_SESSION['userx\last_username_attempt'])) {
-        static $registered = false;
-        if (!$registered) {
-            \register_shutdown_function(function() {
-                unset($_SESSION['userx\last_username_attempt']);
-            });
-            $registered = true;
-        }
-        return $_SESSION['userx\last_username_attempt'];
     } else
-        return @$_COOKIE["LAST_USER"];
+        $auth_user = null;
+    return $auth_user;
 }

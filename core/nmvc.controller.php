@@ -250,10 +250,12 @@ abstract class Controller {
         // Rewrite the path.
         $rewritten_path = AppController::rewriteRequest(self::arrayizePath($path));
         if (!is_array($rewritten_path) && !is_null($rewritten_path) && $rewritten_path !== FALSE)
-            trigger_error("Expected rewriteRequest to return array, null or bool(false). Instead " . gettype($rewritten_path) . " was returned.", \E_USER_ERROR);
+            trigger_error("Expected AppController::rewriteRequest to return array, null or bool(false). Instead " . gettype($rewritten_path) . " was returned.", \E_USER_ERROR);
         if (is_array($rewritten_path)) {
             define("REQ_REWRITTEN_PATH", "/" . implode("/", $rewritten_path));
             $path = $rewritten_path;
+            if (REQ_IS_CORE)
+                \trigger_error("AppController::rewriteRequest may not rewrite /core/ path as it's system reserved.", \E_USER_ERROR);
         } else if ($rewritten_path === false) {
             define("REQ_REWRITTEN_PATH", false);
             return false;

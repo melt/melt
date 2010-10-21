@@ -101,15 +101,19 @@ class SelectQuery implements \IteratorAggregate, \Countable {
         return $arg;
     }
 
-    private function setOrderedField(&$tokens_array, $field, $order) {
+    private function setOrderedField($operator, &$tokens_array, $field, $order) {
         $field_key = "f$field";
         $order_key = "o$field";
-        $adding = \array_key_exists($field_key, $tokens_array);
-        if ($adding && \count($tokens_array) > 0)
-            $tokens_array[] = ",";
+        $adding = !\array_key_exists($field_key, $tokens_array);
+        if ($adding) {
+            if (\count($tokens_array) > 0)
+                $tokens_array[] = ",";
+            else
+                $tokens_array[] = $operator;
+        }
         $tokens_array[$field_key] = new ModelField($field);
         $order = \strtoupper($order);
-        if ($order != "ASC" || $order != "DESC")
+        if ($order != "ASC" && $order != "DESC")
             \trigger_error(__METHOD__ . " error: Unexpected \$order argument. Expected 'ASC' or 'DESC'.", \E_USER_ERROR);
         // Modification of query requires flushing internal cache.
         if ($adding || $tokens_array[$order_key] != $order)
@@ -140,7 +144,7 @@ class SelectQuery implements \IteratorAggregate, \Countable {
      * @see SQL GROUP BY
      */
     public function groupBy($field, $order) {
-        $this->setOrderedField($this->group_by_tokens, $field, $order);
+        $this->setOrderedField("GROUP BY", $this->group_by_tokens, $field, $order);
         return $this;
     }
 
@@ -153,7 +157,7 @@ class SelectQuery implements \IteratorAggregate, \Countable {
      * @see SQL ORDER BY
      */
     public function orderBy($field, $order = "ASC") {
-        $this->setOrderedField($this->order_tokens, $field, $order);
+        $this->setOrderedField("ORDER BY", $this->order_tokens, $field, $order);
         return $this;
     }
 
@@ -282,10 +286,8 @@ class SelectQuery implements \IteratorAggregate, \Countable {
                 $this->where_tokens[] = $pattern;
             } else {
                 // Expects php value or model field.
-                if (is_scalar($arg))
+                if (!($arg instanceof ModelField))
                     $arg = new ModelFieldValue($arg);
-                else if (!($arg instanceof ModelField))
-                    trigger_error(__CLASS__ . " error: Unexpected argument. Expected PHP scalar value or model field! Got: " . gettype($arg), \E_USER_ERROR);
             }
             $this->pending_field_operation = false;
             // Add operator argument.

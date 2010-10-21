@@ -1,18 +1,26 @@
 <?php namespace nmvc\qmi; ?>
-<table>
-    <?php foreach ($this->html_components as $comp_name => $component): ?>
-        <?php list($interface, $html_id) = $component; ?>
-        <tr>
-            <td>
-                <p>
-                    <label for="<?php echo $html_id; ?>">
-                        <?php echo escape(@$this->labels[$comp_name]); ?>
-                    </label>
-                </p>
-            </td>
-            <td class="c_<?php echo $comp_name; ?>">
-                <?php echo $interface; ?>
-            </td>
-        </tr>
-    <?php endforeach; ?>
-</table>
+<div class="qmi_table_interface">
+    <table>
+        <?php foreach ($this->components as $name => $component): ?>
+            <tr>
+                <td class="qmi_label">
+                    <p>
+                        <label for="<?php echo $component->id; ?>">
+                            <?php echo escape($component->label); ?>
+                        </label>
+                    </p>
+                </td>
+                <td class="qmi_component">
+                    <div class="c_<?php echo $name; ?>">
+                        <?php echo $component->html_interface; ?>
+                    </div>
+                    <?php if (isset($component->html_error)): ?>
+                        <div class="qmi_error">
+                            <?php echo $component->html_error; ?>
+                        </div>
+                    <?php endif; ?>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+    </table>
+</div>

@@ -74,5 +74,4 @@ class RecaptchaType extends \nmvc\AppType {
             $this->value = false;
         return;
     }
-
 }

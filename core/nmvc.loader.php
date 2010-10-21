@@ -194,8 +194,6 @@ function autoload($name) {
             development_crash("invalid_parent_class", array("path" => $path,  "class_name" => $class_name, "must_extend" => $must_extend));
         if ($pending_app_override)
             continue;
-        // Declare constant alias for class.
-        define($class_name, $class_name);
         return true;
     }
 }

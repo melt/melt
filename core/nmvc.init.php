@@ -111,3 +111,5 @@ define("REQ_URL_DIR", dirname(REQ_URL));
 define("REQ_URL_BASE", basename(REQ_URL));
 define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
 define("VOLATILE_FIELD", "VOLATILE_FIELD");
+// Disable some features in critical core requests.
+define("REQ_IS_CORE", \strncasecmp(REQ_URL, "/core/", 6) == 0);

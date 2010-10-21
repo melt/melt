@@ -56,7 +56,7 @@ class UploadType extends \nmvc\cache\BlobPointerType {
                 . __("Check this box to remove the file.") . "\" type=\"checkbox\" name=\"$remname\" id=\"$remname\" value=\"delete\" /> "
                 . __("Remove existing file.") . "<br /><br />" . __("Replace file:");
         } else
-            $status = '<br />' . __('No uploaded image. Upload new one:');
+            $status = '<br />' . __('No uploaded file. Upload new one:');
         return $status."<br /><input type=\"file\" name=\"$name\" id=\"$name\" />";
     }
 

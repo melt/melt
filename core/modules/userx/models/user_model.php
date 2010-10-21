@@ -1,6 +1,6 @@
 <?php namespace nmvc\userx;
 
-abstract class UserModel_app_overrideable extends \nmvc\AppModel {
+abstract class UserModel_app_overrideable extends \nmvc\AppModel implements \nmvc\qmi\UserInterfaceProvider {
     /* This field is only used when config\MULTIPLE_GROUPS == false */
     public $group_id = array('core\SelectModelType', 'userx\GroupModel');
     /* This field is only used when config\MULTIPLE_IDENTITIES == false */
@@ -12,6 +12,16 @@ abstract class UserModel_app_overrideable extends \nmvc\AppModel {
     public $user_remember_key = 'core\PasswordType';
     public $user_remember_key_expires = 'core\TimestampType';
     public $disabled = 'core\YesNoType';
+
+    public $remember_login = array(VOLATILE_FIELD, 'core\BooleanType');
+
+    protected function initialize() {
+        parent::initialize();
+        if ($this->isVolatile()) {
+            $this->username = @$_COOKIE["LAST_USER"];
+            $this->remember_login = isset($_COOKIE["REMBR_USR_KEY"]);
+        }
+    }
 
     /**
      * Overridable callback event method.
@@ -36,15 +46,27 @@ abstract class UserModel_app_overrideable extends \nmvc\AppModel {
         $this->password = hash_password($new_password);
     }
 
-    public function validate() {
+    public static function uiGetInterface($interface_name, $field_set) {
+        switch ($interface_name) {
+        case "userx\\login":
+            return array(
+                "username" => __("Username:"),
+                "password" => __("Password:"),
+                "remember_login" => __("Remember Login"),
+            );
+        }
+    }
+
+    public function uiValidate($interface_name) {
         $err = array();
-        $set_cleartext_password = $this->type("password")->getSetCleartextPassword();
-        if ($set_cleartext_password === null && $this->password == "")
-            $err["password"] = __("You must enter a password.");
-        else if ($set_cleartext_password === false)
-            $err["password"] = __("The password confirmation did not match.");
-        if (!isset($this->group))
-            $err["group"] = __("You must set a group for the user.");
+        switch ($interface_name) {
+        case "userx\\login":
+            if ($this->password === false)
+                $err["password"] = __("The password confirmation did not match.");
+            else if ($this->password == "")
+                $err["password"] = __("You must enter a password.");
+            break;
+        }
         return $err;
     }
 }
