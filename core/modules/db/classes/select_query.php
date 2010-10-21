@@ -34,7 +34,7 @@ class SelectQuery implements \IteratorAggregate, \Countable {
         if ($this->is_counting) {
             // Only counting.
             $result = $from_model::getDataForSelection($this);
-            $this->internal_result_count_cache = intval($result[0][0]);
+            $this->internal_result_count_cache = $result;
         } else {
             // Full result.
             $this->internal_result_cache = $from_model::getInstancesForSelection($this);
@@ -331,7 +331,7 @@ class SelectQuery implements \IteratorAggregate, \Countable {
      * result set, disregarding any LIMIT clause.
      */
     public function count_found_rows() {
-        if ($this->internal_found_rows_count_cache !== null) {
+        if ($this->internal_found_rows_count_cache === null) {
             $this->is_calc_found_rows = true;
             $this->refreshInternalResult();
             $this->is_calc_found_rows = false;
@@ -344,7 +344,7 @@ class SelectQuery implements \IteratorAggregate, \Countable {
      * @return integer
      */
     public function count() {
-        if ($this->internal_result_count_cache !== null) {
+        if ($this->internal_result_count_cache === null) {
             $this->is_counting = true;
             $this->refreshInternalResult();
             $this->is_counting = false;
