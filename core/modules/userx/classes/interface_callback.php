@@ -1,6 +1,6 @@
 <?php namespace nmvc\userx;
 
-class InterfaceCallback extends \nmvc\qmi\InterfaceCallback {
+abstract class InterfaceCallback_app_overrideable extends \nmvc\qmi\InterfaceCallback {
 
     public function ic_login() {
         $this->validate_failed_message = __("Invalid username or password!");

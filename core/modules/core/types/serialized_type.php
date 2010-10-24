@@ -11,7 +11,7 @@ class SerializedType extends \nmvc\AppType {
     }
     
     public function getSQLValue() {
-        return $this->value === null? "": \nmvc\db\strfy(\serialize($this->value));
+        return $this->value === null? "''": \nmvc\db\strfy(\serialize($this->value));
     }
 
 

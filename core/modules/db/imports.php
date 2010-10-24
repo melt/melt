@@ -3,11 +3,11 @@
 /**
  * Starts building an inner selection query expression.
  * @param string $first_field The first field name in the selector.
- * @return nmvc\db\SelectQuery
+ * @return nmvc\db\WhereCondition
  */
 function expr($first_field) {
-    $query = new \nmvc\db\SelectQuery();
-    return $query->where($first_field);
+    $wc = new \nmvc\db\WhereCondition();
+    return $wc->where($first_field);
 }
 
 /**

@@ -62,8 +62,9 @@ function make_multipart_formdata($data) {
  * @param boolean $include_common_headers Set to true to send headers assoicated with normal browsers to make the request look more natural.
  * @param array $contents Specify to send data with the POST request. It should contain an array mapped like this: 0 => Content Type, 1 => Data.
  * @param integer $timeout Time before request times out.
- * @return mixed The data and response headers returned by the request like this: 0 => Returned Data, 1 => Response Headers or an error code if the request failed.
- *               Error codes: -1 = Too many redirects (max 8), -2 = Request failed (connection timeout or malformed response)
+ * @return mixed The data and response headers returned by the request like this: array(0 => Returned Data, 1 => Response Headers)
+ * If the request failed an error code will be returned instead:
+ * -1 = Too many redirects (max 8), -2 = Request failed (connection timeout or malformed response)
  */
 function request($url, $method = HTTP_METHOD_GET, $cookies = array(), $user_agent = null, $include_common_headers = false, $contents = array(), $timeout = 5) {
     $methods = array(
@@ -142,8 +143,7 @@ function raw_request($url, $method = "GET", $headers = array(), $data = null, $t
     } else
         trigger_error("raw_request does not understand the protocol: " . $parts['scheme'], \E_USER_ERROR);
     $port = isset($parts['port'])? $parts['port']: $default_port;
-    $request_data =
-    $method . " " . $path . $query . " HTTP/1.1\r\n";
+    $request_data = $method . " " . $path . $query . " HTTP/1.1\r\n";
     if (!isset($headers["Host"])) {
         $headers["Host"] = $host;
         if ($port != 80)

@@ -18,6 +18,10 @@ class BytesType extends \nmvc\AppType {
         $this->value += $bytes;
     }
 
+    public function set($value) {
+        $this->value = intval($value);
+    }
+
     public function readInterface($name) {
         $value = @$_POST[$name];
         $number =  floatval($value);

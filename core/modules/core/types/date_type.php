@@ -24,9 +24,9 @@ class DateType extends \nmvc\AppType {
     }
 
     public function set($value) {
-        $value = \preg_replace('#\s-#', '', $value);
-        if (preg_match('#^\d\{4,4}\d{2,2}\d{2,2}$#', $value))
-            $this->value = date('Y-m-d', mktime(null, null, null, substr($value, 5, 2), substr($value, 8, 2), substr($value, 0, 4)));
+        $value = \preg_replace('#[^\d]#', '', $value);
+        if (\strlen($value) == 8)
+            $this->value = date('Y-m-d', mktime(null, null, null, substr($value, 4, 2), substr($value, 6, 2), substr($value, 0, 4)));
         else
             $this->value = null;
     }

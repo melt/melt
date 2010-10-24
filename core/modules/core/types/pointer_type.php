@@ -83,9 +83,7 @@ class PointerType extends \nmvc\AppType {
      * The basic nanoMVC pointer does not have an interface by default.
      * Simply returns a string representation of its value.
      */
-    public function getInterface($name) {
-        return (string) $this;
-    }
+    public function getInterface($name) { }
 
     /**
      * The basic nanoMVC pointer does not have an interface

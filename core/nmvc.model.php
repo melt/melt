@@ -35,8 +35,6 @@ abstract class Model implements \IteratorAggregate, \Countable {
     protected $_id = 0;
     /** @var array Where columns are internally stored for assignment overload. */
     private $_cols;
-    /** @var array Cache of all columns in this model. */
-    private $_columns_cache = null;
     /** @var array Cache of all fetched instances.  */
     private static $_instance_cache = array();
     /** @var boolean Volatile model instances will ignore store and unlink
@@ -117,18 +115,15 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * Callback function that can is useful when the application requires
      * database partitioning. It will only be called once per request
      * and model, after which the result is cached.
-     * Any model instances that does not match the given where condition will
-     * literally be completly invisible to nanoMVC. In effect, this means
-     * that any pointer relation that crosses between two partitions
-     * will be cut off and reported as "invalid".
-     * For every UNIQUE where_condition this function returns, a new
-     * persistant mySQL view will be created. The view will never be deleted.
-     * If you are generating many different types of filters, this can quickly
-     * flood the database.
-     * @return mixed If this callback returns NULL, no partitioning will
-     * take place. Otherwise it will be treated as a mySQL where_condition.
+     * It is responsible for returning a where condition that will limit any
+     * selection to the model further, in effect, determining what partition
+     * of the database to select from.
+     * Be carful not to store any pointers that crosses partition boundaries
+     * as those pointers will then be broken.
+     * @return db\WhereCondition NULL or a db\WhereCondition to
+     * partition database.
      */
-    protected static function getDatabasePartitionFilter() {
+    protected static function getPartitionCondition() {
         return null;
     }
 
@@ -210,11 +205,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
             // Call the constructor.
             $type_handler = $type_reflector->newInstanceArgs($column_construct_args);
             $type_handler->is_volatile = $is_volatile;
-            foreach ($column_attributes as $key => $attribute) {
-                if (!property_exists(get_class($type_handler), $key))
-                    \trigger_error("Invalid model column: $model_name.\$$column_name - The type '$type_class_name' does not have an attribute named '$key'.", \E_USER_ERROR);
+            foreach ($column_attributes as $key => $attribute)
                 $type_handler->$key = $attribute;
-            }
             // Cache this untouched type instance and clone it to other new instances.
             $parsed_col_array[$column_name] = $type_handler;
         }
@@ -672,11 +664,12 @@ abstract class Model implements \IteratorAggregate, \Countable {
         if ($this->_id <= 0)
             return;
         // Flush cache (or else we will get a copy of ourselves).
-        unlink(self::$_instance_cache[$this->_id]);
+        unset(self::$_instance_cache[$this->_id]);
         // Select again  (read data again).
         $new_instance = $this->selectByID($this->_id);
-        // Copy columns cache (data).
-        $this->_columns_cache = $new_instance->_columns_cache;
+        // Restore data from non volatile fields.
+        foreach ($this->getColumnNames(false) as $col_name)
+            $this->_cols[$col_name]->set($new_instance->_cols[$col_name]->get());
         // Restore cache (so future selects will return this instance).
         self::$_instance_cache[$this->_id] = $this;
     }
@@ -801,19 +794,30 @@ abstract class Model implements \IteratorAggregate, \Countable {
         if ($id <= 0)
             return null;
         $base_name = \get_called_class();
-        $model = @self::$_instance_cache[$id];
-        if ($model !== null)
+        if (\array_key_exists($id, self::$_instance_cache)) {
+            $model = self::$_instance_cache[$id];
             return ($model instanceof $base_name)? $model: null;
+        }
         static $family_tree = null;
         if ($family_tree === null)
             $family_tree = self::getMetaData("family_tree");
         if (!isset($family_tree[$base_name]))
             \trigger_error("Model '$base_name' is out of sync with database.", \E_USER_ERROR);
+        $id = (string) $id;
+        static $cached_queries = array();
         foreach ($family_tree[$base_name] as $table_name) {
-            $model_class_name = self::tableNameToClassName($table_name);
-            $columns = $model_class_name::getColumnNames(false);
-            $query = "SELECT " . implode(",", $columns) . ",id FROM " . db\table(self::classNameToTableName($model_class_name)) . " WHERE id = $id";
-            $result = db\query($query);
+            if (!\array_key_exists($table_name, $cached_queries)) {
+                $model_class_name = self::tableNameToClassName($table_name);
+                $select = $model_class_name::select();
+                $columns = $model_class_name::getColumnNames(false);
+                $columns[] = "id";
+                $select->setSelectFields($columns);
+                $select = self::buildSelectQuery($select);
+                $cached_query = $select . ((strpos($select, "WHERE") === false)? " WHERE id = ": " AND id = ");
+                $cached_queries[$table_name] = $cached_query;
+            } else
+                $cached_query = $cached_queries[$table_name];
+            $result = db\query($cached_query . $id);
             $row = db\next_array($result);
             if ($row !== false)
                 return $model_class_name::instanceFromData(intval(end($row)), $row);
@@ -940,10 +944,32 @@ abstract class Model implements \IteratorAggregate, \Countable {
         return $return_data;
     }
 
+    /*
+     * @return db\WhereCondition
+    private static function getCachedPartitionWhereCondition() {
+        $from_model = \get_called_class();
+        static $partition_selections = array();
+        if (!\array_key_exists($from_model, $partition_selections)) {
+            $partition_condition = $from_model::getDatabasePartition();
+            if ($partition_condition !== null && !($partition_condition instanceof db\WhereCondition))
+                \trigger_error("$from_model::getDatabasePartition() returned incorrect value. Expected db\WhereCondition.", \E_USER_ERROR);
+            $partition_selections[$from_model] = $partition_condition;
+        } else
+            $partition_condition = $partition_selections[$from_model];
+        return $partition_condition;
+    }
+    */
+
+
     /**
      * Builds a selection query in context of called model class.
      */
-    private static function buildSelectQuery(db\SelectQuery $select_query, $columns_data = array(), $alias_offset = 1) {
+    private static function buildSelectQuery(db\SelectQuery $select_query, $columns_data = array(), &$alias_offset = 0, $base_model_alias = null) {
+        // Register base model alias.
+        if ($base_model_alias === null) {
+            $base_model_alias = string\from_index($alias_offset);
+            $alias_offset++;
+        }
         if ($select_query->getIsCounting()) {
             $columns_sql = "COUNT(*)";
         } else {
@@ -952,7 +978,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 \trigger_error("Selecting zero columns is not allowed. (Redundant)", \E_USER_ERROR);
             // Register/process all semantic columns.
             foreach ($select_fields as &$column) {
-                $column_data = static::registerSemanticColumn($column, $columns_data, $alias_offset);
+                $column_data = static::registerSemanticColumn($column, $columns_data, $alias_offset, $base_model_alias);
                 $column = $column_data[0];
             }
             $columns_sql = \implode(",", $select_fields);
@@ -960,20 +986,29 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $from_model = $select_query->getFromModel();
         if ($from_model === null)
             \trigger_error("Given select query does not have an associated model.", \E_USER_ERROR);
-        $select_tokens = $select_query->getSelectSQLTokens();
+        // Get partition condition.
+        static $partition_conditions = array();
+        if (!\array_key_exists($from_model, $partition_conditions)) {
+            $partition_condition = $from_model::getPartitionCondition();
+            if ($partition_condition !== null && !($partition_condition instanceof db\WhereCondition))
+                \trigger_error("$from_model::getPartitionCondition() returned incorrect value. Expected db\WhereCondition.", \E_USER_ERROR);
+            $partition_conditions[$from_model] = $partition_condition;
+        } else
+            $partition_condition = $partition_conditions[$from_model];
+        // Process select tokens.
+        $select_tokens = $select_query->getTokens($partition_condition);
         $sql_select_expr = "";
         if (\count($select_tokens) > 0) {
             $current_field_prototype_type = null;
-            $alias_offset = 0;
             foreach ($select_tokens as $token) {
                 if (\is_string($token)) {
                     $sql_select_expr .= " " . $token;
                 } else if ($token instanceof db\ModelField) {
-                    $column_data = $from_model::registerSemanticColumn($token->getName(), $columns_data, $alias_offset);
+                    $column_data = $from_model::registerSemanticColumn($token->getName(), $columns_data, $alias_offset, $base_model_alias);
                     $sql_select_expr .= " " . $column_data[0];
                     $current_field_prototype_type = $column_data[4];
                 } else if ($token instanceof db\ModelFieldValue) {
-                    if ($current_field_prototype_type !== null) {
+                    if ($current_field_prototype_type !== null && !($current_field_prototype_type instanceof core\PointerType)) {
                         $current_field_prototype_type->set($token->getValue());
                         $sql_select_expr .= " " . $current_field_prototype_type->getSQLValue();
                     } else {
@@ -987,7 +1022,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                     $sql_select_expr .= ")";
                 }
             }
-        }
+        } 
         // Compile left joins.
         $left_joins_sql = array();
         foreach ($columns_data as $column_datas) {
@@ -996,6 +1031,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 $left_joins_sql[] = $left_join;
         }
         $left_joins_sql = \implode(" ", $left_joins_sql);
+        /*
         // Evaluate the from_name which can be a table or a view that defines a partition.
         static $from_names = array();
         if (!\array_key_exists($from_model, $from_names)) {
@@ -1012,11 +1048,10 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 $from_name = $table_name;
             $from_names[$from_model] = $from_name;
         } else
-            $from_name = $from_names[$from_model];
-        $main_alias = $columns_data[""][2];
-        if ($select_query->getIsCalcFoundRows())
-            $columns_sql .= " SQL_CALC_FOUND_ROWS";
-        return "SELECT $columns_sql FROM $from_name AS $main_alias $left_joins_sql $sql_select_expr";
+            $from_name = $from_names[$from_model];*/
+        $table_name = db\table(self::classNameToTableName($from_model));
+        $found_rows_identifier = $select_query->getIsCalcFoundRows()? "SQL_CALC_FOUND_ROWS": "";
+        return "SELECT $found_rows_identifier $columns_sql FROM $table_name AS $base_model_alias $left_joins_sql $sql_select_expr";
     }
 
     /**
@@ -1028,15 +1063,9 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * @param integer $alias_offset Current alias offset (for table aliases to prevent column name collision).
      * @return array Data array for column.
      */
-    public static function registerSemanticColumn($column_name, &$columns_data, &$alias_offset) {
+    public static function registerSemanticColumn($column_name, &$columns_data, &$alias_offset, $base_model_alias) {
         if (isset($columns_data[$column_name]))
             return $columns_data[$column_name];
-        if (!\array_key_exists("", $columns_data)) {
-            // Register base model alias.
-            $columns_data[""] = array(null, \get_called_class(), string\from_index($alias_offset), null, null);
-            $alias_offset++;
-        }
-        $base_model_alias = $columns_data[""][2];
         if (false === \strpos($column_name, "->")) {
             list($column_name, $prototype_type) = self::getColumnPrototype($column_name);
             $col_sql_ref = $base_model_alias . '.' . $column_name;
@@ -1067,8 +1096,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
             }
             $cur_pointer .= "->" . $ref_column;
             if (!isset($columns_data[$cur_pointer])) {
-                $column_name = static::translateFieldToColumn($ref_column);
-                list($column_name, $prototype_type) = self::getColumnPrototype($ref_column);
+                list($column_name, $prototype_type) = $cur_target_model::getColumnPrototype($ref_column);
                 $col_sql_ref = $cur_alias . '.' . $column_name;
                 $columns_data[$cur_pointer] = array($col_sql_ref, null, null, null, $prototype_type);
             }
@@ -1077,7 +1105,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
             $parent_pointer_column = $ref_column;
             $parent_pointer = $ref_column;
         }
-        return $columns_data[$column_name];
+        return $columns_data[$cur_pointer];
     }
 
     private static function getColumnPrototype($column_name) {

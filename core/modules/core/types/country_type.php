@@ -24,25 +24,13 @@ class CountryType extends \nmvc\AppType {
     }
 
     public function readInterface($name) {
-        $value = $_POST[$name];
+        $value = @$_POST[$name];
         if (isset(self::$countries_list[$value]))
             $this->value = $value;
         else
             $this->value = null;
     }
-
-    public function getCountryFlag() {
-        if (isset(self::$countries_list[$this->value])) {
-            $country = self::$countries_list[$this->value];
-            $iso_3166_code = strtolower($this->value);
-            $url = url("/static/mod/iconize/flag/png/$iso_3166_code.png");
-        } else {
-            $country = "Unknown Country";
-            $url = url("/static/mod/iconize/silk/help.png");
-        }
-        return "<img src=\"$url\" title=\"$country\" alt=\"$country Flag\" />";
-    }
-
+    
     public function __toString() {
         return $this->getCountryFlag() . " " . $this->getCountryName();
     }

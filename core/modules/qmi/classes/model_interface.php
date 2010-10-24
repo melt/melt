@@ -14,7 +14,6 @@ class ModelInterface {
     private $default_style;
 
     /**
-     *
      * @param string $interface_name Name of interface (it's identifier).
      * Used for selecting validation and components to return for models.
      * Also used for selecting callback.
@@ -270,7 +269,8 @@ class ModelInterface {
             // Generate the component interface.
             if (isset($invalidation_data['values'][$field_name]))
                 $instance->$field_name = $invalidation_data['values'][$field_name];
-            $component_interface = $instance->type($field_name)->getInterface($component_id);
+            $type = $instance->type($field_name);
+            $component_interface = $type->getInterface($component_id);
             // If an interface(s) was returned, output it.
             if (\is_string($component_interface) && \strlen($component_interface) > 0)
                 $component_interfaces = array($component_interface);
@@ -286,7 +286,7 @@ class ModelInterface {
                 $field_label = isset($ui_fields[$html_components_key])? $ui_fields[$html_components_key]: null;
                 if ($component_error != null)
                     $component_error = escape($component_error);
-                $html_components[$html_components_key] = new HtmlComponent($component_interface, $field_label, $component_error, $component_id);
+                $html_components[$html_components_key] = new HtmlComponent($component_interface, $field_label, $component_error, $component_id, $type);
             }
             // Registering the component.
             $this->components[$component_id] = array($instance_key, $field_name);
@@ -366,8 +366,10 @@ class ModelInterface {
         $callback_class = 'nmvc\\' . $callback_module . '\\InterfaceCallback';
         if (!\class_exists($callback_class))
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' does not exist!", \E_USER_ERROR);
-        if (!is($callback_class, 'nmvc\qmi\InterfaceCallback'))
-            \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not an interface callback!", \E_USER_ERROR);
+                if (!is($callback_class, 'nmvc\qmi\InterfaceCallback'))
+            \trigger_error(__METHOD__ . " error: The callback class '$callback_class' does not extend 'nmvc\qmi\InterfaceCallback'!", \E_USER_ERROR);
+        if (!is($callback_class, $callback_class . "_app_overrideable"))
+            \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not declared overridable by the responsible module!", \E_USER_ERROR);
         $callback_class = new $callback_class($interface_name, $instances, $instance_fields, $is_deleting, $success_url);
         $callback_class->$callback_method();
         \trigger_error(__METHOD__ . " error: The callback '$callback_class::$callback_method' did not redirect request!", \E_USER_ERROR);

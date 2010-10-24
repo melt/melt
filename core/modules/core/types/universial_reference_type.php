@@ -5,7 +5,7 @@
  * The downside is that they aren't "normal" pointers, so they cannot be
  * used for child lookups and cannot garbage collect themselves.
  */
-abstract class UniversialReferenceType extends \nmvc\AppType {
+class UniversialReferenceType extends \nmvc\AppType {
     protected $value = array(null, 0);
 
     /** Resolves this pointer and returns the model it points to. */
@@ -25,10 +25,13 @@ abstract class UniversialReferenceType extends \nmvc\AppType {
     }
 
     public function set($value) {
-        $id = $value->getID();
-        if (!is_a($value, 'nmvc\Model'))
-            trigger_error("Attempted to set a pointer to an incorrect object. The pointer expects a Model.", \E_USER_ERROR);
-        $this->value = array(get_class($value), $id);
+        if ($value === null) {
+            $this->value = array(null, 0);
+        } else if ($value instanceof \nmvc\Model) {
+            $id = $value->getID();
+            $this->value = array(get_class($value), $id);
+        } else
+            trigger_error("Attempted to set UniversialReferenceType to non Model instance.", \E_USER_ERROR);
     }
 
     public function setSQLValue($value) {
@@ -42,4 +45,9 @@ abstract class UniversialReferenceType extends \nmvc\AppType {
     public function getSQLValue() {
         return \nmvc\db\strfy(serialize($this->value));
     }
+    
+    public function getInterface($name) { }
+
+    public function readInterface($name) { }
+
 }

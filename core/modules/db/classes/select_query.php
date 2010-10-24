@@ -1,9 +1,6 @@
 <?php namespace nmvc\db;
 
-class SelectQuery implements \IteratorAggregate, \Countable {
-    private $pending_field_operation = false;
-
-    private $where_tokens = array();
+class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countable {
     private $group_by_tokens = array();
     private $order_tokens = array();
     private $limit = 0;
@@ -41,7 +38,7 @@ class SelectQuery implements \IteratorAggregate, \Countable {
             $this->internal_result_count_cache = count($this->internal_result_cache);
         }
         if ($this->is_calc_found_rows) {
-            $found_rows_result = db\next_array(db\query("SELECT FOUND_ROWS()"));
+            $found_rows_result = next_array(query("SELECT FOUND_ROWS()"));
             $this->is_calc_found_rows = intval($found_rows_result[0]);
         }
     }
@@ -93,14 +90,6 @@ class SelectQuery implements \IteratorAggregate, \Countable {
         return $this->is_calc_found_rows;
     }
 
-    private function argToField($arg) {
-        if (is_string($arg))
-            $arg = new ModelField($arg);
-        else if (!($arg instanceof ModelField))
-            trigger_error(__CLASS__ . " error: Unexpected argument. Expected model field!", \E_USER_ERROR);
-        return $arg;
-    }
-
     private function setOrderedField($operator, &$tokens_array, $field, $order) {
         $field_key = "f$field";
         $order_key = "o$field";
@@ -123,14 +112,14 @@ class SelectQuery implements \IteratorAggregate, \Countable {
 
     }
 
-    public function getSelectSQLTokens() {
-        if ($this->pending_field_operation)
-            trigger_error(__CLASS__ . " error: Trying to read WHERE tokens although query is not finished!", \E_USER_ERROR);
-        $tokens = array_merge($this->where_tokens, $this->group_by_tokens, $this->order_tokens);
-        if ($this->limit > 0)
-            $tokens[] = " LIMIT " . $this->offset . "," . $this->limit;
-        else if ($this->offset > 0)
-            $tokens[] = " LIMIT " . $this->offset . ",18446744073709551615";
+    public function getTokens(WhereCondition $additional_condition = null) {
+        $tokens = array_merge(parent::getTokens($additional_condition), $this->group_by_tokens, $this->order_tokens);
+        if ($this->offset > 0 || $this->limit > 0) {
+            $tokens[] = "LIMIT";
+            $tokens[] = (string) $this->offset;
+            $tokens[] = ",";
+            $tokens[] = $this->limit > 0? (string) $this->limit: "18446744073709551615";
+        }
         return $tokens;
     }
 
@@ -143,7 +132,7 @@ class SelectQuery implements \IteratorAggregate, \Countable {
      * @param string $order ASC or DESC.
      * @see SQL GROUP BY
      */
-    public function groupBy($field, $order) {
+    public function groupBy($field, $order = "ASC") {
         $this->setOrderedField("GROUP BY", $this->group_by_tokens, $field, $order);
         return $this;
     }
@@ -197,140 +186,11 @@ class SelectQuery implements \IteratorAggregate, \Countable {
         return $this;
     }
 
-    public function __call($name, $arguments) {
-        // Find query token.
-        switch ($name) {
-        // Welding tokens.
-        case "where":
-        case "and":
-            $op = "AND";
-            break;
-        case "or":
-            $op = "OR";
-            break;
-        default:
-            switch ($name) {
-            // Comparision tokens.
-            case "is":
-                $op = "=";
-                break;
-            case "isnt":
-                $op = "!=";
-                break;
-            case "isLessThan":
-                $op = "<";
-                break;
-            case "isMoreThan":
-                $op = ">";
-                break;
-            case "isntMoreThan":
-                $op = "<=";
-                break;
-            case "isntLessThan":
-                $op = ">=";
-                break;
-            case "in":
-                $op = "IN";
-                break;
-            case "startsWith":
-                $op = "LIKE";
-                break;
-            case "endsWith":
-                $op = "LIKE";
-                break;
-            case "contains":
-                $op = "LIKE";
-                break;
-            case "like":
-                $op = "LIKE";
-                break;
-            default:
-                // Attempting to apply function on entire result set?
-                $from_model = $this->from_model;
-                if ($from_model !== null && \is_callable(array($from_model, $name))) {
-                    $all = $this->all();
-                    $ret = array();
-                    foreach ($all as $instance)
-                        $ret[] = \call_user_func_array(array($instance, $name), $arguments);
-                    return $ret;
-                }
-                trigger_error(__CLASS__ . " error: Operator/token/function '" . \func_get_arg(0) . "' not supported/understood/accessible. (Note: Tokens are case sensitive.)", \E_USER_ERROR);
-                break;
-            }
-            // Modification of query requires flushing internal cache.
-            $this->resetInternalResult();
-            $arg = @$arguments[0];
-            if (!$this->pending_field_operation)
-                trigger_error(__CLASS__ . " error: Invalid query operator order!", \E_USER_ERROR);
-            // Add operator token, then value (or field name).
-            $this->where_tokens[] = $op;
-            if ($op == "IN") {
-                // Expects SelectQuery argument.
-                if (!($arg instanceof SelectQuery))
-                    trigger_error(__CLASS__ . " error: Unexpected argument. IN operator expects SelectQuery argument! Got: " . gettype($arg), \E_USER_ERROR);
-                if ($arg->getFromModel() === null)
-                    trigger_error(__CLASS__ . " error: Unexpected argument. SelectQuery argument for IN operator has from model missing!", \E_USER_ERROR);
-                if ($arg->getWhereTokens() === null || count($arg->getWhereTokens()) != 1)
-                    trigger_error(__CLASS__ . " error: Unexpected argument. SelectQuery argument for IN operator must have exactly one select field!", \E_USER_ERROR);
-            } else if ($op == "LIKE") {
-                if (!is_scalar($arg))
-                     trigger_error(__CLASS__ . " error: Unexpected argument. $name operator expects PHP scalar value! Got: " . gettype($arg), \E_USER_ERROR);
-                if ($name == "startsWith")
-                    $pattern = "'" . like_pattern_strfy($arg) . "%'";
-                else if ($name == "endsWith")
-                    $pattern = "'%" . like_pattern_strfy($arg) . "'";
-                else if ($name == "contains")
-                    $pattern = "'%" . like_pattern_strfy($arg) . "%'";
-                else
-                    $pattern = strfy($arg);
-                $this->where_tokens[] = $pattern;
-            } else {
-                // Expects php value or model field.
-                if (!($arg instanceof ModelField))
-                    $arg = new ModelFieldValue($arg);
-            }
-            $this->pending_field_operation = false;
-            // Add operator argument.
-            $this->where_tokens[] = $arg;
-            return $this;
-        }
-        // Modification of query requires flushing internal cache.
-        $this->resetInternalResult();
-        $arg = @$arguments[0];
-        // Validate operator order.
-        if ($this->pending_field_operation)
-            trigger_error(__CLASS__ . " error: Invalid query operator order!", \E_USER_ERROR);
-        // Add welding token, and then field name.
-        // Ignore welding token if nothing to weld with. 
-        // This enables more simple logic iteration.
-        $where_initialized = count($this->where_tokens) > 0;
-        if (!$where_initialized)
-            $this->where_tokens[] = "WHERE";
-        else
-            $this->where_tokens[] = $op;
-        if ($arg !== null) {
-            // Either inner expression or field name.
-            if ($arg instanceof SelectQuery) {
-                if (count($arg->where_tokens) > 0) {
-                    $this->where_tokens[] = "(";
-                    foreach ($arg->where_tokens as $inner_expression_query_token)
-                        $this->where_tokens[] = $inner_expression_query_token;
-                    $this->where_tokens[] = ")";
-                }
-                return $this;
-            } else {
-                $this->where_tokens[] = $this->argToField($arg);
-            }
-            $this->pending_field_operation = true;
-        }
-        return $this;
-    }
-
     /**
      * Tells the database to calculate how many rows there would be in the
      * result set, disregarding any LIMIT clause.
      */
-    public function count_found_rows() {
+    public function countFoundRows() {
         if ($this->internal_found_rows_count_cache === null) {
             $this->is_calc_found_rows = true;
             $this->refreshInternalResult();
@@ -385,5 +245,23 @@ class SelectQuery implements \IteratorAggregate, \Countable {
 
     public function getIterator() {
         return new \ArrayIterator($this->all());
+    }
+
+    public function __call($name, $arguments) {
+        if ($this->applyConditionToken($name, $arguments)) {
+            // Condition token applied, need to refresh internal result.
+            $this->resetInternalResult();
+            return $this;
+        }
+        // Attempting to apply function on entire result set?
+        $from_model = $this->from_model;
+        if ($from_model !== null && \is_callable(array($from_model, $name))) {
+            $all = $this->all();
+            $ret = array();
+            foreach ($all as $instance)
+                $ret[] = \call_user_func_array(array($instance, $name), $arguments);
+            return $ret;
+        }
+        $this->tokenFail($name);
     }
 }
