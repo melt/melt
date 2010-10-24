@@ -56,7 +56,7 @@ abstract class RestrictedController extends \nmvc\AppController {
                 $user = $group_or_user;
                 static $cached_user_groups = array();
                 if (!\array_key_exists($user->id, $cached_user_groups))
-                    $cached_user_groups[$user->id] = $user->selectChildren('nmvc\userx\UserGroupModel');
+                    $cached_user_groups[$user->id] = UserGroupModel::selectChildren($user);
                 foreach ($cached_user_groups[$user->id] as $user_group) {
                     if (self::getGroupPermitted($user_group->group, $controller_class_name, $invoke_data))
                         return true;

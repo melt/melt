@@ -839,32 +839,34 @@ abstract class Model implements \IteratorAggregate, \Countable {
     }
 
     /**
-     * Returns/begins a selection query for a child model of this model.
-     * @param string $child_model_name Class name of child model.
+     * Returns/begins a selection query for the children that has the
+     * specified parent.
+     * @param Model $parent
      * @param mixed $fields Array of fields or single field to limit selection.
      * Note that this is ignored when instancing selection. It is only useful
      * when fetching data matrix directly or selecting in subqueries.
+     * @return db\SelectQuery
      */
-    public final function selectChildren($child_model_name, $fields = null) {
-        $ptr_fields = $this->getChildPointers($child_model_name);
-        $id = $this->getID();
-        $select_query = new db\SelectQuery($child_model_name, $fields);
+    public static function selectChildren(Model $parent, $fields = null) {
+        $ptr_fields = static::getParentPointers(\get_class($parent));
+        $id = $parent->getID();
+        $select_query = new db\SelectQuery(\get_called_class(), $fields);
         foreach ($ptr_fields as $ptr_field)
             $select_query->or($ptr_field)->is($id);
         return $select_query;
     }
 
-    /** Returns the name of the child pointer fields. */
-    private static function getChildPointers($child_model_name) {
-        $model_name = \get_called_class();
+    /** Returns the name(s) of the child pointer fields. */
+    private static function getParentPointers($parent_model_class) {
+        $child_model_class = \get_called_class();
         $ptr_fields = array();
-        foreach ($child_model_name::getColumnNames(false) as $col_name) {
+        foreach ($child_model_class::getColumnNames(false) as $col_name) {
             if (substr($col_name, -3) == "_id" &&
-            is($model_name, $child_model_name::getTargetModel($col_name)))
+            is($parent_model_class, $child_model_class::getTargetModel($col_name)))
                 $ptr_fields[] = $col_name;
         }
         if (count($ptr_fields) == 0)
-            \trigger_error("Invalid child model: '" . $child_model_name . "'. Does not contain pointer(s) to the model '$model_name'.", \E_USER_ERROR);
+            \trigger_error("Invalid child model: '" . $child_model_class . "'. Does not contain pointer(s) to '$parent_model_class'.", \E_USER_ERROR);
         return $ptr_fields;
     }
 
