@@ -1,0 +1,2 @@
+<?php namespace nmvc; ?>
+<?php $this->layout->enterSection("some_section_head"); ?>[foo_head]<?php $this->layout->exitSection(); ?>[bar]<?php $this->layout->enterSection("some_section_foot"); ?>[foo_foot]<?php $this->layout->exitSection(); ?>
