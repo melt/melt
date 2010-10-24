@@ -53,7 +53,11 @@ abstract class RestrictedController extends \nmvc\AppController {
                 // Iterate trough all group membership.
                 // If one group is permitted then
                 // user access is granted per definition.
-                foreach ($group_or_user->selectChildren('nmvc\userx\UserGroupModel') as $user_group) {
+                $user = $group_or_user;
+                static $cached_user_groups = array();
+                if (!\array_key_exists($user->id, $cached_user_groups))
+                    $cached_user_groups[$user->id] = $user->selectChildren('nmvc\userx\UserGroupModel');
+                foreach ($cached_user_groups[$user->id] as $user_group) {
                     if (self::getGroupPermitted($user_group->group, $controller_class_name, $invoke_data))
                         return true;
                 }

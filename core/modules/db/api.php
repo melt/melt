@@ -117,6 +117,7 @@ function query($query, $errmsg = "") {
     }
     return $result;
 }
+
 /**
  * @desc Runs a query on the database, ignoring any failure.
  * @param String $query The SQL query to execute on acms DB connection.
@@ -169,11 +170,11 @@ function run($query) {
     if (!config\DEBUG_QUERY_BENCHMARK)
         return mysql_query($query);
     // Benchmark query and log.
-    file_put_contents(APP_DIR . "/db_debug_query_benchmark.log", date("r") . ": $query\n", FILE_APPEND);
     $time_start = microtime(true);
     $ret = mysql_query($query);
     $total = microtime(true) - $time_start;
-    file_put_contents(APP_DIR . "/db_debug_query_benchmark.log",  "^-" . round($total * 1000, 1) . " ms\n\n", FILE_APPEND);
+    $debug_info = date("r") . ": $query\n^-" . round($total * 1000, 1) . " ms\ncaller: " . \nmvc\internal\get_user_callpoint() . "\n\n";
+    file_put_contents(APP_DIR . "/db_debug_query_benchmark.log", $debug_info, FILE_APPEND);
     return $ret;
 }
 

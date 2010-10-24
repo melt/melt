@@ -1372,10 +1372,6 @@ abstract class Model implements \IteratorAggregate, \Countable {
         // This maintenance script can run forever.
         ignore_user_abort(true);
         set_time_limit(0);
-        // Clear nanomvc partitioning views as they need to be recreated when adding fields.
-        $result = db\query("SELECT TABLE_NAME FROM `INFORMATION_SCHEMA`.`VIEWS` WHERE `TABLE_SCHEMA` = " . db\strfy(db\config\NAME) . " AND `TABLE_NAME` LIKE '" . db\config\PREFIX . "nprt/%';");
-        while (false !== ($row = db\next_array($result)))
-            db\query("DROP VIEW " . db\table($row[0]));
         // Clear metadata.
         db\run("DROP TABLE " . db\table('core__metadata'));
         db\run("CREATE TABLE " . db\table('core__metadata') . " (`k` varchar(16) NOT NULL PRIMARY KEY, `v` BLOB NOT NULL)");

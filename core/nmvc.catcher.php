@@ -99,6 +99,43 @@ function development_crash($type, $variables) {
     die("<h1>Development Error $type</h1>" . $msg);
 }
 
+/**
+ * Returns the top call in stack "file:line" that belongs either
+ * to the app or to the module domain. Otherwise returns "CORE".
+ * @return string
+ */
+function get_user_callpoint() {
+    $backtrace = debug_backtrace();
+    foreach ($backtrace as $call) {
+        $file = @$call["file"];
+        $domain = get_call_file_domain($file);
+        if ($domain == "app" || $domain == "module") {
+            if (\nmvc\core\on_windows())
+                $file = \str_replace("\\", "/", $file);
+            if (\nmvc\string\starts_with($file, APP_DIR))
+                $file = \substr($file, \strlen(APP_DIR));
+            return $file . ":" . @$call["line"];
+        }
+    }
+    return "CORE";
+}
+
+/**
+ * Returns the domain the given file belongs to.
+ * @param string $file
+ * @return string
+ */
+function get_call_file_domain($file) {
+    if ($file == null || $file == INTERNAL_LOCATION)
+        return "php";
+    else if (\preg_match("#[/\\\\]core[/\\\\]#", $file))
+        return "core";
+    else if (\preg_match("#[/\\\\]modules[/\\\\]#", $file))
+        return "module";
+    else
+        return "app";
+}
+
 function crash($message, $file, $line, $trace) {
     // Restore output buffer.
     \nmvc\request\reset();
@@ -110,7 +147,7 @@ function crash($message, $file, $line, $trace) {
     $first_trace = true;
     foreach ($trace as $key => $call) {
         if (!isset($call['file']) || $call['file'] == '') {
-            $call['file'] = '~Internal Location~';
+            $call['file'] = INTERNAL_LOCATION;
             $call['line'] = 'N/A';
         }
         /* Keep track of previous function to move trace forward if
@@ -156,13 +193,18 @@ function crash($message, $file, $line, $trace) {
             $trace_line .= ")";
         }
         $errtrace .= "$trace_line\n";
-        if (\preg_match("#[/\\\\]core[/\\\\]#", $call['file']) || $call['file'] == INTERNAL_LOCATION)
+        switch (get_call_file_domain($call["file"])) {
+        case "php":
+        case "core":
             $html_errtrace .= escape($trace_line) . "\n";
-        else if (\preg_match("#[/\\\\]modules[/\\\\]#", $call['file']))
+            break;
+        case "module":
             $html_errtrace .= "<span style=\"color: green;\">" . escape($trace_line) . "</span>\n";
-        else
+            break;
+        default:
             $html_errtrace .= "<span style=\"color: blue;\">" . escape($trace_line) . "</span>\n";
-            
+            break;
+        }
     }
     $errlocation = "__Path: " . REQ_URL . "\n";
     $errraised = "__File: $file; line #$line\n";
