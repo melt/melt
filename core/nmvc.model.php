@@ -951,6 +951,9 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * Builds a selection query in context of called model class.
      */
     private static function buildSelectQuery(db\SelectQuery $select_query, $columns_data = array(), &$alias_offset = 0, $base_model_alias = null, $query_stack = array()) {
+        $from_model = $select_query->getFromModel();
+        if ($from_model === null)
+            \trigger_error("Given select query does not have an associated model.", \E_USER_ERROR);
         // Register base model alias.
         if ($base_model_alias === null) {
             $base_model_alias = string\from_index($alias_offset);
@@ -964,14 +967,11 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 \trigger_error("Selecting zero columns is not allowed. (Redundant)", \E_USER_ERROR);
             // Register/process all semantic columns.
             foreach ($select_fields as &$column) {
-                $column_data = static::registerSemanticColumn($column, $columns_data, $alias_offset, $base_model_alias, $query_stack);
+                $column_data = $from_model::registerSemanticColumn($column, $columns_data, $alias_offset, $base_model_alias, $query_stack);
                 $column = $column_data[0];
             }
             $columns_sql = \implode(",", $select_fields);
         }
-        $from_model = $select_query->getFromModel();
-        if ($from_model === null)
-            \trigger_error("Given select query does not have an associated model.", \E_USER_ERROR);
         // Get partition condition.
         static $partition_conditions = array();
         if (!\array_key_exists($from_model, $partition_conditions)) {
@@ -1005,7 +1005,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                     $sql_select_expr .= " (";
                     $inner_columns_data = array();
                     \array_push($query_stack, &$columns_data);
-                    $sql_select_expr .= static::buildSelectQuery($token, $inner_columns_data, $alias_offset, null, $query_stack);
+                    $sql_select_expr .= self::buildSelectQuery($token, $inner_columns_data, $alias_offset, null, $query_stack);
                     \array_pop($query_stack);
                     $sql_select_expr .= ")";
                 }
