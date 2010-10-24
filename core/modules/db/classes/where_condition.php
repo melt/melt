@@ -106,14 +106,13 @@ class WhereCondition {
                 if (!is_scalar($arg))
                      trigger_error(__CLASS__ . " error: Unexpected argument. $name operator expects PHP scalar value! Got: " . gettype($arg), \E_USER_ERROR);
                 if ($name == "startsWith")
-                    $pattern = "'" . like_pattern_strfy($arg) . "%'";
+                    $arg = "'" . like_pattern_strfy($arg) . "%'";
                 else if ($name == "endsWith")
-                    $pattern = "'%" . like_pattern_strfy($arg) . "'";
+                    $arg = "'%" . like_pattern_strfy($arg) . "'";
                 else if ($name == "contains")
-                    $pattern = "'%" . like_pattern_strfy($arg) . "%'";
+                    $arg = "'%" . like_pattern_strfy($arg) . "%'";
                 else
-                    $pattern = strfy($arg);
-                $this->where_tokens[] = $pattern;
+                    $arg = strfy($arg);
             } else {
                 // Expects php value or model field.
                 if (!($arg instanceof ModelField))
