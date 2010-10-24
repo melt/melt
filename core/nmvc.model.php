@@ -806,8 +806,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $id = (string) $id;
         static $cached_queries = array();
         foreach ($family_tree[$base_name] as $table_name) {
+            $model_class_name = self::tableNameToClassName($table_name);
             if (!\array_key_exists($table_name, $cached_queries)) {
-                $model_class_name = self::tableNameToClassName($table_name);
                 $select = $model_class_name::select();
                 $columns = $model_class_name::getColumnNames(false);
                 $columns[] = "id";
