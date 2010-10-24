@@ -946,27 +946,11 @@ abstract class Model implements \IteratorAggregate, \Countable {
         return $return_data;
     }
 
-    /*
-     * @return db\WhereCondition
-    private static function getCachedPartitionWhereCondition() {
-        $from_model = \get_called_class();
-        static $partition_selections = array();
-        if (!\array_key_exists($from_model, $partition_selections)) {
-            $partition_condition = $from_model::getDatabasePartition();
-            if ($partition_condition !== null && !($partition_condition instanceof db\WhereCondition))
-                \trigger_error("$from_model::getDatabasePartition() returned incorrect value. Expected db\WhereCondition.", \E_USER_ERROR);
-            $partition_selections[$from_model] = $partition_condition;
-        } else
-            $partition_condition = $partition_selections[$from_model];
-        return $partition_condition;
-    }
-    */
-
 
     /**
      * Builds a selection query in context of called model class.
      */
-    private static function buildSelectQuery(db\SelectQuery $select_query, $columns_data = array(), &$alias_offset = 0, $base_model_alias = null) {
+    private static function buildSelectQuery(db\SelectQuery $select_query, $columns_data = array(), &$alias_offset = 0, $base_model_alias = null, $query_stack = array()) {
         // Register base model alias.
         if ($base_model_alias === null) {
             $base_model_alias = string\from_index($alias_offset);
@@ -980,7 +964,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 \trigger_error("Selecting zero columns is not allowed. (Redundant)", \E_USER_ERROR);
             // Register/process all semantic columns.
             foreach ($select_fields as &$column) {
-                $column_data = static::registerSemanticColumn($column, $columns_data, $alias_offset, $base_model_alias);
+                $column_data = static::registerSemanticColumn($column, $columns_data, $alias_offset, $base_model_alias, $query_stack);
                 $column = $column_data[0];
             }
             $columns_sql = \implode(",", $select_fields);
@@ -1006,7 +990,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 if (\is_string($token)) {
                     $sql_select_expr .= " " . $token;
                 } else if ($token instanceof db\ModelField) {
-                    $column_data = $from_model::registerSemanticColumn($token->getName(), $columns_data, $alias_offset, $base_model_alias);
+                    $column_data = $from_model::registerSemanticColumn($token->getName(), $columns_data, $alias_offset, $base_model_alias, $query_stack);
                     $sql_select_expr .= " " . $column_data[0];
                     $current_field_prototype_type = $column_data[4];
                 } else if ($token instanceof db\ModelFieldValue) {
@@ -1020,7 +1004,9 @@ abstract class Model implements \IteratorAggregate, \Countable {
                     // Inner selection.
                     $sql_select_expr .= " (";
                     $inner_columns_data = array();
-                    $sql_select_expr .= static::buildSelectQuery($token, $inner_columns_data, $alias_offset);
+                    \array_push($query_stack, &$columns_data);
+                    $sql_select_expr .= static::buildSelectQuery($token, $inner_columns_data, $alias_offset, null, $query_stack);
+                    \array_pop($query_stack);
                     $sql_select_expr .= ")";
                 }
             }
@@ -1033,24 +1019,6 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 $left_joins_sql[] = $left_join;
         }
         $left_joins_sql = \implode(" ", $left_joins_sql);
-        /*
-        // Evaluate the from_name which can be a table or a view that defines a partition.
-        static $from_names = array();
-        if (!\array_key_exists($from_model, $from_names)) {
-            $partition_filter = $from_model::getDatabasePartitionFilter();
-            $table_name = db\table(self::classNameToTableName($from_model));
-            if ($partition_filter !== null) {
-                $from_name = \nmvc\db\config\PREFIX . "nprt/" . \substr($table_name, 1, -1) . "/" . \substr(\sha1($partition_filter, false), 0, 8);
-                $result = db\next_array(db\query("SELECT count(*) FROM `INFORMATION_SCHEMA`.`VIEWS` WHERE `TABLE_SCHEMA` = " . db\strfy(\nmvc\db\config\NAME) . " AND `TABLE_NAME` = '$from_name';"));
-                $from_name = "`$from_name`";
-                $view_exists = $result[0] != 0;
-                if (!$view_exists)
-                    db\query("CREATE VIEW $from_name AS SELECT * FROM $table_name WHERE $partition_filter", "The where_condition returned from getDatabasePartitionFilter() is invalid or database does not support creating views.");
-            } else
-                $from_name = $table_name;
-            $from_names[$from_model] = $from_name;
-        } else
-            $from_name = $from_names[$from_model];*/
         $table_name = db\table(self::classNameToTableName($from_model));
         $found_rows_identifier = $select_query->getIsCalcFoundRows()? "SQL_CALC_FOUND_ROWS": "";
         return "SELECT $found_rows_identifier $columns_sql FROM $table_name AS $base_model_alias $left_joins_sql $sql_select_expr";
@@ -1061,18 +1029,28 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * returns the data for it. Used when building selection queries.
      * Automatically generates left join for column if required.
      * @param string $column_name Semantic column name (without starting $)
-     * @param array $columns_data Contains pointers mapped to (col_sql_ref, target_model, table_join_alias, left_join, prototype_type).
+     * @param array $cur_columns_data Contains pointers mapped to (col_sql_ref, target_model, table_join_alias, left_join, prototype_type).
      * @param integer $alias_offset Current alias offset (for table aliases to prevent column name collision).
      * @return array Data array for column.
      */
-    public static function registerSemanticColumn($column_name, &$columns_data, &$alias_offset, $base_model_alias) {
-        if (isset($columns_data[$column_name]))
-            return $columns_data[$column_name];
+    public static function registerSemanticColumn($column_name, &$columns_data, &$alias_offset, $base_model_alias, &$query_stack) {
+        $refcleaned_column_name = \preg_replace('#^(<-)*#', '', $column_name);
+        $escape_subquery_refcount = (\strlen($column_name) - \strlen($refcleaned_column_name)) / 2;
+        if ($escape_subquery_refcount > 0) {
+            $column_name = $refcleaned_column_name;
+            $offset = \count($query_stack) - $escape_subquery_refcount;
+            if ($offset < 0)
+                \trigger_error("Syntax error in semantic query: '$column_name' has $escape_subquery_refcount escape subquery operators, but the current subquery is only " . \count($query_stack) . " level(s) deep!", \E_USER_ERROR);
+            $cur_columns_data =& $query_stack[$offset];
+        } else
+            $cur_columns_data =& $columns_data;
+        if (isset($cur_columns_data[$column_name]))
+            return $cur_columns_data[$column_name];
         if (false === \strpos($column_name, "->")) {
             list($column_name, $prototype_type) = self::getColumnPrototype($column_name);
             $col_sql_ref = $base_model_alias . '.' . $column_name;
-            $columns_data[$column_name] = array($col_sql_ref, null, null, null, $prototype_type);
-            return $columns_data[$column_name];
+            $cur_columns_data[$column_name] = array($col_sql_ref, null, null, null, $prototype_type);
+            return $cur_columns_data[$column_name];
         }
         $ref_columns = \explode("->", $column_name);
         $parent_class = \get_called_class();
@@ -1086,28 +1064,28 @@ abstract class Model implements \IteratorAggregate, \Countable {
             $parent_pointer_column .= "_id";
             if (!array_key_exists($parent_pointer_column, $parent_class::getPointerColumns()))
                 \trigger_error("Syntax error in semantic query: The pointer column '$parent_pointer_column' is not declared for '$parent_class'!", \E_USER_ERROR);
-            if (!isset($columns_data[$parent_pointer][1])) {
-                $cur_target_model = $columns_data[$parent_pointer][1] = $parent_class::getTargetModel($parent_pointer_column);
-                $cur_alias = $columns_data[$parent_pointer][2] = string\from_index($alias_offset);
+            if (!isset($cur_columns_data[$parent_pointer][1])) {
+                $cur_target_model = $cur_columns_data[$parent_pointer][1] = $parent_class::getTargetModel($parent_pointer_column);
+                $cur_alias = $cur_columns_data[$parent_pointer][2] = string\from_index($alias_offset);
                 $alias_offset++;
                 $target_table = self::classNameToTableName($cur_target_model);
-                $columns_data[$parent_pointer][3] = "LEFT JOIN " . db\table($target_table) . " AS $cur_alias ON $cur_alias.id = $parent_alias.$parent_pointer_column";
+                $cur_columns_data[$parent_pointer][3] = "LEFT JOIN " . db\table($target_table) . " AS $cur_alias ON $cur_alias.id = $parent_alias.$parent_pointer_column";
             } else {
-                $cur_target_model = $columns_data[$parent_pointer][1];
-                $cur_alias = $columns_data[$parent_pointer][2];
+                $cur_target_model = $cur_columns_data[$parent_pointer][1];
+                $cur_alias = $cur_columns_data[$parent_pointer][2];
             }
             $cur_pointer .= "->" . $ref_column;
-            if (!isset($columns_data[$cur_pointer])) {
+            if (!isset($cur_columns_data[$cur_pointer])) {
                 list($column_name, $prototype_type) = $cur_target_model::getColumnPrototype($ref_column);
                 $col_sql_ref = $cur_alias . '.' . $column_name;
-                $columns_data[$cur_pointer] = array($col_sql_ref, null, null, null, $prototype_type);
+                $cur_columns_data[$cur_pointer] = array($col_sql_ref, null, null, null, $prototype_type);
             }
             $parent_class = $cur_target_model;
             $parent_alias = $cur_alias;
             $parent_pointer_column = $ref_column;
             $parent_pointer = $ref_column;
         }
-        return $columns_data[$cur_pointer];
+        return $cur_columns_data[$cur_pointer];
     }
 
     private static function getColumnPrototype($column_name) {
