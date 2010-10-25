@@ -8,7 +8,7 @@
  */
 
 namespace nmvc {
-    const APP_CONFIG = "1.2.0";
+    const APP_CONFIG = "1.3.0";
 }
 
 namespace nmvc\internal {

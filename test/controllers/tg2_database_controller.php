@@ -14,6 +14,16 @@ class Tg2DatabaseController extends TestGroupController {
         Model::syncronizeAllModels();
     }
 
+    public function do_repair() {
+        Model::repairAllModels();
+        request\reset();
+    }
+
+    public function do_purify() {
+        Model::purifyAllModels();
+        request\reset();
+    }
+
     public function link_unlink() {
         Test1Model::select()->unlink();
         $this->assert(Test1Model::select()->count(), 0);
@@ -157,25 +167,30 @@ class Tg2DatabaseController extends TestGroupController {
         $model->store();
         $id2_2 = $model->id;
         // Direct IN to same model.
-        $result = Test1Model::select()->where("text_f")->in(
+        $result = Test1Model::select()->where("text_f")->isIn(
             Test1Model::select("text_f")
         )->orderBy("id")->all();
         $this->assert(\array_keys($result), $id1);
         // Direct IN to same model with additional condition.
-        $result = Test1Model::select()->where("text_f")->in(
+        $result = Test1Model::select()->where("text_f")->isIn(
             Test1Model::select("text_f")
         )->and("integer_f")->isLessThan(3)->orderBy("id")->all();
         $this->assert(\array_keys($result), array($id1[0], $id1[1], $id1[2]), \array_keys($result));
         // Direct IN to different model.
-        $result = Test1Model::select()->where("text_f")->in(
+        $result = Test1Model::select()->where("text_f")->isIn(
             Test2Model::select("another_text_f")
         )->orderBy("id")->all();
         $this->assert(\array_keys($result), $id1);
         // Parent referencing IN to different model.
-        $result = Test2Model::select()->where("another_text_f")->in(
+        $result = Test2Model::select()->where("another_text_f")->isIn(
             Test1Model::select("text_f")->where("text_f")->is(field("<-another_text_f"))
         )->orderBy("id")->all();
         $this->assert(\array_keys($result), array($id2_0, $id2_1));
+        // Parent referencing NOT IN to different model.
+        $result = Test2Model::select()->where("another_text_f")->isntIn(
+            Test1Model::select("text_f")->where("text_f")->is(field("<-another_text_f"))
+        )->orderBy("id")->all();
+        $this->assert(\array_keys($result), array($id2_2));
     }
 
     public function select_where_like() {
@@ -194,17 +209,29 @@ class Tg2DatabaseController extends TestGroupController {
         $model->store();
         $id2 = $model->id;
         // Starts With
-        $result = Test2Model::select()->where("another_text_f")->startsWith("wa")->orderBy("id")->all();
+        $result = Test2Model::select()->where("another_text_f")->isStartingWith("wa")->orderBy("id")->all();
         $this->assert(\array_keys($result), array($id0, $id2));
-        // Ends With
-        $result = Test2Model::select()->where("another_text_f")->endsWith("akka")->orderBy("id")->all();
+        // Not Starts With
+        $result = Test2Model::select()->where("another_text_f")->isntStartingWith("wa")->orderBy("id")->all();
         $this->assert(\array_keys($result), array($id1));
-        // Contains
-        $result = Test2Model::select()->where("another_text_f")->contains("kka")->orderBy("id")->all();
-        $this->assert(\array_keys($result), array($id0, $id1));
-        // Like
-        $result = Test2Model::select()->where("another_text_f")->like("%wo_ka%")->orderBy("id")->all();
+        // Ends With
+        $result = Test2Model::select()->where("another_text_f")->isEndingWith("akka")->orderBy("id")->all();
+        $this->assert(\array_keys($result), array($id1));
+        // Not ends With
+        $result = Test2Model::select()->where("another_text_f")->isntEndingWith("akka")->orderBy("id")->all();
         $this->assert(\array_keys($result), array($id0, $id2));
+        // Contains
+        $result = Test2Model::select()->where("another_text_f")->isContaining("kka")->orderBy("id")->all();
+        $this->assert(\array_keys($result), array($id0, $id1));
+        // Not Contains
+        $result = Test2Model::select()->where("another_text_f")->isntContaining("kka")->orderBy("id")->all();
+        $this->assert(\array_keys($result), array($id2));
+        // Like
+        $result = Test2Model::select()->where("another_text_f")->isLike("%wo_ka%")->orderBy("id")->all();
+        $this->assert(\array_keys($result), array($id0, $id2));
+        // Not like.
+        $result = Test2Model::select()->where("another_text_f")->isntLike("%wo_ka%")->orderBy("id")->all();
+        $this->assert(\array_keys($result), array($id1));
     }
 
 
