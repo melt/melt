@@ -84,16 +84,28 @@ class Tg3TypesController extends TestGroupController {
         $this->testType("date_f", $set_gets, $set_gets);
     }
 
-    /*
     public function t_enum_copy() {
-        $this->testType("enum_f", array(
-            array("AD", "AD"),
+        Test1Model::select()->unlink();
+        $tm = array();
+        for ($i = 0; $i < 10; $i++) {
+            $test1_model = new Test1Model();
+            $test1_model->text_f = \sha1($i);
+            $test1_model->store();
+            $tm[$i] = $test1_model->id;
+        }
+        $this->testType("enum_copy_f", array(
+            array("foo", "foo"),
+            array(7, "7"),
         ), array(
-            array("BB", "Barbados"),
-            array("ZM", "Zambia"),
-            array("ZZ", null),
+            array("foo bar", ""),
+            array("'\"", ""),
+            array($tm[4], \sha1(4)),
+            array($tm[6], \sha1(6)),
+            array($tm[3], \sha1(3)),
         ));
     }
+
+    /*
 
     public function t_file() {
         $this->testType("date_F", array(

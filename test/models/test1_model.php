@@ -7,7 +7,7 @@ class Test1Model extends AppModel {
     public $bytes_f = array('core\BytesType');
     public $country_f = array('core\CountryType');
     public $date_f = array('core\DateType');
-    public $enum_copy_f = array('core\EnumCopyType', 'Test1Model');
+    public $enum_copy_f = array('core\EnumCopyType', 'Test1Model', "text_f");
     public $file_f = array('core\FileType');
     public $float_f = array('core\FloatType');
     public $integer_f = array('core\IntegerType');
