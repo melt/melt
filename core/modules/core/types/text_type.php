@@ -10,6 +10,10 @@ class TextType extends \nmvc\AppType {
         parent::__construct($column_name);
     }
 
+    public function set($value) {
+        $this->value = (string) $value;
+    }
+
     public function getSQLType() {
         return ($this->varchar_size !== null)? "varchar(" . $this->varchar_size . ")": "text";
     }

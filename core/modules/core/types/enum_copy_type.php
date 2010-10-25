@@ -2,12 +2,12 @@
 
 class EnumCopyType extends \nmvc\core\TextType {
     /** @var \nmvc\db\SelectQuery Target model selection. */
-    private $selection = "";
+    private $selection;
     /* Targeting options. */
     private $label_column;
     private $target_model;
 
-    public function __construct($column_name, $target_model, $label_column = null, $varchar_size = 128, $where = "") {
+    public function __construct($column_name, $target_model, $label_column = null, $varchar_size = 128) {
         parent::__construct($column_name, $varchar_size);
         $target_model = 'nmvc\\' . $target_model;
         if (!class_exists($target_model) || !is_subclass_of($target_model, 'nmvc\Model'))
@@ -43,15 +43,14 @@ class EnumCopyType extends \nmvc\core\TextType {
             // No change.
             return;
         }
-        // If this is an invalid ID, set to null.
-        $where = trim($this->selection);
-        if ($where != "")
-            $where .= " AND ";
-        $selected = forward_static_call(array($this->target_model, 'selectById'), $value);
-        if ($selected === null) {
-            // No change
-            return;
-        }
-        $this->value = strval($selected->{$this->label_column});
+        // If this is an invalid ID, set to nothing.
+        $selection = clone $this->selection;
+        $selected = $selection->and("id")->is($value)->first();
+        if ($selected === null)
+            $this->value = "";
+        else if ($this->label_column == "")
+            $this->value = (string) $selected;
+        else
+            $this->value = \strval($selected->{$this->label_column});
     }
 }
