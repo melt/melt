@@ -1207,7 +1207,6 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $model_classes = self::findAllModels();
         echo "\nSearching for redundant/not used columns and removing them...\n\n";
         \ob_flush();
-        \sleep(6);
         ignore_user_abort(true);
         set_time_limit(0);
         $found_count = 0;
@@ -1271,33 +1270,39 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 continue;
             foreach ($pointer_fields as $ptr_name => $target_model) {
                 $disconnect_reaction = $model_columns[$ptr_name]->getDisconnectReaction();
-                $query = array();
                 if (!isset($family_tree[$target_model]))
                     \trigger_error("Model '$target_model' is out of sync with database.", \E_USER_ERROR);
+                if (count($family_tree[$target_model]) == 0)
+                    continue;
+                $query = array();
                 foreach ($family_tree[$target_model] as $table_name)
                     $query[] = "($ptr_name NOT IN (SELECT id FROM " . db\table($table_name) . "))";
-                if (count($query) > 0) {
-                    $query = implode(" OR ", $query);
-                    $instances = $model_class::selectFreely("WHERE $ptr_name > 0 AND ($query)");
-                    if (count($instances) > 0) {
-                        // Found pointers that are broken.
-                        echo "\nFound " . count($instances) . " instances of " . $model_class . " with their " . $ptr_name . " pointer broken! Repairing...\n\n";
-                        // Remove pointers from database (nullify).
-                        $table_name = self::classNameToTableName($model_class);
-                        db\query("UPDATE " . db\table($table_name) . " SET `$ptr_name` = 0 WHERE id IN (" . implode(",", array_keys($instances)) . ")");
-                        // Reflect the broken pointers in memory.
-                        foreach ($instances as $instance) {
-                            $column = $instance->_cols[$ptr_name];
-                            $column->setSQLValue(0);
-                            $column->setSyncPoint();
-                        }
-                        // Index reactions.
-                        if ($disconnect_reaction == "CASCADE")
-                            $cascade_callbacks += $instances;
-                        else if ($disconnect_reaction == "CALLBACK") {
-                            foreach ($instances as $id => $instance)
-                                $disconnect_callbacks[$id] = array($instance, $ptr_name);
-                        }
+                $source_table = self::classNameToTableName($model_class);
+                $result = db\query("SELECT id FROM " . db\table($source_table) . " WHERE $ptr_name > 0 AND (" . implode(" OR ", $query) .")");
+                if (db\get_num_rows($result) > 0) {
+                    // Found pointers that are broken.
+                    $ids = array();
+                    $instances = array();
+                    while (false !== ($col = db\next_array($result))) {
+                        $ids[] = $id = $col[0];
+                        $instances[$id] = $target_model::selectByID($id);
+                    }
+                    echo "\nFound " . count($instances) . " instances of " . $model_class . " with their " . $ptr_name . " pointer broken! Repairing...\n\n";
+                    // Remove pointers from database (nullify).
+                    $table_name = self::classNameToTableName($model_class);
+                    db\query("UPDATE " . db\table($table_name) . " SET `$ptr_name` = 0 WHERE id IN (" . implode(",", array_keys($instances)) . ")");
+                    // Reflect the broken pointers in memory.
+                    foreach ($instances as $instance) {
+                        $column = $instance->_cols[$ptr_name];
+                        $column->setSQLValue(0);
+                        $column->setSyncPoint();
+                    }
+                    // Index reactions.
+                    if ($disconnect_reaction == "CASCADE")
+                        $cascade_callbacks += $instances;
+                    else if ($disconnect_reaction == "CALLBACK") {
+                        foreach ($instances as $id => $instance)
+                            $disconnect_callbacks[$id] = array($instance, $ptr_name);
                     }
                 }
                 // The cascade reaction also implies that the ID is not NULL.

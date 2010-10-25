@@ -53,6 +53,10 @@ function make_multipart_formdata($data) {
     return array("multipart/form-data; boundary=" . $boundary, $encoded_data);
 }
 
+const HTTP_ERROR_REDIRECT_LIMIT = -1;
+const HTTP_ERROR_TIMEOUT = -2;
+const HTTP_ERROR_MALFORMED_RESPONSE = -3;
+
 /**
  * Makes a HTTP request for the given URL and returns the data received.
  * @param string $url Absolute URL to send the HTTP request too.
@@ -61,10 +65,11 @@ function make_multipart_formdata($data) {
  * @param string $user_agent Specify something other than null to not use the default nanoMVC user agent.
  * @param boolean $include_common_headers Set to true to send headers assoicated with normal browsers to make the request look more natural.
  * @param array $contents Specify to send data with the POST request. It should contain an array mapped like this: 0 => Content Type, 1 => Data.
- * @param integer $timeout Time before request times out.
+ * @param integer $timeout Time before request times out. Connection attempt
+ * and reading/sending data from server can not take longer than this or
+ * timeout error will occour.
  * @return mixed The data and response headers returned by the request like this: array(0 => Returned Data, 1 => Response Headers)
- * If the request failed an error code will be returned instead:
- * -1 = Too many redirects (max 8), -2 = Request failed (connection timeout or malformed response)
+ * If the request failed, one of the HTTP_ERROR_ codes will be returned instead.
  */
 function request($url, $method = HTTP_METHOD_GET, $cookies = array(), $user_agent = null, $include_common_headers = false, $contents = array(), $timeout = 5) {
     $methods = array(
@@ -101,8 +106,8 @@ function request($url, $method = HTTP_METHOD_GET, $cookies = array(), $user_agen
     // Make request, max 8 redirects.
     for ($i = 0; $i < 8; $i++) {
         $response = raw_request($url, $methods[$method], $headers, $content, $timeout);
-        if ($response === false)
-            return -2;
+        if (!is_array($response))
+            return $response;
         $status_code = $response[1];
         $return_headers = $response[3];
         if ($method !== HTTP_METHOD_POST && $status_code[0] == "3" && isset($return_headers["Location"])) {
@@ -112,7 +117,7 @@ function request($url, $method = HTTP_METHOD_GET, $cookies = array(), $user_agen
             return array($data_blob, $return_headers);
         }
     }
-    return -1;
+    return HTTP_ERROR_REDIRECT_LIMIT;
 }
 
 /**
@@ -122,10 +127,13 @@ function request($url, $method = HTTP_METHOD_GET, $cookies = array(), $user_agen
  * @param string $method GET, POST, HEAD or any other method the server supports.
  * @param array $headers A key value array of headers you want to use with the request.
  * @param string $data The data you want to send with the request or null to not send data.
- * @param integer $timeout Specify to change the maximum time which PHP will wait for a connection to be established.
- * @return mixed array(http version, status code, reason phrase, headers (key => value mapped), data blob) or FALSE if connection or response parsing failed.
+ * @param integer $timeout Time before request times out. Connection attempt
+ * and reading/sending data from server can not take longer than this or
+ * timeout error will occour.
+ * @return mixed array(http version, status code, reason phrase, headers (key => value mapped), data blob)
+ * or one of HTTP_ERROR_ codes if request failed.
  */
-function raw_request($url, $method = "GET", $headers = array(), $data = null, $timeout = 5) {
+function raw_request($url, $method = "GET", $headers = array(), $data = null, $timeout = 10) {
     $parts = parse_url($url);
     $scheme = isset($parts['scheme'])? $parts['scheme']: 'http';
     if (!isset($parts['host']))
@@ -160,21 +168,28 @@ function raw_request($url, $method = "GET", $headers = array(), $data = null, $t
     foreach ($headers as $header => $value)
         $request_data .= "$header: " . $value . "\r\n";
     $request_data .= "\r\n" . $data;
+    $time_start = microtime(true);
     $fp = fsockopen($sock_host, $port, $errno, $errstr, $timeout);
     if (!$fp)
-        return false;
+        return HTTP_ERROR_TIMEOUT;
     fwrite($fp, $request_data);
     $response = "";
-    while (!feof($fp))
-        $response .= fgets($fp, 1280);
+    $time_left = $timeout - (microtime(true) - $time_start);
+    stream_set_timeout($fp, floor($time_left), round($time_left - floor($time_left)) * 1000);
+    while (false !== ($chunk = fgets($fp, 1280)))
+        $response .= $chunk;
+    if (!feof($fp)) {
+        fclose($fp);
+        return HTTP_ERROR_TIMEOUT;
+    }
     fclose($fp);
     $header_blob_length = strpos($response, "\r\n\r\n");
     if ($header_blob_length === false)
-        return false;
+        return HTTP_ERROR_MALFORMED_RESPONSE;
     $header_blob = substr($response, 0, $header_blob_length + 2);
     $data_blob = substr($response, $header_blob_length + 4);
     if (preg_match('#(HTTP/1\..) ([^ ]+) ([^' . "\r\n" . ']+)' . "\r\n#im", $header_blob, $matches) == 0)
-        return false;
+        return HTTP_ERROR_MALFORMED_RESPONSE;
     $http_version = $matches[1];
     $status_code = $matches[2];
     $reason_phrase = $matches[3];

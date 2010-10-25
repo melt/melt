@@ -5,9 +5,10 @@
  * @param string $first_field The first field name in the selector.
  * @return nmvc\db\WhereCondition
  */
-function expr($first_field) {
+function expr($first_field = null) {
     $wc = new \nmvc\db\WhereCondition();
-    return $wc->where($first_field);
+    if ($first_field !== null)
+        return $wc->where($first_field);
 }
 
 /**

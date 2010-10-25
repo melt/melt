@@ -41,6 +41,7 @@ class WhereCondition {
 
     protected function applyConditionToken($name, $arguments) {
         $arg = @$arguments[0];
+        $not = false;
         // Find query token.
         switch ($name) {
         // Welding tokens.
@@ -72,19 +73,20 @@ class WhereCondition {
             case "isntLessThan":
                 $op = ">=";
                 break;
-            case "in":
+            case "isntIn":
+                $not = true;
+            case "isIn":
                 $op = "IN";
                 break;
-            case "startsWith":
-                $op = "LIKE";
-                break;
-            case "endsWith":
-                $op = "LIKE";
-                break;
-            case "contains":
-                $op = "LIKE";
-                break;
-            case "like":
+            case "isntStartingWith":
+            case "isntEndingWith":
+            case "isntContaining":
+            case "isntLike":
+                $not = true;
+            case "isStartingWith":
+            case "isEndingWith":
+            case "isContaining":
+            case "isLike":
                 $op = "LIKE";
                 break;
             default:
@@ -93,6 +95,8 @@ class WhereCondition {
             if (!$this->pending_field_operation)
                 trigger_error(__CLASS__ . " error: Invalid query operator order!", \E_USER_ERROR);
             // Add operator token, then value (or field name).
+            if ($not)
+                $this->where_tokens[] = "NOT";
             $this->where_tokens[] = $op;
             if ($op == "IN") {
                 // Expects WhereCondition argument.
@@ -105,11 +109,11 @@ class WhereCondition {
             } else if ($op == "LIKE") {
                 if (!is_scalar($arg))
                      trigger_error(__CLASS__ . " error: Unexpected argument. $name operator expects PHP scalar value! Got: " . gettype($arg), \E_USER_ERROR);
-                if ($name == "startsWith")
+                if (\nmvc\string\ends_with($name, "StartingWith"))
                     $arg = "'" . like_pattern_strfy($arg) . "%'";
-                else if ($name == "endsWith")
+                else if (\nmvc\string\ends_with($name, "EndingWith"))
                     $arg = "'%" . like_pattern_strfy($arg) . "'";
-                else if ($name == "contains")
+                else if (\nmvc\string\ends_with($name, "Containing"))
                     $arg = "'%" . like_pattern_strfy($arg) . "%'";
                 else
                     $arg = strfy($arg);
