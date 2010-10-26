@@ -83,7 +83,7 @@ abstract class BlobPointerType extends \nmvc\core\PointerType {
             if (strlen($extention) == 0 || $extention[0] != ".")
                 trigger_error("Extention MUST start with dot!", \E_USER_ERROR);
             // Prepare storing the binary data in a new blob model.
-            $blob_model = BlobModel::insert();
+            $blob_model = new BlobModel();
             $blob_model->dta = $data;
             $blob_model->tag = \nmvc\string\random_alphanum_str(8);
             $blob_model->ext = $extention;

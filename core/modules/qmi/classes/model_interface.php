@@ -286,8 +286,6 @@ class ModelInterface {
                 // Prefix "_" prevents collision with other fields when using types with multiple interfaces.
                 $html_components_key = ($index == 0)? $field_name:  "_" . $field_name . "_" . ($index + 1);
                 $field_label = isset($ui_fields[$html_components_key])? $ui_fields[$html_components_key]: null;
-                if ($component_error != null)
-                    $component_error = escape($component_error);
                 $html_components[$html_components_key] = new HtmlComponent($component_interface, $field_label, $component_error, $component_id, $type);
             }
             // Registering the component.
@@ -374,6 +372,6 @@ class ModelInterface {
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not declared overridable by the responsible module!", \E_USER_ERROR);
         $callback_class = new $callback_class($interface_name, $instances, $instance_fields, $is_deleting, $success_url);
         $callback_class->$callback_method();
-        \trigger_error(__METHOD__ . " error: The callback '$callback_class::$callback_method' did not redirect request!", \E_USER_ERROR);
+        \nmvc\request\redirect($callback_class->getSuccessUrl());
     }
 }

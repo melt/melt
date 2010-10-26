@@ -27,20 +27,21 @@ class PasswordType extends \nmvc\AppType {
     }
 
     public function getInterface($name) {
-        $ret = array("<input type=\"password\" name=\"$name\" id=\"$name\" value=\"\" />");
+        $value = \is_string($this->value)? escape($this->value): "";
+        $ret = array("<input type=\"password\" name=\"$name\" id=\"$name\" value=\"$value\" />");
         if (!$this->parent->isVolatile())
-            $ret[] = "<input type=\"password\" name=\"$name" . "_1\" id=\"$name" . "_1\" value=\"\" />";
+            $ret[] = "<input type=\"password\" name=\"$name" . "_1\" id=\"$name" . "_1\" value=\"$value\" />";
         return $ret;
     }
 
     public function readInterface($name) {
         $new_pwd = @$_POST[$name];
-        $con_pwd = @$_POST[$name . "_1"];
-        if ($new_pwd == "" && $con_pwd == "") {
+        if ($new_pwd == "") {
             $this->value = null;
             return;
-        } else if ($new_pwd != $con_pwd) {
-
+        } else if (isset($_POST[$name . "_1"]) && $new_pwd != $_POST[$name . "_1"]) {
+            $this->value = false;
+            return;
         }
         $this->value = $new_pwd;
     }

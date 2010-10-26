@@ -37,15 +37,6 @@ abstract class UserModel_app_overrideable extends \nmvc\AppModel implements \nmv
             return "This account has been disabled.";
     }
 
-    /**
-     * Sets a password for this user.
-     * @param string $new_password Cleartext password.
-     * @return void
-     */
-    public function setPassword($new_password) {
-        $this->password = hash_password($new_password);
-    }
-
     public static function uiGetInterface($interface_name, $field_set) {
         switch ($interface_name) {
         case "userx\\login":
@@ -59,14 +50,10 @@ abstract class UserModel_app_overrideable extends \nmvc\AppModel implements \nmv
 
     public function uiValidate($interface_name) {
         $err = array();
-        switch ($interface_name) {
-        case "userx\\login":
-            if ($this->password === false)
-                $err["password"] = __("The password confirmation did not match.");
-            else if ($this->password == "")
-                $err["password"] = __("You must enter a password.");
-            break;
-        }
+        if ($this->password === false)
+            $err["password"] = __("The password confirmation did not match.");
+        else if ($this->password == "")
+            $err["password"] = __("You must enter a password.");
         return $err;
     }
 }

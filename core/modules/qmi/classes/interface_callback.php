@@ -50,7 +50,7 @@ abstract class InterfaceCallback_app_overrideable {
      * Returns the success url configured.
      * @return string
      */
-    protected final function getSuccessUrl() {
+    public final function getSuccessUrl() {
         return $this->success_url;
     }
 
@@ -79,11 +79,13 @@ abstract class InterfaceCallback_app_overrideable {
     }
 
     /**
-     * Validates instances and returns the count of incorrect fields found.
+     * Validates instances and invalid redirect if invalid fields is found.
      * It will disregard fields that are not part of current generated
      * interface.
+     * @param boolean $auto_redirect Set to false to return count of invalid
+     * fields instead of automatically redirecting.
      */
-    protected final function doValidate() {
+    protected final function doValidate($auto_redirect = true) {
         // Validate all instances.
         $error_count = 0;
         foreach ($this->instances as $instance_key => $instance) {
@@ -103,6 +105,8 @@ abstract class InterfaceCallback_app_overrideable {
                 $this->pushError($instance, $field_name, $error);
             $error_count += \count($error_fields);
         }
+        if ($error_count > 0)
+            $this->doInvalidRedirect();
         return $error_count;
     }
 

@@ -4,13 +4,13 @@ abstract class InterfaceCallback_app_overrideable extends \nmvc\qmi\InterfaceCal
 
     public function ic_login() {
         $this->validate_failed_message = __("Invalid username or password!");
+        $this->doValidate();
         $instances = $this->getInstances();
         $user = $instances['nmvc\userx\UserModel'][0];
-        if ($this->doValidate() > 0)
-            $this->doInvalidRedirect();
         if (login_challenge($user->username, $user->password, $user->remember_login)) {
             \nmvc\messenger\redirect_message($this->getSuccessUrl(), __("You are now logged in."), "good");
         } else {
+            $user->password = "";
             $this->pushError($user, "password", __("Invalid username or password!"));
             $this->doInvalidRedirect();
         }
