@@ -68,7 +68,8 @@ abstract class InterfaceCallback_app_overrideable {
             }
         }
         // Store invalid and reload this URL.
-        $_SESSION['qmi_invalid'] = $this->invalidation_data;
+        $_SESSION['qmi_invalid']['name'] = $this->interface_name;
+        $_SESSION['qmi_invalid']['data'] = $this->invalidation_data;
         \nmvc\messenger\redirect_message(REQ_URL, $this->validate_failed_message);
     }
 

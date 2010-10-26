@@ -244,8 +244,10 @@ class ModelInterface {
         $this->attachChanges($instance);
         $instance_key = $this->getMemoryInstanceKey($instance);
         $db_instance_key = self::getDatabaseInstanceKey($instance);
-        if (isset($_SESSION["qmi_invalid"][$db_instance_key])) {
-            $invalidation_data = $_SESSION["qmi_invalid"][$db_instance_key];
+        if (isset($_SESSION["qmi_invalid"]['name'])
+        && $_SESSION["qmi_invalid"]['name'] == $this->interface_name
+        && isset($_SESSION["qmi_invalid"]['data'][$db_instance_key])) {
+            $invalidation_data = $_SESSION["qmi_invalid"]['data'][$db_instance_key];
             // A clear of this invalidation data is now pending.
             static $pending_data_clear = false;
             if (!$pending_data_clear) {
