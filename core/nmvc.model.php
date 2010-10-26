@@ -1285,7 +1285,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                     $instances = array();
                     while (false !== ($col = db\next_array($result))) {
                         $ids[] = $id = $col[0];
-                        $instances[$id] = $target_model::selectByID($id);
+                        $instances[$id] = $model_class::selectByID($id);
                     }
                     echo "\nFound " . count($instances) . " instances of " . $model_class . " with their " . $ptr_name . " pointer broken! Repairing...\n\n";
                     // Remove pointers from database (nullify).
