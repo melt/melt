@@ -51,7 +51,7 @@ abstract class InterfaceCallback_app_overrideable {
      * @return string
      */
     public final function getSuccessUrl() {
-        return $this->success_url;
+        return \str_replace("{id}", $this->iid, $this->success_url);
     }
 
     private $invalidation_data = array();
@@ -144,9 +144,7 @@ abstract class InterfaceCallback_app_overrideable {
                 $this->doStore();
             // Redirect to success url.
             \nmvc\request\reset();
-            $success_url = $this->success_url;
-            $success_url = \str_replace("{id}", $this->iid, $success_url);
-            \nmvc\request\redirect($success_url);
+            \nmvc\request\redirect($this->getSuccessUrl());
         } else
             \trigger_error("Called unknown method $name on " . __CLASS__ . ".", \E_USER_ERROR);
     }
