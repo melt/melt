@@ -71,7 +71,7 @@ const HTTP_ERROR_MALFORMED_RESPONSE = -3;
  * @return mixed The data and response headers returned by the request like this: array(0 => Returned Data, 1 => Response Headers)
  * If the request failed, one of the HTTP_ERROR_ codes will be returned instead.
  */
-function request($url, $method = HTTP_METHOD_GET, $cookies = array(), $user_agent = null, $include_common_headers = false, $contents = array(), $timeout = 5) {
+function request($url, $method = HTTP_METHOD_GET, $cookies = array(), $user_agent = null, $include_common_headers = false, $contents = array(), $timeout = 10) {
     $methods = array(
         HTTP_METHOD_GET => "GET",
         HTTP_METHOD_POST => "POST",
