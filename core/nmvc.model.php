@@ -805,18 +805,17 @@ abstract class Model implements \IteratorAggregate, \Countable {
             \trigger_error("Model '$base_name' is out of sync with database.", \E_USER_ERROR);
         $id = (string) $id;
         static $cached_queries = array();
-        foreach ($family_tree[$base_name] as $table_name) {
-            $model_class_name = self::tableNameToClassName($table_name);
-            if (!\array_key_exists($table_name, $cached_queries)) {
+        foreach ($family_tree[$base_name] as $model_class_name) {
+            if (!\array_key_exists($model_class_name, $cached_queries)) {
                 $select = $model_class_name::select();
                 $columns = $model_class_name::getColumnNames(false);
                 $columns[] = "id";
                 $select->setSelectFields($columns);
                 $select = self::buildSelectQuery($select);
                 $cached_query = $select . ((strpos($select, "WHERE") === false)? " WHERE id = ": " AND id = ");
-                $cached_queries[$table_name] = $cached_query;
+                $cached_queries[$model_class_name] = $cached_query;
             } else
-                $cached_query = $cached_queries[$table_name];
+                $cached_query = $cached_queries[$model_class_name];
             $result = db\query($cached_query . $id);
             $row = db\next_array($result);
             if ($row !== false)
@@ -912,8 +911,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
             \trigger_error("Model '$from_model' is out of sync with database.", \E_USER_ERROR);
         $is_counting = $select_query->getIsCounting();
         $sum = 0;
-        foreach ($family_tree[$from_model] as $table_name) {
-            $model_class_name = self::tableNameToClassName($table_name);
+        foreach ($family_tree[$from_model] as $model_class_name) {
             $columns = $model_class_name::getColumnNames(false);
             $columns[] = "id";
             $select_query->setFromModel($model_class_name);
@@ -1281,8 +1279,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 if (count($family_tree[$target_model]) == 0)
                     continue;
                 $query = array();
-                foreach ($family_tree[$target_model] as $table_name)
-                    $query[] = "($ptr_name NOT IN (SELECT id FROM " . db\table($table_name) . "))";
+                foreach ($family_tree[$target_model] as $model_child_class)
+                    $query[] = "($ptr_name NOT IN (SELECT id FROM " . db\table(self::classNameToTableName($model_child_class)) . "))";
                 $source_table = self::classNameToTableName($model_class);
                 $result = db\query("SELECT id FROM " . db\table($source_table) . " WHERE $ptr_name > 0 AND (" . implode(" OR ", $query) .")");
                 if (db\get_num_rows($result) > 0) {
@@ -1381,14 +1379,6 @@ abstract class Model implements \IteratorAggregate, \Countable {
             // Syncronize this model.
             $parsed_col_array = $model_class::getParsedColumnArray();
             db\sync_table_layout_with_model($table_name, $parsed_col_array);
-            // Record pointers for pointer map.
-            $columns = $model_class::getColumnNames(false);
-            foreach ($parsed_col_array as $col_name => $col_type) {
-                if (substr($col_name, -3) != "_id")
-                    continue;
-                $target_model = $col_type->getTargetModel();
-                $pointer_map[$target_model][] = array($model_class, $col_name);
-            }
             // If creating sequence, record max.
             if ($creating_sequence) {
                 $max_result = db\next_array(db\query("SELECT MAX(id) FROM " . db\table($table_name)));
@@ -1397,21 +1387,28 @@ abstract class Model implements \IteratorAggregate, \Countable {
                     $sequence_max = $max_result;
             }
         }
-        self::setMetaData("pointer_map", $pointer_map);
         // Track all ancestors of all models.
         $family_tree = array();
         foreach ($model_classes as $model_class) {
             // A self relation allows us to loop trough all models that IS
             // that model, and itself IS that model.
-            $model_class_table_name = self::classNameToTableName($model_class);
-            $family_tree[$model_class][] = $model_class_table_name;
+            $family_tree[$model_class][] = $model_class;
             foreach (class_parents($model_class) as $model_parent) {
                 if ($model_parent == 'nmvc\Model')
                     continue;
-                $family_tree[$model_parent][] = $model_class_table_name;
+                $family_tree[$model_parent][] = $model_class;
             }
         }
         self::setMetaData("family_tree", $family_tree);
+        // Record pointers for pointer map.
+        $pointer_map = array();
+        foreach ($model_classes as $model_class) {
+            foreach ($model_class::getPointerColumns(true) as $col_name => $target_model) {
+                foreach ($family_tree[$target_model] as $target_child_class)
+                    $pointer_map[$target_child_class][] = array($model_class, $col_name);
+            }
+        }
+        self::setMetaData("pointer_map", $pointer_map);
         if ($creating_sequence) {
             // Need to create the sequence.
             db\run("DROP TABLE " . db\table('core__seq'));
