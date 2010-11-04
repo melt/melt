@@ -30,7 +30,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
             trigger_error(__CLASS__ . " error: Cannot get result of selection without specifying from model!", \E_USER_ERROR);
         if ($this->is_counting) {
             // Only counting.
-            $result = $from_model::getDataForSelection($this);
+            $result = $from_model::getInstancesForSelection($this);
             $this->internal_result_count_cache = $result;
         } else {
             // Full result.

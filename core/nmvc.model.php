@@ -910,19 +910,25 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $out_array = array();
         if (!isset($family_tree[$from_model]))
             \trigger_error("Model '$from_model' is out of sync with database.", \E_USER_ERROR);
+        $is_counting = $select_query->getIsCounting();
+        $sum = 0;
         foreach ($family_tree[$from_model] as $table_name) {
             $model_class_name = self::tableNameToClassName($table_name);
             $columns = $model_class_name::getColumnNames(false);
             $columns[] = "id";
             $select_query->setFromModel($model_class_name);
             $select_query->setSelectFields($columns);
-            $result_array = $model_class_name::getDataForSelection($select_query);
-            foreach ($result_array as $result_row) {
+            $result = $model_class_name::getDataForSelection($select_query);
+            if ($is_counting) {
+                $sum += $result;
+                continue;
+            }
+            foreach ($result as $result_row) {
                 $id = \intval(\end($result_row));
                 $out_array[$id] = $model_class_name::instanceFromData($id, $result_row);
             }
         }
-        return $out_array;
+        return $is_counting? $sum: $out_array;
     }
 
 
