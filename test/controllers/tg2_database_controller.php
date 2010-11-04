@@ -233,6 +233,52 @@ class Tg2DatabaseController extends TestGroupController {
         $result = Test2Model::select()->where("another_text_f")->isntLike("%wo_ka%")->orderBy("id")->all();
         $this->assert(\array_keys($result), array($id1));
     }
+    
+    
+    
+    public function integrity_a() {
+        TestFooModel::select()->unlink();
+        TestBarModel::select()->unlink();        
+        $foo1 = new TestFooModel();
+        $foo1->name = "foo1";
+        $bar1 = new TestBarModel();
+        $bar1->name = "bar1";
+        $foo1->bar = $bar1;
+        $foo1->bar2 = $bar1;
+        $foo1->store();
+        $bar1->store();
+        $foo2 = new TestFooModel();
+        $foo2->name = "foo2";
+        $barbaz2 = new TestBarBazModel();
+        $barbaz2->name = "barbaz2";
+        $foo2->bar = $bar1;
+        $foo2->bar2 = $barbaz2;
+        $foo2->store();
+        $barbaz2->store();
+        $this->assert(TestFooModel::select()->count(), 2);
+        $this->assert(TestBarModel::select()->count(), 2);
+        $this->assert(TestBarBazModel::select()->count(), 1);
+    }
+    
+    public function integrity_b() {
+        $foo1 = TestFooModel::select()->where("name")->is("foo1")->first();
+        $foo2 = TestFooModel::select()->where("name")->is("foo2")->first();
+        $bar1 = TestBarModel::select()->where("name")->is("bar1")->first();
+        $barbaz2 = TestBarModel::select()->where("name")->is("barbaz2")->first();
+        // Unlinking bar1.
+        $bar1->unlink();
+        $this->assert($foo1->isLinked(), false);
+        $this->assert(TestFooModel::select()->where("name")->is("foo1")->first(), null);
+        $this->assert($foo1->bar, null);
+        $this->assert($foo1->bar2, null);
+        $this->assert($foo2->isLinked(), true);
+        $this->assert($foo2->bar, null);
+        // Unlinking barbaz2.
+        $barbaz2->unlink();
+        $this->assert($foo2->isLinked(), false);
+        $this->assert($foo2->bar2, null);
+        $this->assert(TestFooModel::select()->where("name")->is("foo2")->first(), null);
+    }
 
 
     /*
