@@ -62,14 +62,14 @@ function validate_password($hashed_password, $cleartext_password) {
  * Function does not return.
  */
 function deny() {
-    if (config\SOFT_403) {
+    if (config\SOFT_403 != false) {
         $user = get_user();
         if ($user === null) {
             if (config\LAST_DENY_AUTOREDIRECT)
                 $_SESSION['userx\LAST_DENY_PATH'] = APP_ROOT_URL . \substr(REQ_URL, 1);
-            \nmvc\messenger\redirect_message(config\LOGOUT_URL, __("Access denied. You are not logged in."), "bad");
+            \nmvc\messenger\redirect_message(config\SOFT_403, __("Access denied. You are not logged in."), "bad");
         } else {
-            \nmvc\messenger\redirect_message(config\LOGIN_URL, __("Access denied. Insufficient permissions."), "bad");
+            \nmvc\messenger\redirect_message(config\SOFT_403, __("Access denied. Insufficient permissions."), "bad");
         }
     } else
         \nmvc\request\show_xyz(403);
