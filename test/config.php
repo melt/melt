@@ -114,6 +114,8 @@ namespace nmvc\userx\config {
 
 // Module jquery (only used if enabled)
 namespace nmvc\jquery\config {
+    const INCLUDE_JQUERY_JSTREE = false;
+    const INCLUDE_JQUERY_HOTKEYS = false;
     const INCLUDE_JQUERY_RESIZE = false;
     const INCLUDE_JQUERY_FORM = false;
     const INCLUDE_JQUERY_COOKIE = false;
@@ -127,7 +129,6 @@ namespace nmvc\jquery\config {
      */
     const INCLUDE_JQUERY_CORNER = false;
     const INCLUDE_JQUERY_LIGHTBOX = false;
-    const INCLUDE_JQUERY_TREE = false;
     const INCLUDE_JQUERY_DATATABLES = false;
     const INCLUDE_JQUERY_AUTOCOMPLETE = false;
 }
