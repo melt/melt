@@ -11,7 +11,7 @@ class SelectType extends \nmvc\AppType {
             trigger_error(__CLASS_ . " expects an array array of at least one option as it's second argument. Got: " . gettype($options), \E_USER_ERROR);
         foreach ($options as $k => $v)
             if (!is_integer($k))
-                trigger_error("All keys in the " . __CLASS_ . " options array has to be integers. Found: " . gettype($k));
+                trigger_error("All keys in the " . __CLASS__ . " options array has to be integers. Found: " . gettype($k));
         $this->options = $options;
     }
 
@@ -43,7 +43,7 @@ class SelectType extends \nmvc\AppType {
     public function set($value) {
         $value = intval($value);
         if (!isset($this->options[$value]))
-            trigger_error("Value '$value' is not a valid integer key for " . __CLASS_ . ".", \E_USER_ERROR);
+            trigger_error("Value '$value' is not a valid integer key for " . __CLASS__ . ".", \E_USER_ERROR);
         $this->value = $value;
     }
 
