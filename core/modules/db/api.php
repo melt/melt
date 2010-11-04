@@ -286,19 +286,20 @@ function sync_table_layout_with_columns($table_name, $columns) {
         while (false !== ($column = next_array($current_columns))) {
             $current_name = strtolower($column[0]);
             $current_type = strtolower($column[1]);
+            $supports_null = \strcasecmp($column[2], "no") != 0;
             // ID column is special case.
             if ($current_name == 'id') {
                 if (!\nmvc\string\starts_with($current_type, "bigint"))
-                    query("ALTER TABLE " . table($table_name) . " MODIFY COLUMN id bigint");
+                    query("ALTER TABLE " . table($table_name) . " MODIFY COLUMN id bigint NOT NULL");
                 continue;
             }
             // Skip unknown columns.
             if (!isset($columns[$current_name]))
                 continue;
             $expected_type = $columns[$current_name];
-            if (isset($columns[$current_name]) && sql_column_need_update($expected_type, $current_type)) {
+            if ($supports_null || isset($columns[$current_name]) && sql_column_need_update($expected_type, $current_type)) {
                 // Invalid datatype, alter it.
-                query("ALTER TABLE " . table($table_name) . " MODIFY COLUMN $current_name $expected_type");
+                query("ALTER TABLE " . table($table_name) . " MODIFY COLUMN $current_name $expected_type NOT NULL");
             }
             // This column was confirmed.
             unset($columns[$current_name]);
