@@ -31,6 +31,6 @@ function debug() {
  * @param \nmvc\Model $instance
  * @return integer
  */
-function id(\nmvc\Model $instance = null) {
+function id($instance = null) {
     return \nmvc\core\id($instance);
 }

@@ -372,8 +372,13 @@ function debug() {
  * @param \nmvc\Model $instance
  * @return integer
  */
-function id(\nmvc\Model $instance = null) {
-    return $instance === null? 0: $instance->getID();
+function id($instance = null) {
+    if ($instance === null)
+        return 0;
+    else if (\is_scalar($instance))
+        return intval($instance);
+    else
+        return $instance->getID();
 }
 
 // Import some functions to the global namespace.
