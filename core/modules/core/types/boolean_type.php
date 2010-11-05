@@ -12,7 +12,7 @@ class BooleanType extends \nmvc\AppType {
         return "tinyint";
     }
     public function getSQLValue() {
-        return $this->value? "TRUE": "FALSE";
+        return $this->value? "1": "0";
     }
     public function getInterface($name) {
         $value = ($this->value == true)? "checked=\"checked\"": "";
