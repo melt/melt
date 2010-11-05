@@ -1002,7 +1002,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                         $current_field_prototype_type->set($token->getValue());
                         $sql_select_expr .= " " . $current_field_prototype_type->getSQLValue();
                     } else {
-                        $sql_select_expr .= " " . intval($token->getValue());
+                        $sql_select_expr .= " " . intval(id($token->getValue()));
                     }
                 } else if ($token instanceof db\SelectQuery) {
                     // Inner selection.
