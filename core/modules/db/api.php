@@ -307,7 +307,7 @@ function sync_table_layout_with_columns($table_name, $columns) {
         // Insert the rest of the columns.
         $adds = array();
         foreach ($columns as $name => $type)
-            $adds[] = "$name $type";
+            $adds[] = "$name $type NOT NULL";
         $adds = implode(", ", $adds);
         if (strlen($adds) > 0)
             query("ALTER TABLE " . table($table_name) . " ADD ($adds)");
