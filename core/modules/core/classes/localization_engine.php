@@ -470,17 +470,17 @@ class LocalizationEngine {
                         $translation = $translations[$index];
                     else
                         $translation = \reset($translations);
-                    return vsprintf($translation, $sprintf_args);
+                    return \vsprintf($translation, $sprintf_args);
                 }
             }
         }
         // No translation used. Just do standard plural switch.
         if ($plural_str == "")
-            return $str;
+            return \vsprintf($str, $sprintf_args);
         if ($n > 1)
-            return $plural_str;
+            return \vsprintf($plural_str, $sprintf_args);
         else
-            return $str;
+            return \vsprintf($str, $sprintf_args);
     }
 
     public static function __set_state($saved_state) {

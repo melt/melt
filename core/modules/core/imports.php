@@ -39,14 +39,14 @@ function id($instance = null) {
  * Aliast for gettext.
  */
 function _() {
-    call_user_func_array('gettext', func_get_args());
+    return call_user_func_array('gettext', func_get_args());
 }
 
 /**
  * Alias for gettext.
  */
 function __() {
-    call_user_func_array('gettext', func_get_args());
+    return call_user_func_array('gettext', func_get_args());
 }
 
 /**
@@ -57,7 +57,7 @@ function __() {
  */
 function gettext($msgid) {
     $sprintf_args = array_slice(func_get_args(), 1);
-    nmvc\core\LocalizationEngine::translate($msgid, "", "", 1, $sprintf_args);
+    return nmvc\core\LocalizationEngine::translate($msgid, "", "", 1, $sprintf_args);
 }
 
 /**
@@ -70,7 +70,7 @@ function gettext($msgid) {
  */
 function ngettext($msgid, $msgid_plural, $n) {
     $sprintf_args = array_slice(func_get_args(), 2);
-    nmvc\core\LocalizationEngine::translate($msgid, $msgid_plural, "", $n, $sprintf_args);
+    return nmvc\core\LocalizationEngine::translate($msgid, $msgid_plural, "", $n, $sprintf_args);
 }
 
 /**
@@ -82,5 +82,5 @@ function ngettext($msgid, $msgid_plural, $n) {
  */
 function pgettext($context, $msgid) {
     $sprintf_args = array_slice(func_get_args(), 2);
-    nmvc\core\LocalizationEngine::translate($msgid, "", $context, 1, $sprintf_args);
+    return nmvc\core\LocalizationEngine::translate($msgid, "", $context, 1, $sprintf_args);
 }
