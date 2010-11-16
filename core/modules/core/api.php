@@ -381,5 +381,18 @@ function id($instance = null) {
         return $instance->getID();
 }
 
+/**
+ * Sets or gets the current locale.
+ * @param string $new_locale Set to non FALSE to set a new locale for the
+ * next request of this session.
+ * @return string The current locale if not passing argument.
+ */
+function current_locale($new_locale = false) {
+    if ($new_locale === false)
+        return LocalizationEngine::get()->getLocale();
+    else
+        LocalizationEngine::setNextLocale($new_locale);
+}
+
 // Import some functions to the global namespace.
 include __DIR__ . "/imports.php";
