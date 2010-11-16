@@ -401,13 +401,16 @@ class LocalizationEngine {
                 $translation_data["fuzzy"] = \array_key_exists("fuzzy", $translation_entry);
                 $translations = array();
                 if (\array_key_exists("msgstr", $translation_entry)) {
-                    $translations[0] = $translation_entry["msgstr"];
+                    $msgstr = $translation_entry["msgstr"];
+                    if ($msgstr != "")
+                        $translations[0] = $msgstr;
                 } else {
                     foreach ($translation_entry as $key => $value) {
                         if (!\preg_match('#^msgstr\[(\d+)\]$#', $key, $matches))
                             continue;
                         $index = \intval($matches[1]);
-                        $translations[$index] = $value;
+                        if ($value != "")
+                            $translations[$index] = $value;
                     }
                 }
                 $translation_data["translations"] = $translations;
@@ -460,17 +463,19 @@ class LocalizationEngine {
                 $translations = $translate_strings[$str];
                 if (\array_key_exists($context, $translations)) {
                     $translations = $translations[$context]["translations"];
-                    // Calculate translation index.
-                    $index = ($indexformula != null)? intval(eval($indexformula)): ($n == 1? 0: 1);
-                    if ($index > $maxindex)
-                        $index = $maxindex;
-                    if ($index < 0)
-                        $index = 0;
-                    if (!\array_key_exists($index, $translations))
-                        $translation = $translations[$index];
-                    else
-                        $translation = \reset($translations);
-                    return \vsprintf($translation, $sprintf_args);
+                    if (count($translations) > 0) {
+                        // Calculate translation index.
+                        $index = ($indexformula != null)? intval(eval($indexformula)): ($n == 1? 0: 1);
+                        if ($index > $maxindex)
+                            $index = $maxindex;
+                        if ($index < 0)
+                            $index = 0;
+                        if (\array_key_exists($index, $translations))
+                            $translation = $translations[$index];
+                        else
+                            $translation = \reset($translations);
+                        return \vsprintf($translation, $sprintf_args);
+                    }
                 }
             }
         }
