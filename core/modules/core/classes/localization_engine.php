@@ -230,7 +230,7 @@ class LocalizationEngine {
                     // Translation is new. Find old, similar translation.
                     $best_match = null;
                     $record = $levdist_threshold;
-                    if ($record > 0) {
+                    if ($record > 0 && false) {
                         foreach ($old_locale_strings as $old_msgid => $old_contexts) {
                             if (\count($old_contexts) == 0)
                                 continue;
