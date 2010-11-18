@@ -9,5 +9,6 @@ class IndexController extends AppController {
         Tg1RoutingController::invoke("_run");
         Tg2DatabaseController::invoke("_run");
         Tg3TypesController::invoke("_run");
+        Tg4StringController::invoke("_run");
     }
 }

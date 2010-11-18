@@ -20,6 +20,7 @@ namespace nmvc\internal {
 
 
 namespace nmvc\core\config {
+    const TRANSLATION_ENABLED = false;
     // The following configuration options are explained here:
     // http://docs.nanomvc.com/chapter/development_guide/development_and_debugging
     const MAINTENANCE_MODE = true;
