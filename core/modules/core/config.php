@@ -4,4 +4,5 @@
     "RECAPTCHA_PRIVATE_KEY" => "",
     "RECAPTCHA_PUBLIC_KEY" => "",
     "TRANSLATION_ENABLED" => false,
+    "DEFAULT_LANGUAGE" => "en",
 );

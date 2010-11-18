@@ -512,7 +512,7 @@ class LocalizationEngine {
     }
 
     private function trySetLanguage($locale) {
-        $locale = substr($locale, 0, 2);
+        $locale = \strtolower(\substr($locale, 0, 2));
         if (\strlen($locale) != 2)
             return false;
         if (\array_key_exists($locale, $this->locale_data)) {
@@ -529,7 +529,7 @@ class LocalizationEngine {
     private function __construct($locale_data) {
         $this->locale_data = $locale_data;
         // Determine what language to use if supporting more than one language.
-        if (count($locale_data) > 1) {
+        if (\count($locale_data) > 1) {
             $locale = null;
             if (isset($_SESSION['core\locale']))
                 // 1. Set by session, if it can.
@@ -538,24 +538,24 @@ class LocalizationEngine {
                 unset($_SESSION['core\locale\language']);
             if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
                 // 2. Set by accept-language, if it can.
-                $server_accept_language = preg_replace('#\s#', '', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
-                $accept_langs = explode(',', $server_accept_language);
+                $server_accept_language = \preg_replace('#\s#', '', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
+                $accept_langs = \explode(',', $server_accept_language);
                 $lang_try_order = array();
                 foreach ($accept_langs as $locale) {
-                    if (false !== ($qp = strpos($locale, ';q='))) {
-                        $q = floatval(substr($locale, $qp + 3));
+                    if (false !== ($qp = \strpos($locale, ';q='))) {
+                        $q = \floatval(\substr($locale, $qp + 3));
                     } else
                         $q = 1;
-                    $locale = substr($locale, 0, 2);
+                    $locale = \substr($locale, 0, 2);
                     $lang_try_order[$locale] = $q;
                 }
-                arsort($lang_try_order);
+                \arsort($lang_try_order);
                 foreach ($lang_try_order as $locale => $q)
                     if ($this->trySetLanguage($locale))
                         return;
             }
-            // 3. Set to english, if it can.
-            if ($this->trySetLanguage('en'))
+            // 3. Set to default language, if it can.
+            if ($this->trySetLanguage(config\DEFAULT_LANGUAGE))
                 return;
         }
         // 4. Set to the first of the supported.
