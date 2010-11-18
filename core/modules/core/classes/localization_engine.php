@@ -198,7 +198,7 @@ class LocalizationEngine {
         $po_block .= "\n";
         return $po_block;
     }
-
+    
     /**
      * Exports a locale to a PO file and scans for translation changes in
      * the source code in the process.
@@ -207,7 +207,7 @@ class LocalizationEngine {
      * strings to old strings for them to count as similar but fuzzy.
      * @return string
      */
-    public function exportLanguage($locale, $levdist_threshold) {
+    public function exportLanguage($locale, $min_similar_string_dist = 0.85) {
         if (!\array_key_exists($locale, $this->locale_data))
             trigger_error("Locale $locale does not exist!", \E_USER_ERROR);
         $old_locale_strings = $this->locale_data[$locale]["strings"];
@@ -216,6 +216,8 @@ class LocalizationEngine {
         $plural_ids = array();
         $references = array();
         $php_files = grep(APP_DIR, '#.*\.php$#');
+        $untranslated_strings = array();
+        $used_old_locale_strings = array();
         foreach ($php_files as $php_file) {
             foreach ($this->parseTranslateInvokes($php_file) as $translate_invoke) {
                 list($msgid, $plural_id, $context, $reference) = $translate_invoke;
@@ -226,31 +228,33 @@ class LocalizationEngine {
                 } else if (isset($old_locale_strings[$msgid][$context])) {
                     // Translation already exists. Transfer old locale string to new.
                     $new_locale_strings[$msgid][$context] = $old_locale_strings[$msgid][$context];
+                    // Mark this old translation as used.
+                    $used_old_locale_strings[$msgid][$context] = true;
                 } else {
                     // Translation is new. Find old, similar translation.
                     $best_match = null;
-                    $record = $levdist_threshold;
-                    if ($record > 0 && false) {
+                    if (\ceil($min_similar_string_dist * \strlen($msgid)) < \strlen($msgid)) {
+                        $record = $min_similar_string_dist;
                         foreach ($old_locale_strings as $old_msgid => $old_contexts) {
                             if (\count($old_contexts) == 0)
                                 continue;
-                            $dist = \levenshtein($msgid, $old_msgid);
-                            if ($dist <= $record) {
-                                $record = $dist - 1;
-                                if ($record < 1)
-                                    break;
+                            $similarity = \nmvc\string\lcs_similarity($msgid, $old_msgid, $record);
+                            if ($similarity !== false && $similarity > $record) {
                                 $best_match = $old_contexts;
+                                $record = $similarity;
                             }
                         }
                     }
                     if ($best_match !== null) {
                         // Use same context or just pick one.
-                        if (\array_key_exists($context, $record))
-                            $fuzzy_translation = $record[$context];
+                        if (\array_key_exists($context, $best_match))
+                            $fuzzy_translation = $best_match[$context];
                         else
-                            $fuzzy_translation = \reset($record);
+                            $fuzzy_translation = \reset($best_match);
                         $new_locale_strings[$msgid][$context] = $fuzzy_translation;
                         $new_locale_strings[$msgid][$context]["fuzzy"] = true;
+                        // Mark this old translation as used.
+                        $used_old_locale_strings[$msgid][$context] = true;
                     } else {
                         // Translation is new and couldn't be matched, just add.
                         $new_locale_strings[$msgid][$context] = array(
@@ -262,6 +266,18 @@ class LocalizationEngine {
                 if (!isset($plural_ids[$msgid][$context]) || $plural_id != "")
                     $plural_ids[$msgid][$context] = $plural_id;
                 $references[$msgid][$context][] = $reference;
+            }
+        }
+        // Add all translated deprecated strings.
+        foreach ($old_locale_strings as $old_msgid => $old_contexts) {
+            foreach ($old_contexts as $old_context => $tranlation_entry) {
+                if (isset($used_old_locale_strings[$old_msgid][$old_context]))
+                    continue;
+                if (count($tranlation_entry["translations"]) == 0)
+                    continue;
+                $new_locale_strings[$old_msgid][$old_context] = $old_locale_strings[$old_msgid][$old_context];
+                $plural_ids[$old_msgid][$old_context] = "";
+                $references[$old_msgid][$old_context] = array();
             }
         }
         $comment = "NanoMVC Application Automatically Generated .PO Translation File";
@@ -413,6 +429,9 @@ class LocalizationEngine {
                             $translations[$index] = $value;
                     }
                 }
+                // Skip empty translations.
+                if (count($translations) == 0)
+                    continue;
                 $translation_data["translations"] = $translations;
                 $new_strings[$msgid][$context] = $translation_data;
             }

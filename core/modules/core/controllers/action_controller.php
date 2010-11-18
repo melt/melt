@@ -49,7 +49,7 @@ class ActionController extends DeveloperController {
         } else if ($action === "remove") {
             $this->engine->removeLocale($locale);
         } else if ($action === "export") {
-            $po_content = $this->engine->exportLanguage($locale, 6);
+            $po_content = $this->engine->exportLanguage($locale);
             \nmvc\request\reset();
             \header('Content-Disposition: attachment; filename=nmvc-translation-' . $locale . '.po');
             \header('Content-Type: text/plain');

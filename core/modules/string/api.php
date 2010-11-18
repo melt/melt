@@ -252,3 +252,97 @@ function in_range($string, $min = -1, $max = -1) {
         return true;
 }
 
+/**
+ * Calculates the least common substring of two strings.
+ * It has a worst case of O(strlen($str1) * strlen($str2))
+ * but should usually run much faster if much_reach_least is high enough.
+ * @param string $str1
+ * @param string $str2
+ * @param integer $must_reach_least
+ * @return integer LCS distance or FALSE if must_reach_least canceled the search.
+ */
+function lcs_distance($str1, $str2, $must_reach_least = null) {
+    // Reduce all charachers that exists in neither string,
+    // This should not affect the result and should improve many real world cases.
+    $str1_chars = \count_chars($str1, 1);
+    $str2_chars = \count_chars($str2, 1);
+    $unique_chars = \array_keys(\array_diff_key($str1_chars, $str2_chars) + \array_diff_key($str2_chars, $str1_chars));
+    $unique_chars = \array_map(function($c) { return \chr($c); }, $unique_chars);
+    $str1 = \str_replace($unique_chars, array(), $str1);
+    $str2 = \str_replace($unique_chars, array(), $str2);
+    // Take distances into account.
+    $m = \strlen($str1);
+    $n = \strlen($str2);
+    if ($must_reach_least !== null) {
+        $max_lcs = \max($m, $n);
+        if ($max_lcs < $must_reach_least)
+            return false;
+        else if ($max_lcs === $must_reach_least)
+            return \strcmp($str1, $str2) === 0? $max_lcs: false;
+    }
+    $lcs_row_a = \array_fill(0, $n + 1, 0);
+    $lcs_row_b = \array_fill(0, $n + 1, 0);
+    // This variable holds the max lcs for the current row.
+    // It is equal to the maximum value on row above + 1.
+    $max_row_lcs = 1;
+    for ($i = 1; $i <= $m; $i++) {
+        // Reduces array copying in memory by flipping references.
+        if (($i % 2) == 0) {
+            $lcs_row_above =& $lcs_row_a;
+            $lcs_table_current =& $lcs_row_b;
+        } else {
+            $lcs_row_above =& $lcs_row_b;
+            $lcs_table_current =& $lcs_row_a;
+        }
+        // Make comparision that short circuits if max lcs is reached.
+        for ($j = 1; $j <= $n; $j++) {
+            if ($str1[$i - 1] == $str2[$j - 1])
+                $new_lcs = $lcs_row_above[$j - 1] + 1;
+            else
+                $new_lcs = \max($lcs_table_current[$j - 1], $lcs_row_above[$j]);
+            $lcs_table_current[$j] = $new_lcs;
+            if ($new_lcs == $max_row_lcs) {
+                // Max lcs is reached, row can no longer increment - so just fill.
+                $max_row_lcs++;
+                for ($j++; $j <= $n; $j++)
+                    $lcs_table_current[$j] = $new_lcs;
+                break;
+            }
+        }
+        if ($must_reach_least !== null) {
+            // Check that LCS can still reach at least value.
+            $max_lcs_possible = ($m - $i) + ($max_row_lcs - 1);
+            if ($max_lcs_possible < $must_reach_least)
+                return false;
+        }
+    }
+    return $max_row_lcs - 1;
+}
+
+/**
+ * Calculates the lcs similarity between string 1 and string 2 and returns
+ * it. The similarity is a float % calculated like:
+ * lcs_distance(str1, str2) / max(strlen(str1), strlen(str2))
+ * It has a worst case runtime of O(strlen(str1) * strlen(str2))
+ * Setting a minimum similarity will speed up the search.
+ * @param string $str1
+ * @param string $str2
+ * @param float $minimum_similarity
+ * @return mixed Either a float if similarity was calculated or
+ * FALSE if the calculation was canceled because the similarity is below
+ * $minimum_similarity.
+ */
+function lcs_similarity($str1, $str2, $minimum_similarity = null) {
+    $max_lcs = \max(\strlen($str1), \strlen($str2));
+    if ($minimum_similarity === null) {
+        $must_reach_least = null;
+    } else {
+        $minimum_similarity = ($minimum_similarity < 0)? 0: ($minimum_similarity > 1? 1: $minimum_similarity);
+        $must_reach_least = \floor($max_lcs * \floatval($minimum_similarity));
+    }
+    $dist = lcs_distance($str1, $str2, $must_reach_least);
+    if ($dist === false)
+        return false;
+    else
+        return $dist / $max_lcs;
+}
