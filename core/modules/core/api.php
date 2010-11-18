@@ -17,7 +17,7 @@ function fork($callback, $parameters = array()) {
     if (!is_file(APP_DIR . "/.forkkey"))
         file_put_contents(APP_DIR . "/.forkkey", $forkkey = \nmvc\string\random_hex_str(16));
     else
-        $forkkey = file_get_contents(".forkkey");
+        $forkkey = file_get_contents(APP_DIR . "/.forkkey");
     // Execute fork.
     $headers = array(
         "Host" => APP_ROOT_HOST,
