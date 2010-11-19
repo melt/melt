@@ -89,6 +89,8 @@ abstract class InterfaceCallback_app_overrideable {
         // Validate all instances.
         $error_count = 0;
         foreach ($this->instances as $instance_key => $instance) {
+            if (!($instance instanceof UserInterfaceProvider))
+                continue;
             $error_fields = $instance->uiValidate($this->interface_name);
             // Validation not returning array = validation success.
             if (!is_array($error_fields))
