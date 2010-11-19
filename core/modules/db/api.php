@@ -315,7 +315,7 @@ function sync_table_layout_with_columns($table_name, $columns) {
         // Creating new table.
         $adds = 'id BIGINT UNSIGNED NOT NULL, PRIMARY KEY (id)';
         foreach ($columns as $name => $type)
-            $adds .= ", $name $type";
+            $adds .= ", $name $type NOT NULL";
         query("CREATE TABLE " . table($table_name) . " ( $adds )");
     }
     // Finally reset the auto id trigger.
