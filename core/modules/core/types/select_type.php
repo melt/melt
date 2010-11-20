@@ -5,8 +5,10 @@ class SelectType extends \nmvc\AppType {
     /** @var Where condition to filter targets. */
     private $options;
 
-    public function __construct($column_name, $options) {
+    public function __construct($column_name, $options = null) {
         parent::__construct($column_name);
+        if (\is_callable($options))
+            $options = $options();
         if (!is_array($options) || count($options) == 0)
             trigger_error(__CLASS_ . " expects an array array of at least one option as it's second argument. Got: " . gettype($options), \E_USER_ERROR);
         foreach ($options as $k => $v)
@@ -15,12 +17,22 @@ class SelectType extends \nmvc\AppType {
         $this->options = $options;
     }
 
+    private function getLabel($key) {
+        $value = $this->options[$key];
+        if ($value !== null)
+            return $value;
+        if ($this->parent instanceof SelectTypeLabeled)
+            $value = $this->parent->getSelectTypeLabel($key);
+        return $value;
+    }
+
     public function getInterface($name) {
         $html = "<select name=\"$name\" id=\"$name\">";
         $nothing = __("—");
         //$html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
         $selected = ' selected="selected"';
-        foreach ($this->options as $option_key => $option_val) {
+        foreach (\array_keys($this->options) as $option_key) {
+            $option_val = $this->getLabel($option_key);
             $label = escape($option_val);
             $id = escape($option_key);
             $s = ($this->value == $id)? $selected: null;
@@ -55,7 +67,7 @@ class SelectType extends \nmvc\AppType {
 
     public function __toString() {
         $set = isset($this->options[$this->value]);
-        return $set? "'" . escape($this->options[$this->value]) . "'": __("Not Set");
+        return $set? "'" . escape($this->getLabel($this->value)) . "'": __("Not Set");
     }
 
     public function getSQLType() {
