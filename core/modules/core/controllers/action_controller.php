@@ -62,6 +62,6 @@ class ActionController extends DeveloperController {
             $this->engine->setNextLocale($locale);
         } else
             \nmvc\request\show_404();
-        \nmvc\request\redirect("/core/action/locale");
+        \nmvc\request\redirect(url("/core/action/locale"));
     }
 }
