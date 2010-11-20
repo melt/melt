@@ -34,16 +34,16 @@ abstract class UserModel_app_overrideable extends \nmvc\AppModel implements \nmv
      */
     public function sessionValidate() {
         if ($this->disabled)
-            return "This account has been disabled.";
+            return _("This account has been disabled.");
     }
 
     public static function uiGetInterface($interface_name, $field_set) {
         switch ($interface_name) {
         case "userx\\login":
             return array(
-                "username" => __("Username:"),
-                "password" => __("Password:"),
-                "remember_login" => __("Remember Login"),
+                "username" => _("Username:"),
+                "password" => _("Password:"),
+                "remember_login" => _("Remember Login"),
             );
         }
     }
@@ -51,9 +51,9 @@ abstract class UserModel_app_overrideable extends \nmvc\AppModel implements \nmv
     public function uiValidate($interface_name) {
         $err = array();
         if ($this->password === false)
-            $err["password"] = __("The password confirmation did not match.");
+            $err["password"] = _("The password confirmation did not match.");
         else if ($this->password == "")
-            $err["password"] = __("You must enter a password.");
+            $err["password"] = _("You must enter a password.");
         return $err;
     }
 }

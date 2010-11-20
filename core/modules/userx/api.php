@@ -61,15 +61,19 @@ function validate_password($hashed_password, $cleartext_password) {
  * Will deny user access. Action taken is determined by configuration.
  * Function does not return.
  */
-function deny() {
+function deny($message = null) {
     if (config\SOFT_403 != false) {
         $user = get_user();
         if ($user === null) {
             if (config\LAST_DENY_AUTOREDIRECT)
                 $_SESSION['userx\LAST_DENY_PATH'] = APP_ROOT_URL . \substr(REQ_URL, 1);
-            \nmvc\messenger\redirect_message(config\SOFT_403, __("Access denied. You are not logged in."), "bad");
+            if ($message === null)
+                $message = _("Access denied. You are not logged in.");
+            \nmvc\messenger\redirect_message(config\SOFT_403, $message, "bad");
         } else {
-            \nmvc\messenger\redirect_message(config\SOFT_403, __("Access denied. Insufficient permissions."), "bad");
+            if ($message === null)
+                $message = _("Access denied. Insufficient permissions.");
+            \nmvc\messenger\redirect_message(config\SOFT_403, $message, "bad");
         }
     } else
         \nmvc\request\show_xyz(403);
@@ -129,7 +133,7 @@ function login_challenge($username, $cleartext_password, $remember_session = fal
             // Remember username for two years.
             set_host_aware_cookie("LAST_USER", $username, time() + 60 * 60 * 24 * 365 * 2);
             // Replace any current shell with this shell.
-            logout(false);
+            logout();
             login($user);
             return true;
         }
@@ -210,7 +214,7 @@ function get_user() {
         $error = $auth_user->sessionValidate();
         if ($error != "") {
             logout();
-            \nmvc\messenger\redirect_message(REQ_URL, $error);
+            deny($error);
         }
         if (config\LAST_DENY_AUTOREDIRECT) {
             // Handle autoredirection.
