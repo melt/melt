@@ -253,6 +253,14 @@ function in_range($string, $min = -1, $max = -1) {
 }
 
 /**
+ * Converts variable to string and returns it quoted.
+ * @param string $string
+ */
+function quote($string) {
+    return \var_export((string) $string, true);
+}
+
+/**
  * Calculates the least common substring of two strings.
  * It has a worst case of O(strlen($str1) * strlen($str2))
  * but should usually run much faster if much_reach_least is high enough.
