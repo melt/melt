@@ -8,7 +8,8 @@
 function expr($first_field = null) {
     $wc = new \nmvc\db\WhereCondition();
     if ($first_field !== null)
-        return $wc->where($first_field);
+        $wc->where($first_field);
+    return $wc;
 }
 
 /**
