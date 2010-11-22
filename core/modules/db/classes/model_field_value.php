@@ -10,4 +10,10 @@ class ModelFieldValue {
     public function getValue() {
         return $this->value;
     }
+
+    public function __sleep() {
+        if ($this->value instanceof \nmvc\Model)
+            $this->value = $this->value->id;
+        return array("value");
+    }
 }
