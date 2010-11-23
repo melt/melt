@@ -6,7 +6,7 @@
  * Use get() to get the instance.
  */
 abstract class SingletonModel extends \nmvc\AppModel {
-    private $is_getting = false;
+    private static $is_getting = false;
 
     /**
      * Returns this SingletonModel instance.
@@ -19,11 +19,11 @@ abstract class SingletonModel extends \nmvc\AppModel {
             return $singleton_model_cache[$class_name];
         $result = static::select()->all();
         $singleton_model = \reset($result);
-        if ($singleton_model === null) {
+        if ($singleton_model === false) {
             // If there are no model instance, create new.
-            $this->is_getting = true;
+            self::$is_getting = true;
             $singleton_model = new $class_name();
-            $this->is_getting = false;
+            self::$is_getting = false;
             $singleton_model->store();
         } else {
             // If there are more than one model instance, unlink the rest.
@@ -35,7 +35,7 @@ abstract class SingletonModel extends \nmvc\AppModel {
 
     protected function initialize() {
         parent::initialize();
-        if (!$this->getting)
+        if (!self::$is_getting)
             \trigger_error("Only SingletonModel may create new instance of itself. Access the instance trough the ::get() function.", \E_USER_ERROR);
     }
 }
