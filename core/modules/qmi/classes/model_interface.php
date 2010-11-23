@@ -374,7 +374,7 @@ class ModelInterface {
         $callback_class = new $callback_class($interface_name, $instances, $instance_fields, $is_deleting, $success_url, $ajax_submit);
         $callback_class->$callback_method();
         if ($ajax_submit) {
-            $data = array("success" => true, "unlinked" => false);
+            $data = array("success" => true, "unlinked" => false, "errors" => array());
             foreach ($instances as $instance) {
                 if (!$instance->isLinked()) {
                     $data["unlinked"] = true;

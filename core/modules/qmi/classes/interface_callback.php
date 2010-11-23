@@ -60,7 +60,7 @@ abstract class InterfaceCallback_app_overrideable {
 
     protected final function doInvalidRedirect() {
         if ($this->ajax_submit)
-            \nmvc\request\send_json_data($this->invalidation_data);
+            \nmvc\request\send_json_data(array("success" => false, "unlinked" => false, "errors" => $this->invalidation_data));
         // Fetch all interface values and return them.
         foreach ($this->instances as $instance_key => $instance) {
             $instance_db_key = ModelInterface::getDatabaseInstanceKey($instance);
