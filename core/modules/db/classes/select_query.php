@@ -39,7 +39,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
         }
         if ($this->is_calc_found_rows) {
             $found_rows_result = next_array(query("SELECT FOUND_ROWS()"));
-            $this->is_calc_found_rows = intval($found_rows_result[0]);
+            $this->internal_found_rows_count_cache = intval($found_rows_result[0]);
         }
     }
 
