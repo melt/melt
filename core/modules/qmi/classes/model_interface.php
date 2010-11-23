@@ -309,6 +309,7 @@ class ModelInterface {
     public static function _interface_callback() {
         if (!\array_key_exists("_qmi", $_POST))
             return;
+        $ajax_submit = array_key_exists("_qmi_ajax_submit", $_POST) && $_POST["_qmi_ajax_submit"] == true;
         $qmi_data = \nmvc\string\simple_decrypt($_POST["_qmi"]);
         if ($qmi_data === false) {
             \nmvc\messenger\redirect_message(REQ_URL, __("The action failed, your session might have timed out. Please try again."));
@@ -347,10 +348,10 @@ class ModelInterface {
                 $pointer_model->$pointer_field_name = $target_model;
             }
             // Read all components from post data (overwriting setters).
-            foreach ($components as $component_name => $component) {
+            foreach ($components as $component_id => $component) {
                 list($instance_key, $field_name) = $component;
-                $instances[$instance_key]->type($field_name)->readInterface($component_name);
-                $instance_fields[$instance_key][$field_name] = 1;
+                $instances[$instance_key]->type($field_name)->readInterface($component_id);
+                $instance_fields[$instance_key][$field_name] = $component_id;
             }
         }
         // Extract callback from interface name.
@@ -370,8 +371,11 @@ class ModelInterface {
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' does not extend 'nmvc\qmi\InterfaceCallback'!", \E_USER_ERROR);
         if (!is($callback_class, $callback_class . "_app_overrideable"))
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not declared overridable by the responsible module!", \E_USER_ERROR);
-        $callback_class = new $callback_class($interface_name, $instances, $instance_fields, $is_deleting, $success_url);
+        $callback_class = new $callback_class($interface_name, $instances, $instance_fields, $is_deleting, $success_url, $ajax_submit);
         $callback_class->$callback_method();
-        \nmvc\request\redirect($callback_class->getSuccessUrl());
+        if ($ajax_submit)
+            \nmvc\request\send_json_data(true);
+        else
+            \nmvc\request\redirect($callback_class->getSuccessUrl());
     }
 }

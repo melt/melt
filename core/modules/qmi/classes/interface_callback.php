@@ -10,19 +10,21 @@ abstract class InterfaceCallback_app_overrideable {
     private $instance_fields;
     private $is_deleting;
     private $success_url;
+    private $ajax_submit;
 
     /**
      * @var string Contains the message that will be displayed when form validation failed.
      */
     protected $validate_failed_message;
 
-    public final function __construct($interface_name, $instances, $instance_fields, $is_deleting, $success_url) {
+    public final function __construct($interface_name, $instances, $instance_fields, $is_deleting, $success_url, $ajax_submit) {
         $this->interface_name = $interface_name;
         $this->instances = $instances;
         $this->instance_fields = $instance_fields;
         $this->is_deleting = $is_deleting;
         $this->success_url = $success_url;
         $this->validate_failed_message = __("Validation failed. Please check your input.");
+        $this->ajax_submit = $ajax_submit;
     }
 
     /**
@@ -57,6 +59,8 @@ abstract class InterfaceCallback_app_overrideable {
     private $invalidation_data = array();
 
     protected final function doInvalidRedirect() {
+        if ($this->ajax_submit)
+            \nmvc\request\send_json_data($this->invalidation_data);
         // Fetch all interface values and return them.
         foreach ($this->instances as $instance_key => $instance) {
             $instance_db_key = ModelInterface::getDatabaseInstanceKey($instance);
@@ -74,8 +78,16 @@ abstract class InterfaceCallback_app_overrideable {
     }
 
     protected final function pushError(\nmvc\Model $instance, $field_name, $error) {
-        $instance_db_key = ModelInterface::getDatabaseInstanceKey($instance);
-        $this->invalidation_data[$instance_db_key]['errors'][$field_name] = $error;
+        if ($this->ajax_submit) {
+            $instance_key = \array_search($instance, $this->instances, true);
+            if ($instance_key === false)
+                trigger_error("Trying to push error to unknown instance.", \E_USER_ERROR);
+            $component_key = $this->instance_fields[$instance_key][$field_name];
+            $this->invalidation_data[$component_key] = $error;
+        } else {
+            $instance_db_key = ModelInterface::getDatabaseInstanceKey($instance);
+            $this->invalidation_data[$instance_db_key]['errors'][$field_name] = $error;
+        }
     }
 
     /**
@@ -144,9 +156,6 @@ abstract class InterfaceCallback_app_overrideable {
                 $this->doDelete();
             else
                 $this->doStore();
-            // Redirect to success url.
-            \nmvc\request\reset();
-            \nmvc\request\redirect($this->getSuccessUrl());
         } else
             \trigger_error("Called unknown method $name on " . __CLASS__ . ".", \E_USER_ERROR);
     }
