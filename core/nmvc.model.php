@@ -359,8 +359,12 @@ abstract class Model implements \IteratorAggregate, \Countable {
             // ->xyz for existing xyz_id field resolves subtype.
             $closure = function($columns) use ($id_companion, $subresolve) {
                 $ret = $columns[$id_companion];
-                if ($subresolve !== null)
-                    $ret = $ret->get()->type($subresolve);
+                if ($subresolve !== null) {
+                    $ret = $ret->get();
+                    if ($ret === null)
+                        \trigger_error("Trying to subresolve null pointer ($id_companion" . "->).", \E_USER_ERROR);
+                    $ret = $ret->type($subresolve);
+                }
                 return $ret;
             };
         } else if (!isset($this->_cols[$name])) {
