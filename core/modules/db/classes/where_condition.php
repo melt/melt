@@ -133,12 +133,13 @@ class WhereCondition {
         // Add welding token, and then field name.
         // Ignore welding token if nothing to weld with.
         // This enables more simple logic iteration.
-        if (count($this->where_tokens) > 0)
-            $this->where_tokens[] = $op;
+        $add_where_token = count($this->where_tokens) > 0;
         if ($arg !== null) {
             // Either inner expression or field name.
             if ($arg instanceof WhereCondition) {
                 if (count($arg->where_tokens) > 0) {
+                    if ($add_where_token)
+                        $this->where_tokens[] = $op;
                     $this->where_tokens[] = "(";
                     foreach ($arg->where_tokens as $inner_expression_query_token)
                         $this->where_tokens[] = $inner_expression_query_token;
@@ -146,10 +147,13 @@ class WhereCondition {
                 }
                 return true;
             } else {
+                if ($add_where_token)
+                    $this->where_tokens[] = $op;
+                $this->pending_field_operation = true;
                 $this->where_tokens[] = $this->argToField($arg);
             }
-            $this->pending_field_operation = true;
-        }
+        } else if ($add_where_token)
+            $this->where_tokens[] = $op;
         return true;
     }
 }
