@@ -373,9 +373,16 @@ class ModelInterface {
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not declared overridable by the responsible module!", \E_USER_ERROR);
         $callback_class = new $callback_class($interface_name, $instances, $instance_fields, $is_deleting, $success_url, $ajax_submit);
         $callback_class->$callback_method();
-        if ($ajax_submit)
-            \nmvc\request\send_json_data(true);
-        else
+        if ($ajax_submit) {
+            $data = array("success" => true, "unlinked" => false);
+            foreach ($instances as $instance) {
+                if (!$instance->isLinked()) {
+                    $data["unlinked"] = true;
+                    break;
+                }
+            }
+            \nmvc\request\send_json_data($data);
+        } else
             \nmvc\request\redirect($callback_class->getSuccessUrl());
     }
 }
