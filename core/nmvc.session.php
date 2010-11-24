@@ -1,4 +1,5 @@
 <?php namespace nvmc\internal;
+
 call_user_func(function() {
     // Saving sessions in database.
     \session_set_save_handler(function() {}, function() {
