@@ -3,7 +3,7 @@
 /**
  * Returns an array of all availible modules.
  * Mapped MODULE_NAME => array(MODULE_CLASSNAME, MODULE_PATH)
- */
+     */
 function get_all_modules() {
     static $modules = null;
     // Return result if cached.
@@ -210,47 +210,48 @@ function pear_autoload($name) {
         return false;
 }
 
+\call_user_func(function() {
+    // Registers autoload function.
+    spl_autoload_register("nmvc\internal\autoload");
 
-// Registers autoload function.
-spl_autoload_register("nmvc\internal\autoload");
+    // Register pear autoload function if used.
+    if (\nmvc\core\config\PEAR_AUTOLOAD) {
+        \spl_autoload_register("nmvc\internal\pear_autoload");
+        // Some pear classes include stuff themselves and requires include path to be set.
+        set_include_path(get_include_path() . PATH_SEPARATOR . APP_DIR . "/vendors/pear/");
+    }
 
-// Register pear autoload function if used.
-if (\nmvc\core\config\PEAR_AUTOLOAD) {
-    \spl_autoload_register("nmvc\internal\pear_autoload");
-    // Some pear classes include stuff themselves and requires include path to be set.
-    set_include_path(get_include_path() . PATH_SEPARATOR . APP_DIR . "/vendors/pear/");
-}
-
-// Include the API's of all modules and configure them.
-foreach (get_all_modules() as $module_name => $module_parameters) {
-    $module_path = $module_parameters[1];
-    $api_path = $module_path . "/api.php";
-    if (is_file($api_path))
-        require $api_path;
-    // Configure module.
-    $mod_cfg_path = $module_path . "/config.php";
-    if (is_file($mod_cfg_path)) {
-        $config_directives = require($mod_cfg_path);
-        if (!is_array($config_directives))
-            trigger_error("The file '$mod_cfg_path' did not return an array as expected!");
-        foreach ($config_directives as $config_var_name => $default_value) {
-            $config_var_fqn = "nmvc\\$module_name\\config\\$config_var_name";
-            put_configuration_directive($config_var_fqn, $default_value);
+    // Include the API's of all modules and configure them.
+    foreach (get_all_modules() as $module_name => $module_parameters) {
+        $module_path = $module_parameters[1];
+        $api_path = $module_path . "/api.php";
+        if (is_file($api_path))
+            require $api_path;
+        // Configure module.
+        $mod_cfg_path = $module_path . "/config.php";
+        if (is_file($mod_cfg_path)) {
+            $config_directives = require($mod_cfg_path);
+            if (!is_array($config_directives))
+                trigger_error("The file '$mod_cfg_path' did not return an array as expected!");
+            foreach ($config_directives as $config_var_name => $default_value) {
+                $config_var_fqn = "nmvc\\$module_name\\config\\$config_var_name";
+                put_configuration_directive($config_var_fqn, $default_value);
+            }
         }
     }
-}
 
-// Include application specifyers.
-foreach(array(
-array('\nmvc\AppController', '\nmvc\Controller', 'app_controller.php'),
-array('\nmvc\AppModel', '\nmvc\Model', 'app_model.php'),
-array('\nmvc\AppType', '\nmvc\Type', 'app_type.php')) as $app_include) {
-    list($class, $base, $file) = $app_include;
-    require APP_DIR . "/" . $file;
-    if (!class_exists($class))
-         development_crash("invalid_class_name", array("path" => $path, "expected_name" => $class));
-    else if (!is_subclass_of($class, $base))
-         development_crash("invalid_parent_class", array("path" => $path,  "class_name" => $class, "must_extend" => $base));
-    else if (!\nmvc\core\is_abstract($class))
-         development_crash("must_be_abstract", array("path" => $path,  "class_name" => $class));
-}
+    // Include application specifyers.
+    foreach(array(
+    array('\nmvc\AppController', '\nmvc\Controller', 'app_controller.php'),
+    array('\nmvc\AppModel', '\nmvc\Model', 'app_model.php'),
+    array('\nmvc\AppType', '\nmvc\Type', 'app_type.php')) as $app_include) {
+        list($class, $base, $file) = $app_include;
+        require APP_DIR . "/" . $file;
+        if (!class_exists($class))
+             development_crash("invalid_class_name", array("path" => $path, "expected_name" => $class));
+        else if (!is_subclass_of($class, $base))
+             development_crash("invalid_parent_class", array("path" => $path,  "class_name" => $class, "must_extend" => $base));
+        else if (!\nmvc\core\is_abstract($class))
+             development_crash("must_be_abstract", array("path" => $path,  "class_name" => $class));
+    }
+});

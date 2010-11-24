@@ -1,5 +1,7 @@
 <?php namespace nmvc\internal;
 
+const INTERNAL_LOCATION = "~Internal Location~";
+
 function get_error_name($error_number) {
     $error_map = array(
         \E_ERROR => "E_ERROR",
@@ -71,8 +73,6 @@ function error_handler($errno, $errstr, $errfile, $errline) {
     crash("$type caught: " . $errstr, $errfile, $errline, $backtrace);
     exit;
 }
-
-const INTERNAL_LOCATION = "~Internal Location~";
 
 function remove_cache_headers() {
     if (\headers_sent())
@@ -265,17 +265,18 @@ function crash($message, $file, $line, $trace) {
     die("<h1>" . $topic . "</h1>" . $msg);
 }
 
-// Never use standard unsafe PHP error handling.
-// Show informative messages trough nanoMVC on script Exceptions/Assertations.
-assert_options(ASSERT_CALLBACK, '\nmvc\internal\assert_failed');
-set_exception_handler('\nmvc\internal\exception_handler');
-set_error_handler('\nmvc\internal\error_handler');
+\call_user_func(function() {
+    // Never use standard unsafe PHP error handling.
+    // Show informative messages trough nanoMVC on script Exceptions/Assertations.
+    assert_options(ASSERT_CALLBACK, '\nmvc\internal\assert_failed');
+    set_exception_handler('\nmvc\internal\exception_handler');
+    set_error_handler('\nmvc\internal\error_handler');
 
-// Catch all errors in maintence mode or if forcing error display.
-if (is_integer(\nmvc\core\config\FORCE_ERROR_FLAGS))
-    error_reporting(\nmvc\core\config\FORCE_ERROR_FLAGS);
-else if (APP_IN_DEVELOPER_MODE || \nmvc\core\config\FORCE_ERROR_DISPLAY)
-    error_reporting(E_ALL | E_STRICT);
-else
-    error_reporting(E_USER_ERROR);
-
+    // Catch all errors in maintence mode or if forcing error display.
+    if (is_integer(\nmvc\core\config\FORCE_ERROR_FLAGS))
+        error_reporting(\nmvc\core\config\FORCE_ERROR_FLAGS);
+    else if (APP_IN_DEVELOPER_MODE || \nmvc\core\config\FORCE_ERROR_DISPLAY)
+        error_reporting(E_ALL | E_STRICT);
+    else
+        error_reporting(E_USER_ERROR);
+});
