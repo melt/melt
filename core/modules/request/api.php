@@ -156,6 +156,18 @@ function info($topic, $body) {
 }
 
 /**
+ * Returns true if the current request is invoked by AJAX.
+ * Detecting this is useful in cases where this affects
+ * if redirection should take place and format of return data.
+ * Detection is done by matching the X-Requested-With: XMLHttpRequest header.
+ * @return boolean
+ */
+function is_ajax() {
+    return \array_key_exists('HTTP_X_REQUESTED_WITH', $_SERVER) &&
+    $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest';
+}
+
+/**
 * @desc Will attempt to abort execution and redirect client to url.
 * @param string $url URL to redirect to (eg. http://example/page)
 */
