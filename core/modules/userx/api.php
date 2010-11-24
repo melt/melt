@@ -62,7 +62,8 @@ function validate_password($hashed_password, $cleartext_password) {
  * Function does not return.
  */
 function deny($message = null) {
-    if (config\SOFT_403 != false) {
+    // Ignore soft 403 for ajax requests as redirections is transparent.
+    if (config\SOFT_403 != false && !\nmvc\request\is_ajax()) {
         $user = get_user();
         if ($user === null) {
             if (config\LAST_DENY_AUTOREDIRECT)
