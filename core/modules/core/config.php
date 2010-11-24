@@ -5,5 +5,6 @@
     "RECAPTCHA_PUBLIC_KEY" => "",
     "TRANSLATION_ENABLED" => false,
     "DEFAULT_LANGUAGE" => "en",
-    "DOMAIN_WIDE_SESSION" => true,
+    "SESSION_DOMAIN" => "",
+    "SESSION_ENFORCE_HTTPS" => false,
 );

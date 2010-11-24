@@ -30,14 +30,15 @@
     $time = time();
     \nmvc\core\SessionDataModel::select()->where("last_store_attempt")->isLessThan($time - $maxlifetime)->unlink();
 });
+// Forward session cookie parameters from configuration.
+call_user_func(function() {
+    $session_domain = \is_string(\nmvc\core\config\SESSION_DOMAIN);
+    if (!\is_string($session_domain) || $session_domain === "")
+        $session_domain = APP_ROOT_HOST;
+    $secure = \nmvc\core\config\SESSION_ENFORCE_HTTPS == true;
+    \session_set_cookie_params(0, "/", $session_domain, $secure);
+});
 \session_start();
-if (\nmvc\core\config\DOMAIN_WIDE_SESSION && !isset($_COOKIE['PHPSESSID'])) {
-    // Apply domain wide session cookie by overriding the PHPSESSID header.
-    $cookie_domain = \preg_replace('#^[^\.]+#', '', APP_ROOT_HOST);
-    if (\substr_count($cookie_domain, ".") < 2)
-        $cookie_domain = APP_ROOT_HOST;
-    \header("Set-Cookie: PHPSESSID=" . \session_id() . "; path=/; domain=$cookie_domain", true);
-}
 // Make sure sessions are written before we loose object instancing capability.
 \register_shutdown_function(function() {
     // Move write close to the end of shutdown function chain.
