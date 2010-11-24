@@ -16,10 +16,6 @@
     /** Set this to true to enable login in a shell structured manner.
      * This way a new login will temporarly override the current. */
     "SHELL_LOGIN" => false,
-    /** Normally userx uses the current host for the session cookie and other
-     * cookies it uses. Setting this to a string instead of null will however
-     * use that value as host instead. */
-    "COOKIE_HOST" => null,
     /** Enabling this results in: If user is denied due to login failure,
      * saving the deny path so user can be redirected there after successful
      * login. */
