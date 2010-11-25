@@ -181,7 +181,7 @@ class ModelInterface {
                 trigger_error("'$field_name' is not a valid field/column name!", \E_USER_ERROR);
             else if (is($instance->type($field_name), 'nmvc\core\PointerType'))
                 trigger_error("'$field_name' is a pointer attachChangeArray does not take pointer fields! Use attachRelation() instead.", \E_USER_ERROR);
-            $this->setters[] = array($instance_key, $field_name, $value);
+            $this->setters[$instance_key][$field_name] = $value;
         }
     }
 
@@ -272,6 +272,9 @@ class ModelInterface {
             if (isset($invalidation_data['values'][$field_name]))
                 $instance->$field_name = $invalidation_data['values'][$field_name];
             $type = $instance->type($field_name);
+            // Make sure sub resolved fields have their parent instances attached.
+            if ($type->parent != $instance)
+                $this->attachChanges($type->parent);
             $component_interface = $type->getInterface($component_id);
             // If an interface(s) was returned, output it.
             if (\is_string($component_interface) && \strlen($component_interface) > 0)
@@ -336,9 +339,9 @@ class ModelInterface {
         } else {
             $is_deleting = false;
             // Process all setters.
-            foreach ($setters as $setter) {
-                list($instance_key, $field_name, $value) = $setter;
-                $instances[$instance_key]->$field_name = $value;
+            foreach ($setters as $instance_key => $fields) {
+                foreach ($fields as $field_name => $value)
+                    $instances[$instance_key]->$field_name = $value;
             }
             // Connect the instances that should be connected.
             foreach ($autolinks as $autolink) {
