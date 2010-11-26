@@ -56,7 +56,7 @@ abstract class BlobPointerType extends \nmvc\core\PointerType {
                 // Need to delete the blob I'm pointing on.
                 // As unlink would require loading the blob into memory
                 // direct querying will be used instead.
-                \nmvc\db\run("DELETE FROM " . table('cache\blob') . " WHERE id = " . intval($this->value));
+                \nmvc\db\run("DELETE FROM " . \nmvc\db\table('cache\blob') . " WHERE id = " . intval($this->value));
             }
             if ($this->change_to === null) {
                 // Reset.
