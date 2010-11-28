@@ -96,9 +96,9 @@ class PictureType extends \nmvc\cache\BlobPointerType {
         case 1:
             return __("Only %s pictures is supported.", $sup[0]);
         case 2:
-            return __("The picture formats %s and %s is supported.", $sup[0], $sup[1]);
+            return __("Picture formats %s and %s are supported.", $sup[0], $sup[1]);
         case 3:
-            return __("The picture formats %s, %s and %s is supported.", $sup[0], $sup[1], $sup[2]);
+            return __("Picture formats %s, %s and %s are supported.", $sup[0], $sup[1], $sup[2]);
         }
     }
 
