@@ -36,7 +36,7 @@ class SelectType extends \nmvc\AppType {
         $nothing = __("—");
         //$html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
         $selected = ' selected="selected"';
-        foreach ($this->options as $option_key => $option_key) {
+        foreach ($this->options as $option_key => $option_val) {
             $label = escape($option_val);
             $id = escape($option_key);
             $s = ($this->value == $id)? $selected: null;
@@ -72,10 +72,14 @@ class SelectType extends \nmvc\AppType {
             $this->value = null;
     }
 
+    public function getLabel() {
+        $this->prepareOptions();
+        return  isset($this->options[$this->value])? $this->options[$this->value]: null;
+    }
+
     public function __toString() {
         $this->prepareOptions();
-        $set = isset($this->options[$this->value]);
-        return $set? "'" . escape($this->getLabel($this->value)) . "'": __("Not Set");
+        return escape($this->getLabel());
     }
 
     public function getSQLType() {
