@@ -313,7 +313,7 @@ class LocalizationEngine {
         return $po_file_content;
     }
 
-    public function importLanguage($po_file_content) {
+    public function importLanguage($po_file_content, $locale_code) {
         $po_file_sections = \preg_split('#\n\s*\n#', $po_file_content);
         $po_data = array();
         foreach ($po_file_sections as $po_file_section) {
@@ -362,7 +362,6 @@ class LocalizationEngine {
             trigger_error("PO file does not include headers!", \E_USER_ERROR);
         $headers = $po_data[""][""]["msgstr"];
         unset($po_data[""][""]);
-        $locale_code = null;
         $charset = null;
         $last_translator = null;
         $nplurals = null;
@@ -377,7 +376,8 @@ class LocalizationEngine {
             $value = $matches[2];
             switch ($key) {
             case "language":
-                $locale_code = strtolower($value);
+                if ($locale_code == null)
+                    $locale_code = strtolower($value);
                 break;
             case "content-type":
                 if (!\preg_match('#charset=([^\s;]+)#', $value, $matches))

@@ -57,7 +57,10 @@ class ActionController extends DeveloperController {
             exit;
         } else if ($action === "import") {
             $po_content = get_uploaded_file("po_file", $file_name, false);
-            $this->engine->importLanguage($po_content);
+            if (!\preg_match('#^nmvc-translation-([a-z][a-z])#', $file_name, $matches))
+                \trigger_error("The file name you're uploading must begin with 'nmvc-translation-xx' where xx is the locale you are importing.");
+            $locale = $matches[1];
+            $this->engine->importLanguage($po_content, $locale);
         } else if ($action === "switch") {
             $this->engine->setNextLocale($locale);
         } else
