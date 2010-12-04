@@ -8,26 +8,32 @@ class SelectModelType extends PointerType {
     public $label_column;
     /** @var mixed FALSE = prevent dash column, TRUE = always dash column, NULL = auto, based on disconnect reaction. */
     public $dash_column = null;
+    /** @var string Null options will use all possible instances as options,
+     * otherwise a function in parent instance that returns a where condition
+     * which filters possible options. */
+    public $options = null;
 
     public function __construct($column_name, $target_model, $disconnect_reaction = "SET NULL", $label_column = null) {
         parent::__construct($column_name, $target_model, $disconnect_reaction);
     }
 
-    /**
-     * Responsible for returning selection of model instances to
-     * display in dropdown.
-     * @return \nmvc\db\SelectQuery
-     */
-    protected function getSelection() {
+    private function getOptions() {
         $target_model = $this->target_model;
-        return $target_model::select();
+        if ($this->options === null)
+            return $target_model::select();
+        if (!\is_callable(array($this->parent, $this->options)))
+            \trigger_error(__CLASS__ . " configured incorrectly! Parent " . \get_class($this->parent) . " has no function " . $this->options, \E_USER_ERROR);
+        $options = \call_user_func(array($this->parent, $this->options));
+        if (!($options instanceof \nmvc\db\WhereCondition))
+            \trigger_error(__CLASS__ . " configured incorrectly! Parent " . \get_class($this->parent) . " did not return nmvc\db\WhereCondition as expected.", \E_USER_ERROR);
+        return $target_model::select()->where($options);
     }
 
     public function getInterface($name) {
         $current_id = $this->getID();
         $html = "<select name=\"$name\" id=\"$name\">";
         $nothing = __("—");
-        $results = $this->getSelection()->all();
+        $results = $this->getOptions()->all();
         if (($this->dash_column !== false && ($this->dash_column === true || $this->getDisconnectReaction() != "CASCADE")) || count($results) == 0)
             $html .= "<option style=\"font-style: italic;\" value=\"0\">$nothing</option>";
         $selected = ' selected="selected"';
@@ -53,13 +59,7 @@ class SelectModelType extends PointerType {
             $this->value = 0;
             return;
         }
-        // If this is an invalid ID, set to null.
-        $where = trim($this->getWhereFilter());
-        if ($where != "")
-            $where = "($where) AND ";
-        $where .= "id = $value";
-        $count = forward_static_call(array($this->target_model, 'count'), $where);
-        if ($count != 1)
+        if ($this->getOptions()->and("id")->is($value)->count() == 0)
             $value = 0;
         $this->value = $value;
     }
