@@ -227,8 +227,8 @@ final class View {
         // Should now be back at last level.
         if ($controller->layout->getLevel() != $level)
             trigger_error("nanoMVC: After rendering '$view_path.php', a level imbalance was detected! The enterSections() does not have a balanced ammount of exitSections().", \E_USER_ERROR);
-        // Should render if it prepared the layout.
-        if ($layout_path != null) {
+        // Should render if it prepared the layout and returned to root level.
+        if ($layout_path != null && $controller->layout->getLevel() == 0) {
             // Throw away any output that was ignored.
             ob_end_clean();
             $content = $controller->layout->render($layout_path, $controller);
