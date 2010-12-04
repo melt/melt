@@ -50,7 +50,7 @@ class ModelInterface {
         $qmi_data = \nmvc\string\simple_crypt(gzcompress(serialize(array($this->success_url, $this->instances, $this->components, $this->setters, array_values($this->autolinks), $this->interface_name))));
         $html = '<div><input type="hidden" name="_qmi" value="' . $qmi_data . '" />';
         if ($auto_submit) {
-            $msg = $this->creating? __("Create"): __("Save Changes");
+            $msg = $this->creating? __("Add New"): __("Save Changes");
             $html .= '<input type="submit" value="' . $msg . '" />';
         }
         if ($auto_delete && !$this->creating) {
