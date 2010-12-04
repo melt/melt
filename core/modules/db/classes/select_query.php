@@ -24,6 +24,20 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
         $this->internal_found_rows_count_cache = null;
     }
 
+    public function __sleep() {
+        return \array_diff(
+            \array_keys(\get_class_vars(__CLASS__)),
+            array(
+                "is_calc_found_rows",
+                "is_counting",
+                "internal_result_cache",
+                "internal_result_count_cache",
+                "internal_found_rows_count_cache",
+                "internal_first_result_cache",
+            )
+        );
+    }
+
     private function refreshInternalResult() {
         $from_model = $this->from_model;
         if ($from_model === null)
