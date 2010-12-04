@@ -272,7 +272,7 @@ abstract class Controller {
         if ($require_controller !== null && !is($invoke_data->getControllerClass(), $require_controller))
             return false;
         // Invoke action on controller.
-        self::internalInvoke($invoke_data, false);
+        self::internalInvoke($invoke_data, false, true);
         return true;
     }
 
@@ -281,7 +281,8 @@ abstract class Controller {
      * @param mixed $action_name Action name to invoke.
      * @param array $arguments Arguments to pass to action.
      * @param boolean $use_controller_layout Set to true to render in the
-     * controller specifyed layout.
+     * controller specifyed layout, otherwise the final layout and
+     * a final render will be used.
      * @return boolean True if action was found and valid, otherwise false.
      */
     public static final function invoke($action_name, $arguments = array(), $use_controller_layout = false) {
@@ -291,7 +292,7 @@ abstract class Controller {
         if (!self::validateAction($controller_class, $action_name, $arguments, true))
             return false;
         $invoke_data = new core\InvokeData($controller_class, $action_name, $arguments);
-        self::internalInvoke($invoke_data, !$use_controller_layout);
+        self::internalInvoke($invoke_data, !$use_controller_layout, !$use_controller_layout);
         return true;
     }
 
@@ -300,7 +301,7 @@ abstract class Controller {
      * has already been verified to be valid by using Controller::validateAction.
      * @param core\InvokeData $data
      */
-    private static function internalInvoke(core\InvokeData $data, $ignore_controller_layout) {
+    private static function internalInvoke(core\InvokeData $data, $ignore_controller_layout, $final) {
         // Put this invoke on stack.
         array_push(self::$invoke_stack, $data);
         if (count(self::$invoke_stack) > 128)
@@ -333,9 +334,9 @@ abstract class Controller {
             $controller->layout = null;
         if ($ret_view === null) {
             $view_path = "/" . str_replace("\\", "/", internal\cased_to_underline(substr(get_class($controller), 5, -10))) . "/" . $action_name;
-            $found_view = View::render($view_path, $controller, false, true, true);
+            $found_view = View::render($view_path, $controller, false, $final, true);
         } else if (is_string($ret_view)) {
-            $found_view = View::render($ret_view, $controller, false, true, false);
+            $found_view = View::render($ret_view, $controller, false, $final, false);
         } else
             trigger_error("Did not understand what controller action returned (" . var_export($ret_view, true) . ").", \E_USER_ERROR);
         // Raise afterRender event.
