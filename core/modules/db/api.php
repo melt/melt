@@ -363,6 +363,30 @@ function verify_keyword($word) {
     trigger_error("The identifier name you used '$word' was detected to be reserved by the list '$err'. Using that identifier should be avoided as it can break SQL queries now or in the future. Please choose another name.", \E_USER_ERROR);
 }
 
+function name_lock_is_free($named_lock) {
+    $db_lock = strfy(config\NAME . "_" . config\PREFIX . $named_lock);
+    $r = query("SELECT IS_FREE_LOCK($db_lock)");
+    $r = next_array($r);
+    return $r[0] == 1;
+}
+
+function enter_critical_section($named_lock, $timeout = null) {
+    $db_lock = strfy(config\NAME . "_" . config\PREFIX . $named_lock);
+    $db_timeout = $timeout === null? 0: \intval($timeout);
+    do {
+        $r = query("SELECT GET_LOCK($db_lock, $db_timeout)");
+        $r = next_array($r);
+        $r = $r[0];
+        if ($r == 0 && $timeout !== null)
+            throw new CriticalSectionTimeoutException();
+    } while ($r == 0);
+}
+
+function exit_critical_section($named_lock) {
+    $db_lock = strfy(config\NAME . "_" . config\PREFIX . $named_lock);
+    query("SELECT RELEASE_LOCK($db_lock)");
+}
+
 /**
  * Convenience function for prefixing and quoting table names
  * when building queries.
