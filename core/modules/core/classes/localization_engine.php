@@ -493,7 +493,7 @@ class LocalizationEngine {
                             $translation = $translations[$index];
                         else
                             $translation = \reset($translations);
-                        return \vsprintf($translation, $sprintf_args);
+                        return @\vsprintf($translation, $sprintf_args);
                     }
                 }
             }
