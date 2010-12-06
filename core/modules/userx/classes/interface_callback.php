@@ -8,7 +8,7 @@ abstract class InterfaceCallback_app_overrideable extends \nmvc\qmi\InterfaceCal
         $instances = $this->getInstances();
         $user = $instances['nmvc\userx\UserModel'][0];
         if (login_challenge($user->username, $user->password, $user->remember_login)) {
-            \nmvc\messenger\redirect_message($this->getSuccessUrl(), __("You are now logged in."), "good");
+            \nmvc\messenger\redirect_message($this->getSuccessUrl(), __("Successfully logged in."), "good");
         } else {
             $user->password = "";
             $this->pushError($user, "password", __("Invalid username or password!"));
