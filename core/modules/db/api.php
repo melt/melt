@@ -377,8 +377,12 @@ function enter_critical_section($named_lock, $timeout = null) {
         $r = query("SELECT GET_LOCK($db_lock, $db_timeout)");
         $r = next_array($r);
         $r = $r[0];
-        if ($r == 0 && $timeout !== null)
-            throw new CriticalSectionTimeoutException();
+        if ($r == 0) {
+            if ($timeout !== null)
+                throw new CriticalSectionTimeoutException();
+            else
+                \usleep(25000);
+        }
     } while ($r == 0);
 }
 
