@@ -36,7 +36,7 @@ function insert_id() {
 /**
  * This function properly escapes and quotes any string you insert,
  * making it ready to be directly inserted into your SQL queries.
- * @example Input: a 'test' Output: "a \'test\'"
+ * @example Input: a 'test' Output: 'a \'test\''
  * @param string $string
  * @param integer $max_length Maximum length of string in charachers.
  * Only use this parameter if string contains UTF-8 text and not binary data.
@@ -48,7 +48,7 @@ function strfy($string, $max_length = null) {
     // Have to connect for mysql_real_escape_string to work.
     if (!defined("NANOMVC_DB_LINK"))
         run("");
-    return '"' . mysql_real_escape_string($string) . '"';
+    return "'" . mysql_real_escape_string($string) . "'";
 }
 
 /**
