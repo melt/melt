@@ -39,6 +39,11 @@ class ActionController extends DeveloperController {
         \nmvc\request\redirect(url("/"));
     }
 
+    public function restart() {
+        SessionDataModel::select()->unlink();
+        die("Application restarted, all sessions where teared down!");
+    }
+
     public function locale($action = null, $locale = null) {
         $this->engine = LocalizationEngine::get();
         if ($action === null)
