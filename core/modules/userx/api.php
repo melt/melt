@@ -178,7 +178,7 @@ function get_shell_count() {
     if (!config\SHELL_LOGIN)
         return 1;
     else
-        return isset($_SESSION['userx\auth']['shells'])? \count($_SESSION['userx\auth']['shells']): 1;
+        return isset($_SESSION['userx\auth']['shells'])? \count($_SESSION['userx\auth']['shells']) + 1: 1;
 }
 
 /**
