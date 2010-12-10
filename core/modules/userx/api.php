@@ -166,6 +166,22 @@ function logout() {
 }
 
 /**
+ * Returns the shell stack count.
+ * Will only return 1 or 0 if SHELL_LOGIN is disabled. Otherwise the shell
+ * stack can be higher.
+ * @return integer
+ */
+function get_shell_count() {
+    get_user();
+    if (!isset($_SESSION['userx\auth']))
+        return 0;
+    if (!config\SHELL_LOGIN)
+        return 1;
+    else
+        return isset($_SESSION['userx\auth']['shells'])? \count($_SESSION['userx\auth']['shells']): 1;
+}
+
+/**
  * Will login as the specified user. Login will take place in a new
  * shell if SHELL_LOGIN is enabled, otherwise the new session will replace
  * the current.
