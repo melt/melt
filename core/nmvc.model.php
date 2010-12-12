@@ -30,9 +30,14 @@ abstract class Model implements \IteratorAggregate, \Countable {
     /**
      * Identifier of this data set or <= 0 if unlinked.
      * @var int
-     * @internal
      */
-    protected $_id = 0;
+    private $_id = 0;
+    /**
+     * Reserved id for storing this data set.
+     * Zero if no id has been reserved.
+     * @var int
+     */
+    private $_reserved_id = 0;
     /** @var array Where columns are internally stored for assignment overload. */
     private $_cols;
     /** @var array Cache of all fetched instances.  */
@@ -519,6 +524,23 @@ abstract class Model implements \IteratorAggregate, \Countable {
     }
 
     /**
+     * Returns an ID reserved for storing this instance or the id it has
+     * already been stored as. If no ID has been reserved yet for storing
+     * (default), and ID will be reserved.
+     * @return integer
+     */
+    public function getReservedID() {
+        if ($this->isLinked())
+            return $this->_id;
+        if ($this->_reserved_id <= 0) {
+            db\query("UPDATE " . db\table('core__seq') . " SET id = LAST_INSERT_ID(id + 1)");
+            $result = db\next_array(db\query("SELECT @last_insert"));
+            $this->_reserved_id = \intval($result[0]);
+        }
+        return $this->_reserved_id;
+    }
+
+    /**
      * Stores any changes to this model instance to the database.
      * If this is a new instance, it's inserted, otherwise, it's updated.
      */
@@ -553,7 +575,13 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 $id = $id[0];
             } else
                 $id = db\insert_id();
-            $id = intval($id);
+            $id = \intval($id);
+            if ($this->_reserved_id > 0) {
+                // Switch ID to use previously reserved.
+                $reserved_id = \intval($this->_reserved_id);
+                db\query("UPDATE " . self::classNameToTableName(get_class($this)) . " SET id = $reserved_id WHERE id = $id");
+                $id = $reserved_id;
+            }
             $this->_id = $id;
             // Put this instance in the instance cache.
             self::$_instance_cache[$id] = $this;
@@ -758,7 +786,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         }
         $value_list = implode(',', $value_list);
         if (!db\config\USE_TRIGGER_SEQUENCING) {
-            db\run("UPDATE " . db\table('core__seq') . " SET id = LAST_INSERT_ID(id + 1)");
+            db\query("UPDATE " . db\table('core__seq') . " SET id = LAST_INSERT_ID(id + 1)");
             $id = "LAST_INSERT_ID()";
         } else {
             $id = 0;
@@ -1158,7 +1186,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
 
     protected static function setMetaData($key, $value) {
         self::$_metadata_cache[$key] = $value;
-        db\run("REPLACE INTO " . db\table('core__metadata') . " (k,v) VALUES (" . db\strfy($key) . "," . db\strfy(serialize($value)) . ")");
+        db\query("REPLACE INTO " . db\table('core__metadata') . " (k,v) VALUES (" . db\strfy($key) . "," . db\strfy(serialize($value)) . ")");
     }
 
     /**
