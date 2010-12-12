@@ -121,8 +121,19 @@ class PictureType extends \nmvc\cache\BlobPointerType {
         parent::setBinaryData(null, null);
         return $data === null;
     }
-    
-    public function getUrl($max_width = 0, $max_height = 0, $file_name = null) {
+
+    /**
+     * Returns a URL to a thumbnail of this picture, or a URL to the
+     * full picture if no picture size limits is specified. Will return
+     * an absolute file system path to the picture instead if $local_path
+     * is true.
+     * @param integer $max_width
+     * @param integer $max_height
+     * @param string $file_name
+     * @param string $local_path
+     * @return string
+     */
+    public function getUrl($max_width = 0, $max_height = 0, $file_name = null, $local_path = false) {
         // Cannot return image if not set.
         if ($this->value <= 0)
             return null;
@@ -130,7 +141,7 @@ class PictureType extends \nmvc\cache\BlobPointerType {
         $file_name = str_replace("!", "", $file_name);
         // Not thumbnail and just a normal link?
         if ($max_width <= 0 && $max_height <= 0)
-            return $this->getFileCacheLink($file_name);
+            return $this->getFileCacheLink($file_name, $local_path);
         // Get the thumbnail path.
         if ($max_width < 0 || !is_integer($max_width))
             $max_width == 0;
@@ -176,6 +187,8 @@ class PictureType extends \nmvc\cache\BlobPointerType {
             imagesavealpha($thumb, true); // Save with alpha channel.
             assert(imagepng($thumb, $thumb_path, 9));
         }
+        if ($local_path)
+            return $thumb_path;
         // Convert local filesystem path to url.
         $path = substr($thumb_path, strlen(APP_DIR));
         return url($path);
