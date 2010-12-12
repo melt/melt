@@ -8,7 +8,7 @@
  *
  * Be sure to understand how it works before you use it.
  */
-abstract class BlobPointerType extends \nmvc\core\PointerType {
+class BlobPointerType extends \nmvc\core\PointerType {
     /** Constructs this typed field with this column name. */
     public function __construct($column_name, $disconnect_reaction = "SET NULL") {
         parent::__construct($column_name, 'cache\BlobModel', $disconnect_reaction);
@@ -152,11 +152,14 @@ abstract class BlobPointerType extends \nmvc\core\PointerType {
     }
 
     /**
-     * Returns a link to the binary data.
+     * Returns a link to the binary data. Will return
+     * an absolute file system path to the file instead if $local_path
+     * is true.
      * @param string $file_name The requested file name. If null, a tag will be used instead.
+     * @param boolean $local_path
      * @return string The link or NULL if not set.
      */
-    public function getFileCacheLink($file_name = null) {
+    public function getFileCacheLink($file_name = null, $local_path = false) {
         $cache_path = $this->getCachePath($file_name);
         if ($cache_path == null)
             return null;
@@ -169,6 +172,8 @@ abstract class BlobPointerType extends \nmvc\core\PointerType {
             if ($file_tag_path !== null)
                 file_put_contents($file_tag_path, $blob_model->tag);*/
         }
+        if ($local_path)
+            return $cache_path;
         // Convert local filesystem path to url.
         $path = substr($cache_path, strlen(APP_DIR));
         return url($path);
