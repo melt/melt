@@ -1,8 +1,5 @@
 <?php namespace nmvc\core;
 
-/**
- * SelectType, the only built-in pointer type.
- */
 class SelectModelType extends PointerType {
     /** @var string Column in target to use for labeling objects. */
     public $label_column;
