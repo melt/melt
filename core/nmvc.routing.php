@@ -24,7 +24,7 @@
                 \nmvc\db\query("COMMIT");
         } else {
             // Rollback by closing mysql connection without comitting.
-            \mysql_close();
+            @\mysql_close();
         }
         define("NMVC_REQUEST_COMPLETE", true);
     });
