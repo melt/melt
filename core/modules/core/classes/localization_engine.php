@@ -105,10 +105,10 @@ class LocalizationEngine {
                 $expected = true;
                 break;
             case ",":
-            case ")":
             case \T_WHITESPACE:
             case \T_COMMENT:
             case \T_DOC_COMMENT:
+                $expected = true;
                 break;
             case \T_FUNCTION:
             case \T_CLASS:
@@ -175,7 +175,7 @@ class LocalizationEngine {
         return \str_replace(array('\\\\', '\"', '\t', '\n', '\r', '\0'), array('\\', '"', "\t", "\n", "\r", "\0"), $cstr);
     }
 
-    private static function getPoBlock($msgid, $msgid_plural = "", $translations = array(), $fuzzy = false, $references = array(), $no_meta = false, $comments = "") {
+    private static function getPoBlock($msgctxt, $msgid, $msgid_plural = "", $translations = array(), $fuzzy = false, $references = array(), $no_meta = false, $comments = "") {
         $po_block = "";
         if ($comments != "")
             $po_block .= "#" . \str_replace("\n", "\n# ", $comments) . "\n";
@@ -184,6 +184,8 @@ class LocalizationEngine {
                 $po_block .= "#: " . \implode(" ", $references) . "\n";
             $po_block .= "#, php-format" . ($fuzzy? ", fuzzy": "") . "\n";
         }
+        if ($msgctxt != "")
+            $po_block .= 'msgctxt  "' . self::strToCStr($msgctxt) . "\"\n";
         $po_block .= 'msgid "' . self::strToCStr($msgid) . "\"\n";
         if ($msgid_plural != "")
             $po_block .= 'msgid_plural "' . self::strToCStr($msgid_plural) . "\"\n";
@@ -208,6 +210,7 @@ class LocalizationEngine {
      * @return string
      */
     public function exportLanguage($locale, $min_similar_string_dist = 0.85) {
+        \set_time_limit(0);
         if (!\array_key_exists($locale, $this->locale_data))
             trigger_error("Locale $locale does not exist!", \E_USER_ERROR);
         $old_locale_strings = $this->locale_data[$locale]["strings"];
@@ -219,6 +222,15 @@ class LocalizationEngine {
         $untranslated_strings = array();
         $used_old_locale_strings = array();
         foreach ($php_files as $php_file) {
+            if ($php_file == "localization.php")
+                continue;
+            if (\nmvc\string\starts_with($php_file, "vendors/"))
+                continue;
+            if (\preg_match('#^modules/([^/]+)/#', $php_file, $matches)) {
+                $module = $matches[1];
+                if (!module_loaded($module))
+                    continue;
+            }
             foreach ($this->parseTranslateInvokes($php_file) as $translate_invoke) {
                 list($msgid, $plural_id, $context, $reference) = $translate_invoke;
                 $msgid = trim($msgid);
@@ -300,14 +312,14 @@ class LocalizationEngine {
         $header = "";
         foreach ($headers as $key => $value)
             $header .= "$key: $value\n";
-        $po_file_content = self::getPoBlock("", "", array($header), false, array(), true, $comment);
+        $po_file_content = self::getPoBlock("", "", "", array($header), false, array(), true, $comment);
         foreach ($new_locale_strings as $msgid => $new_locale_contexts) {
             foreach ($new_locale_contexts as $context => $translation) {
                 $msgid_plural = $plural_ids[$msgid][$context];
                 $translations = $translation["translations"];
                 $fuzzy = $translation["fuzzy"] == true;
                 $entry_references = $references[$msgid][$context];
-                $po_file_content .= self::getPoBlock($msgid, $msgid_plural, $translations, $fuzzy, $entry_references);
+                $po_file_content .= self::getPoBlock($context, $msgid, $msgid_plural, $translations, $fuzzy, $entry_references);
             }
         }
         return $po_file_content;
