@@ -35,7 +35,7 @@ class ModelInterface {
     public function startForm($extra_attributes = array()) {
         $attributes = array();
         foreach ($extra_attributes as $key => $value)
-            $attributes = "$key=\"" . escape($value) .'"';
+            $attributes[] = "$key=\"" . escape($value) .'"';
         return '<form enctype="multipart/form-data" action="' . url(REQ_URL) . '" method="post" ' . implode(" ", $attributes) . '>';
     }
 
