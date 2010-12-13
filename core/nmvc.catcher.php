@@ -92,10 +92,11 @@ function development_crash($type, $variables) {
     \nmvc\request\reset();
     remove_cache_headers();
     if (!headers_sent()) {
-        header("HTTP/1.x 500 Internal Server Error");
-        header("Status: 500 Internal Server Error");
+        \header("HTTP/1.x 500 Internal Server Error");
+        \header("Status: 500 Internal Server Error");
     }
     $msg = \nmvc\View::render("/core/deverrors/$type", $variables);
+    define("NMVC_REQUEST_CRASHED", true);
     die("<h1>Development Error $type</h1>" . $msg);
 }
 
@@ -262,21 +263,21 @@ function crash($message, $file, $line, $trace) {
         header("HTTP/1.x 500 Internal Server Error");
         header("Status: 500 Internal Server Error");
     }
+    define("NMVC_REQUEST_CRASHED", true);
     die("<h1>" . $topic . "</h1>" . $msg);
 }
 
 \call_user_func(function() {
     // Never use standard unsafe PHP error handling.
     // Show informative messages trough nanoMVC on script Exceptions/Assertations.
-    assert_options(ASSERT_CALLBACK, '\nmvc\internal\assert_failed');
-    set_exception_handler('\nmvc\internal\exception_handler');
-    set_error_handler('\nmvc\internal\error_handler');
-
+    \assert_options(ASSERT_CALLBACK, '\nmvc\internal\assert_failed');
+    \set_exception_handler('\nmvc\internal\exception_handler');
+    \set_error_handler('\nmvc\internal\error_handler');
     // Catch all errors in maintence mode or if forcing error display.
-    if (is_integer(\nmvc\core\config\FORCE_ERROR_FLAGS))
-        error_reporting(\nmvc\core\config\FORCE_ERROR_FLAGS);
+    if (\is_integer(\nmvc\core\config\FORCE_ERROR_FLAGS))
+        \error_reporting(\nmvc\core\config\FORCE_ERROR_FLAGS);
     else if (APP_IN_DEVELOPER_MODE || \nmvc\core\config\FORCE_ERROR_DISPLAY)
-        error_reporting(E_ALL | E_STRICT);
+        \error_reporting(E_ALL | E_STRICT);
     else
-        error_reporting(E_USER_ERROR);
+        \error_reporting(E_USER_ERROR);
 });

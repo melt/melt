@@ -88,6 +88,24 @@ function php_value_to_sql($php_value) {
         return (string) $php_value;
 }
 
+/**
+ * Returns the configured storage engine (in lowercase) that is expected
+ * to be configured for all tables (and will be configured during sync).
+ * It can also return NULL which means that NanoMVC will not autoconfigure
+ * any storage engines.
+ * @return string
+ */
+function storage_engine() {
+    $configured_engine = \strtolower(config\STORAGE_ENGINE);
+    $possible_options = array("custom" => 1, "auto" => 1, "myisam" => 1, "innodb" => 1);
+    if (!isset($configured_engine[$possible_options]))
+        \trigger_error("Invalid configuration 'db\config\STORAGE_ENGINE', expects one of: " . \array_keys($possible_options), \E_USER_ERROR);
+    if ($configured_engine == "custom")
+        return null;
+    else if ($configured_engine == "auto")
+        $configured_engine = config\REQUEST_LEVEL_TRANSACTIONALIY? "innodb": "myisam";
+    return $configured_engine;
+}
 
 /**
  * @desc Queries the database, and throws specified error on failure.
@@ -160,6 +178,13 @@ function run($query) {
             throw new \Exception("No database name specified!");
         $initialized = true;
         query("USE " . config\NAME);
+        if (config\REQUEST_LEVEL_TRANSACTIONALIY) {
+            // Applying per-request transactionality. Rolling back any previous
+            // uncommited changes on this transaction and starting a new.
+            query("ROLLBACK");
+            query("SET autocommit = 0");
+            query("START TRANSACTION WITH CONSISTENT SNAPSHOT");
+        }
     }
     if ($query == "")
         return true;

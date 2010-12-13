@@ -8,21 +8,21 @@ class ActionController extends DeveloperController {
         // Display all SQL queries made during syncronization.
         \nmvc\db\enable_display();
         \nmvc\Model::syncronizeAllModels();
-        die("\n\n\n>>> Database syncronization complete!");
+        die("\n\n\n>>> Database syncronization complete!\n\n");
     }
 
     public function repair() {
         // Display all SQL queries made during repair.
         \nmvc\db\enable_display();
         \nmvc\Model::repairAllModels();
-        die("\n\n\n>>> Model repairation complete!");
+        die("\n\n\n>>> Model repairation complete!\n\n");
     }
     
     public function purify() {
         // Display all SQL queries made during repair.
         \nmvc\db\enable_display();
         \nmvc\Model::purifyAllModels();
-        die("\n\n\n>>> Model purification complete!");
+        die("\n\n\n>>> Model purification complete!\n\n");
     }
 
 

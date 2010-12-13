@@ -46,6 +46,9 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * requests so their changes cannot be saved, nor can they
      * be linked/unlinked. */
     private $_is_volatile = false;
+    /** @var boolean True if revert needs to be executed before any
+     * further field access is made. */
+    private $_requires_revert = false;
 
     const TRANSITION_STABLE = 0;
     const TRANSITION_BLOCKING = 3;
@@ -534,7 +537,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
             return $this->_id;
         if ($this->_reserved_id <= 0) {
             db\query("UPDATE " . db\table('core__seq') . " SET id = LAST_INSERT_ID(id + 1)");
-            $result = db\next_array(db\query("SELECT @last_insert"));
+            $result = db\next_array(db\query("SELECT LAST_INSERT_ID()"));
             $this->_reserved_id = \intval($result[0]);
         }
         return $this->_reserved_id;
@@ -688,6 +691,23 @@ abstract class Model implements \IteratorAggregate, \Countable {
     }
 
     /**
+     * This is an expensive operation that commits the current transaction
+     * and then starts a new one. After the new transaction has begun
+     * all instances that has been loaded so far is re syncronized to reflect
+     * any changes made during the transaction.
+     * This function is critical when keeping the database state in sync
+     * with neccesary side effects (effects which is not isolated to the
+     * database state).
+     * @return void
+     */
+    public static final function commitSession() {
+        if (!db\config\REQUEST_LEVEL_TRANSACTIONALIY)
+            return;
+        db\query("COMMIT");
+        db\query("START TRANSACTION WITH CONSISTENT SNAPSHOT");
+    }
+
+    /**
      * Reverts all changes made to this model instance by flushing all
      * fields and reading them from database again.
      * Note: Unlinked instances cannot be reverted. Nothing happens on those.
@@ -699,11 +719,16 @@ abstract class Model implements \IteratorAggregate, \Countable {
         unset(self::$_instance_cache[$this->_id]);
         // Select again  (read data again).
         $new_instance = $this->selectByID($this->_id);
-        // Restore data from non volatile fields.
-        foreach ($this->getColumnNames(false) as $col_name)
-            $this->_cols[$col_name]->set($new_instance->_cols[$col_name]->get());
-        // Restore cache (so future selects will return this instance).
-        self::$_instance_cache[$this->_id] = $this;
+        if ($new_instance === null) {
+            // Update the state of this instance to unlinked.
+            $this->_id = 0;
+        } else {
+            // Restore data from non volatile fields.
+            foreach ($this->getColumnNames(false) as $col_name)
+                $this->_cols[$col_name]->set($new_instance->_cols[$col_name]->get());
+            // Restore cache (so future selects will return this instance).
+            self::$_instance_cache[$this->_id] = $this;
+        }
     }
 
     /**
@@ -1446,6 +1471,30 @@ abstract class Model implements \IteratorAggregate, \Countable {
             db\run("DROP TABLE " . db\table('core__seq'));
             db\query("CREATE TABLE " . db\table('core__seq') . " (id BIGINT PRIMARY KEY NOT NULL)");
             db\query("INSERT INTO " . db\table('core__seq') . " VALUES (" . (intval($sequence_max) + 1) . ")");
+        }
+        // Configure table engines.
+        $config_engine = db\storage_engine();
+        if ($config_engine === null)
+            return;
+        $fn_get_db_engines = function() {
+            $result = db\query("SHOW TABLE STATUS");
+            $db_engines = array();
+            while (false !== ($row = db\next_assoc($result)))
+                $db_engines[$row["Name"]] = \strtolower($row["Engine"]);
+            return $db_engines;
+        };
+        $db_engines = $fn_get_db_engines();
+        $table_names = \array_merge(\array_keys($model_classes), array("core__seq", "core__metadata"));
+        foreach ($table_names as $table_name) {
+            if (!isset($db_engines[$table_name]))
+                \trigger_error("Table `$table_name` was unexpectedly not found when reflecting database.", \E_USER_ERROR);
+            if ($db_engines[$table_name] != $config_engine) {
+                db\query("ALTER TABLE " . db\table($table_name) . " ENGINE = $config_engine");
+                // Verify that table engine was altered correctly.
+                $db_engines = $fn_get_db_engines();
+                if ($db_engines[$table_name] != $config_engine)
+                    \trigger_error("Altering engine of table `$table_name` to $config_engine failed!", \E_USER_ERROR);
+            }
         }
     }
 }

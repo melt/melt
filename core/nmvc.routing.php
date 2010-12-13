@@ -1,5 +1,36 @@
 <?php namespace nmvc\internal;
 
+// Routing of required actions to take to gracefully complete a request.
+\register_shutdown_function(function() {
+    \register_shutdown_function(function() {
+        $crash = defined("NMVC_REQUEST_CRASHED") && NMVC_REQUEST_CRASHED;
+        if (!$crash) {
+            // Detect a PHP fatal error.
+            $last_error = \error_get_last();
+            if ($last_error !== null) {
+                $crash = \in_array($last_error["type"]
+                , array(E_ERROR, E_PARSE, E_CORE_ERROR,	E_COMPILE_ERROR, E_USER_ERROR));
+            }
+        }
+        // Skip graceful completion of request that crash.
+        // At those we'd rather forget everything we done and rollback.
+        if (!$crash) {
+            \ignore_user_abort(true);
+            // Write updated session data. (Can't do this automatically
+            // as we need to still require object instancing at that point.)
+            \session_write_close();
+            // If using request level transactionality, now is the time to commit.
+            if (\nmvc\db\config\REQUEST_LEVEL_TRANSACTIONALIY)
+                \nmvc\db\query("COMMIT");
+        } else {
+            // Rollback by closing mysql connection without comitting.
+            \mysql_close();
+        }
+        define("NMVC_REQUEST_COMPLETE", true);
+    });
+});
+
+
 \call_user_func(function() {
     // Stuff can be rendered beyond this point, so reset output buffer.
     \nmvc\request\reset();
