@@ -43,9 +43,10 @@ class DecimalType extends \nmvc\AppType {
         // Remove unnecessary begin or ending zeros.
         $strvalue = (string) $this->value;
         $strvalue = \ltrim($strvalue, "0");
+        if ($strvalue == "" || $strvalue[0] == ".")
+            $strvalue = "0" . $strvalue;
         if (\strpos($strvalue, ".") !== false)
             $strvalue = \rtrim(\rtrim($strvalue, "0"), ".");
-        return $strvalue !== ""? $strvalue: "0";
     }
 }
 
