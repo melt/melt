@@ -2,7 +2,7 @@
 
 class FloatType extends \nmvc\AppType {
     public function getSQLType() {
-        return "float";
+        return "double";
     }
 
     public function get() {
