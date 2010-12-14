@@ -1,29 +1,30 @@
 <?php namespace nmvc\core;
 
 class FloatType extends \nmvc\AppType {
+    protected $value = 0;
+
     public function getSQLType() {
         return "double";
     }
 
-    public function get() {
-        return floatval($this->value);
+    public function set($value) {
+        $this->value = \floatval($value);
     }
 
     public function getSQLValue() {
-        return floatval($this->value);
+        return \strval(\floatval($this->value));
     }
 
     public function getInterface($name) {
-        $value = floatval($this->value);
-        return "<input type=\"text\" name=\"$name\" id=\"$name\" value=\"$value\" />";
+        return "<input type=\"text\" name=\"$name\" id=\"$name\" value=\"$this->value\" />";
     }
 
     public function readInterface($name) {
-        $this->value = floatval(@$_POST[$name]);
+        $this->value = \floatval(@$_POST[$name]);
     }
 
     public function __toString() {
-        return strval(floatval($this->value));
+        return \strval($this->value);
     }
 }
 
