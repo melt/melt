@@ -44,7 +44,7 @@ class DecimalType extends \nmvc\AppType {
         $strvalue = (string) $this->value;
         $strvalue = \ltrim($strvalue, "0");
         if (\strpos($strvalue, ".") !== false)
-            $strvalue = \rtrim($strvalue, "0.");
+            $strvalue = \rtrim(\rtrim($strvalue, "0"), ".");
         return $strvalue !== ""? $strvalue: "0";
     }
 }
