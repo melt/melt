@@ -1,5 +1,10 @@
 <?php namespace nmvc\core;
 
+/**
+ * For fixed point, decimal storage.
+ * This type is recommended to be used with BC Math Functions.
+ * @see http://www.php.net/manual/en/ref.bc.php
+ */
 class DecimalType extends \nmvc\AppType {
     public $precision = 20;
     public $scale = 10;
@@ -27,7 +32,7 @@ class DecimalType extends \nmvc\AppType {
     }
 
     public function getInterface($name) {
-        return "<input type=\"text\" name=\"$name\" id=\"$name\" value=\"$this->value\" />";
+        return "<input type=\"text\" name=\"$name\" id=\"$name\" value=\"$this\" />";
     }
 
     public function readInterface($name) {
@@ -35,7 +40,12 @@ class DecimalType extends \nmvc\AppType {
     }
 
     public function __toString() {
-        return \strval($this->value);
+        // Remove unnecessary begin or ending zeros.
+        $strvalue = (string) $this->value;
+        $strvalue = \ltrim($strvalue, "0");
+        if (\strpos($strvalue, ".") !== false)
+            $strvalue = \rtrim($strvalue, "0.");
+        return $strvalue !== ""? $strvalue: "0";
     }
 }
 
