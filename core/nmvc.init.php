@@ -93,6 +93,7 @@ function read_server_var($var_name, $alt_var_name = null) {
     put_configuration_directive('nmvc\core\config\FORCE_ERROR_DISPLAY', false);
     put_configuration_directive('nmvc\core\config\FORCE_ERROR_FLAGS', false);
     put_configuration_directive('nmvc\core\config\PEAR_AUTOLOAD', false);
+    put_configuration_directive('nmvc\core\config\TRANSLATION_ENABLED', false);
     // Evaluate developer mode based on configuration and cookies.
     $devkey_is_blank = \nmvc\core\config\DEVELOPER_KEY == "";
     $devkey_matches = isset($_COOKIE['NMVC_DEVKEY']) && ($_COOKIE['NMVC_DEVKEY'] === \nmvc\core\config\DEVELOPER_KEY);
@@ -118,8 +119,8 @@ function read_server_var($var_name, $alt_var_name = null) {
     // Disable some features in critical core requests.
     define("REQ_IS_CORE", \strncasecmp(REQ_URL, "/core/", 6) == 0);
     // The gettext extention conflicts with nanomvc and must be disabled.
-    if (\extension_loaded("gettext"))
-        trigger_error("NanoMVC compability error: The Gettext PHP extention is loaded in your installation and must be disabled as it conflicts with the NanoMVC core gettext implementation.", \E_USER_ERROR);
+    if (\nmvc\core\config\TRANSLATION_ENABLED && \extension_loaded("gettext"))
+        trigger_error("NanoMVC compability error: The Gettext PHP extention is loaded in your installation and must be disabled as it conflicts with the NanoMVC core gettext implementation. Optionally you can disable translation by setting core\config\TRANSLATION_ENABLED to false.", \E_USER_ERROR);
     // Define identifier constants.
     define("VOLATILE_FIELD", "VOLATILE_FIELD");
 });

@@ -35,52 +35,64 @@ function id($instance = null) {
     return \nmvc\core\id($instance);
 }
 
-/**
- * Aliast for gettext.
- */
-function _() {
-    return call_user_func_array('gettext', func_get_args());
+if (!function_exists("_") || \nmvc\core\config\TRANSLATION_ENABLED) {
+    /**
+     * Aliast for gettext.
+     */
+    function _() {
+        return call_user_func_array('gettext', func_get_args());
+    }
 }
 
-/**
- * Alias for gettext.
- */
-function __() {
-    return call_user_func_array('gettext', func_get_args());
+
+if (!function_exists("__") || \nmvc\core\config\TRANSLATION_ENABLED) {
+    /**
+     * Alias for gettext.
+     */
+    function __() {
+        return call_user_func_array('gettext', func_get_args());
+    }
 }
 
-/**
- * Translates string.
- * @param string $msgid Must be string litteral expression. Function call is
- * parsed by localization engine.
- * @return string Locale translated string.
- */
-function gettext($msgid) {
-    $sprintf_args = array_slice(func_get_args(), 1);
-    return nmvc\core\LocalizationEngine::translate($msgid, "", "", 1, $sprintf_args);
+if (!function_exists("gettext") || \nmvc\core\config\TRANSLATION_ENABLED) {
+    /**
+     * Translates string.
+     * @param string $msgid Must be string litteral expression. Function call is
+     * parsed by localization engine.
+     * @return string Locale translated string.
+     */
+    function gettext($msgid) {
+        $sprintf_args = array_slice(func_get_args(), 1);
+        return nmvc\core\LocalizationEngine::translate($msgid, "", "", 1, $sprintf_args);
+    }
 }
 
-/**
- * Translates by plural form.
- * @param string $msgid Must be string litteral expression. Function call is
- * parsed by localization engine.
- * @param string $msgid_plural
- * @param integer $n
- * @return string Locale translated string.
- */
-function ngettext($msgid, $msgid_plural, $n) {
-    $sprintf_args = array_slice(func_get_args(), 2);
-    return nmvc\core\LocalizationEngine::translate($msgid, $msgid_plural, "", $n, $sprintf_args);
+
+if (!function_exists("ngettext") || \nmvc\core\config\TRANSLATION_ENABLED) {
+    /**
+     * Translates by plural form.
+     * @param string $msgid Must be string litteral expression. Function call is
+     * parsed by localization engine.
+     * @param string $msgid_plural
+     * @param integer $n
+     * @return string Locale translated string.
+     */
+    function ngettext($msgid, $msgid_plural, $n) {
+        $sprintf_args = array_slice(func_get_args(), 2);
+        return nmvc\core\LocalizationEngine::translate($msgid, $msgid_plural, "", $n, $sprintf_args);
+    }
 }
 
-/**
- * Translates by context.
- * @param string $context Context of string.
- * @param string $msgid Must be string litteral expression. Function call is
- * parsed by localization engine.
- * @return string Locale translated string.
- */
-function pgettext($context, $msgid) {
-    $sprintf_args = array_slice(func_get_args(), 2);
-    return nmvc\core\LocalizationEngine::translate($msgid, "", $context, 1, $sprintf_args);
+if (!function_exists("pgettext") || \nmvc\core\config\TRANSLATION_ENABLED) {
+    /**
+     * Translates by context.
+     * @param string $context Context of string.
+     * @param string $msgid Must be string litteral expression. Function call is
+     * parsed by localization engine.
+     * @return string Locale translated string.
+     */
+    function pgettext($context, $msgid) {
+        $sprintf_args = array_slice(func_get_args(), 2);
+        return nmvc\core\LocalizationEngine::translate($msgid, "", $context, 1, $sprintf_args);
+    }
 }
