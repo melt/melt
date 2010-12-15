@@ -10,6 +10,12 @@
             if ($last_error !== null) {
                 $crash = \in_array($last_error["type"]
                 , array(E_ERROR, E_PARSE, E_CORE_ERROR,	E_COMPILE_ERROR, E_USER_ERROR));
+                // Tries to send internal server error here as these crashes
+                // bypass error handler.
+                if ($crash && !headers_sent()) {
+                    header("HTTP/1.x 500 Internal Server Error");
+                    header("Status: 500 Internal Server Error");
+                }
             }
         }
         // Skip graceful completion of request that crash.
