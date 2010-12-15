@@ -90,8 +90,6 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
             $from_model = $this->from_model;
             if ($from_model === null)
                 trigger_error("Cannot set select fields to non null without specifying from model.", \E_USER_ERROR);
-            foreach ($select_fields as $field)
-                $from_model::translateFieldToColumn($field, true);
         }
         $this->select_fields = $select_fields;
     }
