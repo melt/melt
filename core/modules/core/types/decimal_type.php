@@ -8,6 +8,7 @@
 class DecimalType extends \nmvc\AppType {
     public $precision = 20;
     public $scale = 10;
+    protected $value = "0";
 
     public function __construct($column_name, $precision = 20, $scale = 10) {
         parent::__construct($column_name);
@@ -44,6 +45,8 @@ class DecimalType extends \nmvc\AppType {
         $strvalue = (string) $this->value;
         if (\strpos($strvalue, ".") !== false)
             $strvalue = \rtrim(\rtrim($strvalue, "0"), ".");
+        if ($strvalue == "")
+            debug($this);
         return $strvalue;
     }
 }
