@@ -25,11 +25,16 @@ class DecimalType extends \nmvc\AppType {
     }
 
     public function set($value) {
-        $this->value = \bcadd($value, "0", $this->scale);
+        // Cast value and remove unuseful data.
+        $this->value = number_trim(\bcadd($value, "0", $this->scale));
     }
 
     public function getSQLValue() {
         return \nmvc\db\strfy($this->value);
+    }
+
+    public function setSQLValue($value) {
+        $this->set($value);
     }
 
     public function getInterface($name) {
@@ -41,13 +46,7 @@ class DecimalType extends \nmvc\AppType {
     }
 
     public function __toString() {
-        // Remove unnecessary begin or ending zeros.
-        $strvalue = (string) $this->value;
-        if (\strpos($strvalue, ".") !== false)
-            $strvalue = \rtrim(\rtrim($strvalue, "0"), ".");
-        if ($strvalue == "")
-            debug($this);
-        return $strvalue;
+        return escape($this->value);
     }
 }
 
