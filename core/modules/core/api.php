@@ -348,6 +348,22 @@ function get_uploaded_file($form_name, &$file_name = null, $only_path = false) {
 }
 
 /**
+ * Takes a string numer and removes starting and ending zeros.
+ * Example: "0003.1400" returns "3.14"
+ * @param string $str_number
+ * @return string
+ */
+function number_trim($str_number) {
+    $str_number = \strval($str_number);
+    if (\strpos($str_number, ".") !== false)
+        $str_number = \rtrim(\rtrim($str_number, "0"), ".");
+    $str_number = \ltrim($str_number, "0");
+    if ($str_number == "")
+        $str_number = "0";
+    return $str_number;
+}
+
+/**
  * This function throws an E_USER_WARNING error if the application is in
  * developer mode, and proceeds to print all arguments that where
  * passed to it.
