@@ -233,8 +233,6 @@ class LocalizationEngine {
             }
             foreach ($this->parseTranslateInvokes($php_file) as $translate_invoke) {
                 list($msgid, $plural_id, $context, $reference) = $translate_invoke;
-                $msgid = trim($msgid);
-                $context = trim($context);
                 if (isset($new_locale_strings[$msgid][$context])) {
                     // Translation exists in multiple locations.
                 } else if (isset($old_locale_strings[$msgid][$context])) {
