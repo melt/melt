@@ -358,8 +358,8 @@ function number_trim($str_number) {
     if (\strpos($str_number, ".") !== false)
         $str_number = \rtrim(\rtrim($str_number, "0"), ".");
     $str_number = \ltrim($str_number, "0");
-    if ($str_number == "")
-        $str_number = "0";
+    if ($str_number == "" || $str_number[0] == ".")
+        $str_number = "0$str_number";
     return $str_number;
 }
 
