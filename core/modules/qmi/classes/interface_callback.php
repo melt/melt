@@ -11,13 +11,15 @@ abstract class InterfaceCallback_app_overrideable {
     private $is_deleting;
     private $success_url;
     private $ajax_submit;
+    /** @var \DateTime When the interface was created. */
+    private $time_created;
 
     /**
      * @var string Contains the message that will be displayed when form validation failed.
      */
     protected $validate_failed_message;
 
-    public final function __construct($interface_name, $instances, $instance_fields, $is_deleting, $success_url, $ajax_submit) {
+    public final function __construct($interface_name, $instances, $instance_fields, $is_deleting, $success_url, $ajax_submit, $time_created) {
         $this->interface_name = $interface_name;
         $this->instances = $instances;
         $this->instance_fields = $instance_fields;
@@ -25,6 +27,7 @@ abstract class InterfaceCallback_app_overrideable {
         $this->success_url = $success_url;
         $this->validate_failed_message = __("Validation failed. Please check your input.");
         $this->ajax_submit = $ajax_submit;
+        $this->time_created = $time_created;
     }
 
     /**
@@ -33,6 +36,14 @@ abstract class InterfaceCallback_app_overrideable {
      */
     protected final function isDeleting() {
         return $this->is_deleting;
+    }
+
+    /**
+     * Returns the date time when the interface was created.
+     * @return \DateTime
+     */
+    protected final function getTimeCreated() {
+        return clone $this->time_created;
     }
 
     /**

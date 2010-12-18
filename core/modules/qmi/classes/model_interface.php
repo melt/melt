@@ -12,6 +12,7 @@ class ModelInterface {
     private $success_url;
     private $creating = true;
     private $default_style;
+    private $time_created;
 
     /**
      * @param string $interface_name Name of interface (it's identifier).
@@ -27,6 +28,7 @@ class ModelInterface {
         $this->interface_name = $interface_name;
         $this->default_style = (string) $default_style;
         $this->success_url = is_null($success_url)? url(REQ_URL): $success_url;
+        $this->time_created = new \DateTime();
     }
 
     /**
@@ -47,7 +49,11 @@ class ModelInterface {
         // Convert instance object references to id|class references.
         foreach ($this->instances as &$instance)
             $instance = array($instance->getID(), get_class($instance), $instance->isVolatile());
-        $qmi_data = \nmvc\string\simple_crypt(gzcompress(serialize(array($this->success_url, $this->instances, $this->components, $this->setters, array_values($this->autolinks), $this->interface_name))));
+        $qmi_data = \nmvc\string\simple_crypt(gzcompress(serialize(array(
+            $this->success_url, $this->instances, $this->components
+            , $this->setters, array_values($this->autolinks)
+            , $this->interface_name, $this->time_created
+        ))));
         $html = '<div><input type="hidden" name="_qmi" value="' . $qmi_data . '" />';
         if ($auto_submit) {
             $msg = $this->creating? __("Add New"): __("Save Changes");
@@ -318,7 +324,7 @@ class ModelInterface {
             \nmvc\messenger\redirect_message(REQ_URL, __("The action failed, your session might have timed out. Please try again."));
             return;
         }
-        list($success_url, $instance_keys, $components, $setters, $autolinks, $interface_name) = unserialize(gzuncompress($qmi_data));
+        list($success_url, $instance_keys, $components, $setters, $autolinks, $interface_name, $time_created) = unserialize(gzuncompress($qmi_data));
         // Fetch all instances and translate all instance keys to their new spl object hashes.
         $instances = array();
         foreach ($instance_keys as $old_instance_key => $instance_values) {
@@ -374,7 +380,7 @@ class ModelInterface {
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' does not extend 'nmvc\qmi\InterfaceCallback'!", \E_USER_ERROR);
         if (!is($callback_class, $callback_class . "_app_overrideable"))
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not declared overridable by the responsible module!", \E_USER_ERROR);
-        $callback_class = new $callback_class($interface_name, $instances, $instance_fields, $is_deleting, $success_url, $ajax_submit);
+        $callback_class = new $callback_class($interface_name, $instances, $instance_fields, $is_deleting, $success_url, $ajax_submit, $time_created);
         $callback_class->$callback_method();
         if ($ajax_submit) {
             $data = array("success" => true, "unlinked" => false, "errors" => array());
