@@ -69,9 +69,8 @@ function read_server_var($var_name, $alt_var_name = null) {
     restore_workdir();
     // Send Powered By Header.
     header("X-Powered-By: nmvc/" . VERSION, false);
-    // Explicitly set the default timezone if neccessary.
-    if (function_exists("date_default_timezone_set"))
-        date_default_timezone_set(@date_default_timezone_get());
+    // Explicitly set the default timezone to UTC.
+    date_default_timezone_set("UTC");
     // Using UTF-8 for everything.
     iconv_set_encoding("internal_encoding", "UTF-8");
     iconv_set_encoding("output_encoding", "UTF-8");
