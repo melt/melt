@@ -254,10 +254,15 @@ function in_range($string, $min = -1, $max = -1) {
 
 /**
  * Converts variable to string and returns it quoted.
+ * The following charachers with special meaning in many contexts
+ * is automatically escaped: control charachers (<0x20)
+ * " ' < > \ $
  * @param string $string
  */
 function quote($string) {
-    return \var_export((string) $string, true);
+    return '"' . \preg_replace_callback('#[\x00-\x1f\x22\x24\x27\x3c\x3e\x5c]#', function($matches) {
+        return '\x' . \str_pad(\dechex(\ord($matches[0])), 2, "0", \STR_PAD_LEFT);
+    }, (string) $string) . '"';
 }
 
 /**
