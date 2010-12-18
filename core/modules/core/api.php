@@ -348,6 +348,15 @@ function get_uploaded_file($form_name, &$file_name = null, $only_path = false) {
 }
 
 /**
+ * Returns an array of all modules where each key is the module name
+ * and the value is an array like (module class, module file path)
+ * @return array
+ */
+function get_all_modules() {
+    return \nmvc\internal\get_all_modules();
+}
+
+/**
  * Takes a string numer and removes starting and ending zeros.
  * Example: "0003.1400" returns "3.14"
  * @param string $str_number
