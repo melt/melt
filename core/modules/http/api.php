@@ -14,9 +14,9 @@ function unhook_current_request() {
     ignore_user_abort(true);
     header("Connection: close");
     header("Content-Encoding: none");
-    header("Content-Length: 1");
+    header("Content-Length: 0");
     ob_start();
-    echo "\n";
+    echo " ";
     ob_end_flush();
     flush();
     ob_end_clean();
