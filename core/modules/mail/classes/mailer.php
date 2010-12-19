@@ -18,6 +18,8 @@ class Mailer {
     public $cc;
     /** @var AddressList List of BCC repicents. */
     public $bcc;
+    /** @var string Subject of mail. */
+    public $subject = "";
     
     public function __construct() {
         $this->from = new Address();
@@ -70,55 +72,75 @@ class Mailer {
         return $headers;
     }
 
+    private $attachments = array();
+
+    public function attachFile($filename, $data) {
+        $filename = "\"=?UTF-8?B?" . base64_encode($filename) . "?=\"";
+        $this->attachments[] = array("application/octet-stream; name=$filename", $data);
+    }
+
     /** Sends this mail as plain text. */
-    public function mailPlain($body, $subject = null) {
-        $headers = $this->addressEmail();
-        $headers .= 'Content-Type: text/plain; charset=UTF-8' . Smtp::CRLF;
-        // Base 64 encode content and put it in a single blob.
-        $headers .= 'Content-transfer-encoding: base64' . Smtp::CRLF;
-        $body = base64_encode($body);
-        // Remove whitespace from start and end of rows, and cut rows to a length of 998.
-        $rows_out = array();
-        $rows_in = explode("\n", $body);
-        foreach ($rows_in as $row) {
-            $row = trim($row);
-            $i = 0;
-            while (true) {
-                $r = substr($row, $i, 998);
-                $rows_out[] = $r;
-                $i += 998;
-                if ($i >= strlen($row))
-                    break;
-            }
-        }
-        // Use \r\n linebreaks.
-        $body = implode($rows_out, "\r\n");
-        // Send the mail.
-        $this->spoolMail($subject, $body, $headers);
+    public function mailPlain($plain_text) {
+        // Assemble the mail and send it.
+        $mail_message_content = array(array("text/plain; charset=UTF-8", $plain_text));
+        $this->assembleMail($mail_message_content);
+    }
+
+    /**
+     * Escapes a HTML message and sends it as both plain text and HTML,
+     * using a heuristic algoritm to convert the message.
+     * The plain-text variant is just a safe fallback for clients that doesn't
+     * support HTML.
+     */
+    private function getPlanTextFallback($html) {
+        // Set of regex whitespace not including newline.
+        $wnn = '[\x00-\x09\x0B-\x20]';
+        $plain_text = $html;
+        // Escape styles from html.
+        $plain_text = \preg_replace("#<style[^>]*>[^<]*#", "", $plain_text);
+        // Escape anchors from html.
+        $plain_text = \preg_replace('#href[ ]*="[ ]*(https?://[^"]+)"#', ">$1 <foo", $plain_text);
+        // Strip markup from html.
+        $plain_text = \trim(strip_tags($plain_text));
+        // Escape entities from html.
+        $plain_text = \html_entity_decode($plain_text, \ENT_QUOTES, "UTF-8");
+        // Remove unnecessary number of newlines.
+        $plain_text = \preg_replace("#\n$wnn+\n[\s]+#", "\n\n", $plain_text);
+        // Remove traling and prefixing space.
+        $plain_text = \preg_replace("#\n$wnn+|$wnn+\n#", "\n", $plain_text);
+        // Remove unnecessary blank spaces.
+        return \preg_replace("#[ ][ ]+#", " ", $plain_text);
     }
 
     /** Sends this mail with HTML content. */
-    public function mailHTML($body, $subject = null) {
-        $headers = $this->addressEmail();
-        // Assemble the content.
-        $html_subject = ($subject == null)? 'Untitled': escape($subject);
-        $content = "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.1//EN\"\r\n \"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd\">\r\n";
-        $content = "<html>\r\n\t<head>\r\n\t\t<title>$html_subject\r\n\t</title>\r\n\t</head>\r\n\t<body>\r$body\r\n\t</body>\r\n</html>\r\n";
+    public function mailHTML($html_content) {
         // Create a plain text fallback for the HTML content.
-        $content = $this->createPlainTextFallback($content, $headers);
-        // Send the mail.
-        $this->spoolMail($subject, $content, $headers);
-        return;
+        $plain_text_content = $this->getPlanTextFallback($html_content);
+        // Assemble the mail and send it.
+        $mail_message_sections = array(
+            array("text/plain; charset=UTF-8", $plain_text_content),
+            array("text/html; charset=UTF-8", $html_content),
+        );
+        $this->assembleMail($mail_message_sections);
     }
 
-    private function spoolMail($subject, $content, $headers) {
+    private function assembleMail($mail_message_sections) {
+        $mail_sections = $this->attachments;
+        // Appand message (alternatives) before any attachments.
+        \array_unshift($mail_sections, array("multipart/alternative", $mail_message_sections));
+        $mail_content = $this->boundaryWrap($mail_sections, "multipart/mixed");
+        $this->spoolMail($mail_content);
+    }
+
+    private function spoolMail($mail_data) {
         // Also append other standard headers.
-        $headers .= 'MIME-Version: 1.0' . Smtp::CRLF;
-        $headers .= 'X-Mailer: nanoMVC/' . \nmvc\internal\VERSION . '; PHP/' . phpversion() . Smtp::CRLF;
-        $headers .= 'Date: ' . date("r") . Smtp::CRLF;
-        $headers .= "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=" . Smtp::CRLF;
-        $headers .= $this->to->getAsHeader('To');
-        $headers .= $this->cc->getAsHeader('Cc');
+        $start_headers = $this->addressEmail();
+        $start_headers .= 'MIME-Version: 1.0' . Smtp::CRLF;
+        $start_headers .= 'X-Mailer: nanoMVC/' . \nmvc\internal\VERSION . '; PHP/' . phpversion() . Smtp::CRLF;
+        $start_headers .= 'Date: ' . date("r") . Smtp::CRLF;
+        $start_headers .= "Subject: =?UTF-8?B?" . base64_encode($this->subject) . "?=" . Smtp::CRLF;
+        $start_headers .= $this->to->getAsHeader('To');
+        $start_headers .= $this->cc->getAsHeader('Cc');
         // Compile RCPT array.
         $rcpt_array = array();
         foreach ($this->to->getPlainArray() as $rcpt)
@@ -138,8 +160,8 @@ class Mailer {
         $from_email = $this->from->email;
         if (!\nmvc\string\email_validate($from_email))
             trigger_error(__CLASS__ . " failed, invalid from address: $from_email", \E_USER_ERROR);
-        // Compile data.
-        $data = $headers . Smtp::CRLF . $content;
+        // Prepend start headers to mail data.
+        $data = $start_headers . $mail_data;
         // Spool the mail.
         $spooled_mail = new SpooledMailModel();
         $spooled_mail->from_email = $from_email;
@@ -155,45 +177,34 @@ class Mailer {
         $spooled_mail->store();
     }
 
-    /**
-     * Escapes a HTML message and sends it as both plain text and HTML,
-     * using a heuristic algoritm to convert the message.
-     * The plain-text variant is just a safe fallback for clients that doesn't
-     * support HTML.
-     */
-    private function createPlainTextFallback($html, &$headers) {
+    private function boundaryWrap($sections, $multipart_mime) {
         $boundary = \nmvc\string\random_alphanum_str(16);
-        $headers .= "Content-Type: multipart/alternative; boundary=$boundary" . Smtp::CRLF;
-        // Set of regex whitespace not including newline.
-        $wnn = '[\x00-\x09\x0B-\x20]';
-        $plain_text = $html;
-        // Escape styles from html.
-        $plain_text = preg_replace("#<style[^>]*>[^<]*#", "", $plain_text);
-        // Escape anchors from html.
-        $plain_text = preg_replace('#href[ ]*="[ ]*(https?://[^"]+)"#', ">$1 <foo", $plain_text);
-        // Strip markup from html.
-        $plain_text = trim(strip_tags($plain_text));
-        // Escape entities from html.
-        $plain_text = html_entity_decode($plain_text, \ENT_QUOTES, "UTF-8");
-        // Remove unnecessary number of newlines.
-        $plain_text = preg_replace("#\n$wnn+\n[\s]+#", "\n\n", $plain_text);
-        // Remove traling and prefixing space.
-        $plain_text = preg_replace("#\n$wnn+|$wnn+\n#", "\n", $plain_text);
-        // Remove unnecessary blank spaces.
-        $plain_text = preg_replace("#[ ][ ]+#", " ", $plain_text);
-        // Compile plain text part.
-        $plain_text_part = "--$boundary\n"
-        . "Content-Type: text/plain; charset=UTF-8\n"
-        . "Content-Transfer-Encoding: base64\n\n"
-        . chunk_split(base64_encode($plain_text), self::RFC_MAX_LINELENGTH, smtp::CRLF);
-        // Compile HTML part.
-        $html_part = "--$boundary\n"
-        . "Content-Type: text/html; charset=UTF-8\n"
-        . "Content-Transfer-Encoding: base64\n\n"
-        . chunk_split(base64_encode($html), self::RFC_MAX_LINELENGTH, smtp::CRLF);
-        // Forge content.
-        $content = "$plain_text_part\n\n$html_part\n\n--$boundary--";
+        if (\count($sections) < 1) {
+            \trigger_error("Boundary wrap called with no sections.", \E_USER_ERROR);
+        } else if (\count($sections) == 1) {
+            // Skip boundary wrap when only using one section.
+            list($content_type, $data) = \reset($sections);
+            return \is_array($data)
+            ? $this->boundaryWrap($data, $content_type)
+            : $this->base64Wrap($data, $content_type);
+        }
+        $content = "Content-Type: $multipart_mime; boundary=$boundary" . smtp::CRLF . smtp::CRLF;
+        foreach ($sections as $section) {
+            list($content_type, $data) = $section;
+            $content .= "--$boundary" . smtp::CRLF;
+            $content .= \is_array($data)
+            ? $this->boundaryWrap($data, $content_type)
+            : $this->base64Wrap($data, $content_type);
+            $content .= smtp::CRLF;
+        }
+        $content .= "--$boundary--";
         return $content;
+    }
+
+    private function base64Wrap($data, $content_type) {
+        return "Content-Type: $content_type" . smtp::CRLF
+        . "Content-Transfer-Encoding: base64" . smtp::CRLF . smtp::CRLF
+        . \chunk_split(\base64_encode($data), self::RFC_MAX_LINELENGTH, smtp::CRLF) . smtp::CRLF;
     }
 
 }
