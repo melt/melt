@@ -21,6 +21,7 @@
         // Skip graceful completion of request that crash.
         // At those we'd rather forget everything we done and rollback.
         if (!$crash) {
+            // End request handler. Making all side effects permanent.
             \ignore_user_abort(true);
             // Write updated session data. (Can't do this automatically
             // as we need to still require object instancing at that point.)
@@ -28,8 +29,11 @@
             // If using request level transactionality, now is the time to commit.
             if (\nmvc\db\config\REQUEST_LEVEL_TRANSACTIONALIY)
                 \nmvc\db\query("COMMIT");
+            // Process any unsent mails in mail queue.
+            \nmvc\mail\SpooledMailModel::processMailQueue(true);
         } else {
-            // Rollback by closing mysql connection without comitting.
+            // Something went wrong, rollback by closing mysql connection
+            // without comitting.
             @\mysql_close();
         }
         define("NMVC_REQUEST_COMPLETE", true);

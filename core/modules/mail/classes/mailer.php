@@ -94,7 +94,7 @@ class Mailer {
         // Use \r\n linebreaks.
         $body = implode($rows_out, "\r\n");
         // Send the mail.
-        $this->doMail($subject, $body, $headers);
+        $this->spoolMail($subject, $body, $headers);
     }
 
     /** Sends this mail with HTML content. */
@@ -107,11 +107,11 @@ class Mailer {
         // Create a plain text fallback for the HTML content.
         $content = $this->createPlainTextFallback($content, $headers);
         // Send the mail.
-        $this->doMail($subject, $content, $headers);
+        $this->spoolMail($subject, $content, $headers);
         return;
     }
 
-    private function doMail($subject, $content, $headers) {
+    private function spoolMail($subject, $content, $headers) {
         // Also append other standard headers.
         $headers .= 'MIME-Version: 1.0' . Smtp::CRLF;
         $headers .= 'X-Mailer: nanoMVC/' . \nmvc\internal\VERSION . '; PHP/' . phpversion() . Smtp::CRLF;
@@ -138,33 +138,21 @@ class Mailer {
         $from_email = $this->from->email;
         if (!\nmvc\string\email_validate($from_email))
             trigger_error(__CLASS__ . " failed, invalid from address: $from_email", \E_USER_ERROR);
-        // Read smtp 'from' host.
-        $smtp_from_host = $this->smtp_from_host;
-        if ($smtp_from_host == null)
-            $smtp_from_host = gethostname();
         // Compile data.
         $data = $headers . Smtp::CRLF . $content;
-        // Connect to SMTP server and send the mail.
-        $smtp = new Smtp();
-        $smtp->Connect($this->smtp_host, $this->smtp_port, $this->smtp_timeout);
-        if (!$smtp->Connected())
-            trigger_error(__CLASS__ . " failed, could not connect to SMTP host " . $this->smtp_host . ":" . $this->smtp_port . "! (Timeout is " . $this->smtp_timeout. " seconds). Message: " . var_export($smtp->error, true), \E_USER_ERROR);
-        $smtp->Hello($smtp_from_host)
-            or trigger_error(__CLASS__ . " failed, HELO/EHLO command error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
-        if ($this->smtp_auth_enable) {
-            $smtp->Authenticate($this->smtp_auth_user, $this->smtp_auth_password)
-                or trigger_error(__CLASS__ . " failed, authentication error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
-        }
-        $smtp->Mail($from_email)
-            or trigger_error(__CLASS__ . " failed, MAIL command error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
-        foreach ($rcpt_array as $rcpt_email) {
-            $smtp->Recipient($rcpt_email)
-                or trigger_error(__CLASS__ . " failed, RCPT command error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
-        }
-        $smtp->Data($data)
-            or trigger_error(__CLASS__ . " failed, DATA command error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
-        $smtp->Quit(true)
-            or trigger_error(__CLASS__ . " failed, QUIT command error. Message: " . var_export($smtp->error, true), \E_USER_ERROR);
+        // Spool the mail.
+        $spooled_mail = new SpooledMailModel();
+        $spooled_mail->from_email = $from_email;
+        $spooled_mail->rcpt_list = $rcpt_array;
+        $spooled_mail->mail_data = $data;
+        $spooled_mail->smtp_host = $this->smtp_host;
+        $spooled_mail->smtp_port = $this->smtp_port;
+        $spooled_mail->smtp_timeout = $this->smtp_timeout;
+        $spooled_mail->smtp_auth_enable = $this->smtp_auth_enable;
+        $spooled_mail->smtp_auth_user = $this->smtp_auth_user;
+        $spooled_mail->smtp_auth_password = $this->smtp_auth_password;
+        $spooled_mail->smtp_from_host = $this->smtp_from_host;
+        $spooled_mail->store();
     }
 
     /**

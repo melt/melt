@@ -8,4 +8,5 @@
     "SMTP_AUTH_ENABLE" => false,
     "SMTP_AUTH_USER" => "user",
     "SMTP_AUTH_PASSWORD" => "password",
+    "SPOOL_RETRY_INTERVAL_SECONDS" => 300,
 );
