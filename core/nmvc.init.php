@@ -91,6 +91,7 @@ function read_server_var($var_name, $alt_var_name = null) {
     put_configuration_directive('nmvc\core\config\MAINTENANCE_MODE', true);
     put_configuration_directive('nmvc\core\config\FORCE_ERROR_DISPLAY', false);
     put_configuration_directive('nmvc\core\config\FORCE_ERROR_FLAGS', false);
+    put_configuration_directive('nmvc\core\config\ERROR_LOG', null);
     put_configuration_directive('nmvc\core\config\PEAR_AUTOLOAD', false);
     put_configuration_directive('nmvc\core\config\TRANSLATION_ENABLED', false);
     // Evaluate developer mode based on configuration and cookies.
@@ -116,7 +117,7 @@ function read_server_var($var_name, $alt_var_name = null) {
     define("REQ_URL_BASE", basename(REQ_URL));
     define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
     // Disable some features in critical core requests.
-    define("REQ_IS_CORE", \strncasecmp(REQ_URL, "/core/", 6) == 0);
+    define("REQ_IS_CORE_DEV_ACTION", \strncasecmp(REQ_URL, "/core/action/", 6) == 0);
     // The gettext extention conflicts with nanomvc and must be disabled.
     if (\nmvc\core\config\TRANSLATION_ENABLED && \extension_loaded("gettext"))
         trigger_error("NanoMVC compability error: The Gettext PHP extention is loaded in your installation and must be disabled as it conflicts with the NanoMVC core gettext implementation. Optionally you can disable translation by setting core\config\TRANSLATION_ENABLED to false.", \E_USER_ERROR);

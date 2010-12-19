@@ -3,7 +3,7 @@
 class UserxModule extends \nmvc\CoreModule {
 
     public static function beforeRequestProcess() {
-        if (REQ_IS_CORE)
+        if (REQ_IS_CORE_DEV_ACTION)
             return;
         // Check if the user has a remembered login key.
         if (get_user() === null && isset($_COOKIE['REMBR_USR_KEY'])) {

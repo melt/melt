@@ -211,7 +211,16 @@ function crash($message, $file, $line, $trace) {
     $errraised = "__File: $file; line #$line\n";
     // The message cannot be larger than 8K. Prevents error log flooding.
     $errmessage = "__Messsage: " . substr($message, 0, 8000) . "\n";
-    error_log(str_replace("\n", ";", "Exception caught: " . $errraised . $errmessage . $errtrace));
+    if (\nmvc\core\config\ERROR_LOG === false) {
+        // No error logging.
+    } else if (\nmvc\core\config\ERROR_LOG == null) {
+        \error_log(\str_replace("\n", ";", "Exception caught: " . $errraised . $errmessage . $errtrace));
+    } else {
+        \chdir(APP_DIR);
+        $log_entry = "Exception Caught " . date("r") . "\n\n$errraised\n$errmessage\n$errtrace\nError tag: #$errcode\n\n\n";
+        \file_put_contents(\nmvc\core\config\ERROR_LOG, $log_entry, \FILE_APPEND);
+        restore_workdir();
+    }
     if (!APP_IN_DEVELOPER_MODE && !\nmvc\core\config\FORCE_ERROR_DISPLAY) {
         // Do not unsafly print error information for non developers.
         $topic = "500 - Internal Server Error";

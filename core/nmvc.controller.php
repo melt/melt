@@ -254,7 +254,7 @@ abstract class Controller {
         if (is_array($rewritten_path)) {
             define("REQ_REWRITTEN_PATH", "/" . implode("/", $rewritten_path));
             $path = $rewritten_path;
-            if (REQ_IS_CORE)
+            if (REQ_IS_CORE_DEV_ACTION)
                 \trigger_error("AppController::rewriteRequest may not rewrite /core/ path as it's system reserved.", \E_USER_ERROR);
         } else if ($rewritten_path === false) {
             define("REQ_REWRITTEN_PATH", false);
