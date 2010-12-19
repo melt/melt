@@ -30,7 +30,8 @@
             if (\nmvc\db\config\REQUEST_LEVEL_TRANSACTIONALIY)
                 \nmvc\db\query("COMMIT");
             // Process any unsent mails in mail queue.
-            \nmvc\mail\SpooledMailModel::processMailQueue(true);
+            if (!REQ_IS_CORE_DEV_ACTION)
+                \nmvc\mail\SpooledMailModel::processMailQueue(true);
         } else {
             // Something went wrong, rollback by closing mysql connection
             // without comitting.
