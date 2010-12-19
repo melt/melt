@@ -2,7 +2,7 @@
 
 /**
  * Forks a function call, allowing parallell execution.
- * Note that forking has an extremly high overhead in terms of
+ * Note that forking has a relativly high overhead in terms of
  * both CPU and memory so it should be avoided unless neccessary.
  * Also note that fork only works in environments with a webserver
  * configured to handle multiple requests. In other enviroments the fork
@@ -12,29 +12,84 @@
  * @see call_user_func_array
  */
 function fork($callback, $parameters = array()) {
-    if (!is_callable($callback))
-        trigger_error("The callback '$callback' is invalid!", \E_USER_ERROR);
-    if (!is_file(APP_DIR . "/.forkkey"))
-        file_put_contents(APP_DIR . "/.forkkey", $forkkey = \nmvc\string\random_hex_str(16));
-    else
-        $forkkey = file_get_contents(APP_DIR . "/.forkkey");
+    if (!\is_callable($callback))
+        \trigger_error("The callback '$callback' is invalid!", \E_USER_ERROR);
     // Execute fork.
     $headers = array(
         "Host" => APP_ROOT_HOST,
         "User-Agent" => "nanoMVC/" . \nmvc\internal\VERSION . " (Internal Fork)",
     );
-    $data = serialize(array(
-        "forkkey" => $forkkey,
+    $data = \serialize(array(
+        "forkkey" => get_fork_key(),
         "callback" => $callback,
         "parameters" => $parameters,
     ));
     $base_path = APP_ROOT_PATH;
-    if (substr($base_path, 0, -1) != "/")
-        $base_path .= "/";
-    $status = \nmvc\http\raw_request("http://localhost" . $base_path . "core/callback/fork", "POST", $headers, $data, 15);
-    $return_code = $status[1];
-    if ($return_code != "200")
-        trigger_error("fork() failed! Return code: $return_code", \E_USER_ERROR);
+    if (\substr($base_path, -1) == "/")
+        $base_path = \substr($base_path, 0, -1);
+    $loopback_addr = req_is_ipv4()? "127.0.0.1": "::1";
+    $server_port = \intval($_SERVER["SERVER_PORT"]);
+    // Using a socket directly so we can open and close as quickly as possible.
+    $host = APP_ROOT_HOST;
+    $request_data = "POST $base_path/core/callback/fork HTTP/1.1\r\nHost: $host"
+    . "\r\nContent-Type: text/plain"
+    . "\r\nContent-Length: " . \strlen($data)
+    . "\r\n\r\n$data";
+    $stream = \fsockopen($loopback_addr, $server_port, $errno, $errstr, 10);
+    \fwrite($stream, $request_data);
+    \stream_set_timeout($stream, 10);
+    // Just grab the first chunk with the status code and close the
+    // connection since the callback enables ignore user abort before
+    // sending any headers.
+    $chunk = \fgets($stream, 128);
+    if ($chunk !== false) {
+        $status = \preg_match('#^[^ ]+ ([^ ]+)#', $chunk, $matches);
+        $status = @$matches[1];
+        if ($status == "200")
+            return;
+        $status = "Server returned HTTP $status.";
+    } else
+        $status = "Loopback connection closed/timeout.";
+    trigger_error(__FUNCTION__ . " failed! $status", \E_USER_ERROR);
+}
+
+/**
+ * Returns the internal fork key used to validate fork requests.
+ * @internal
+ * @return string
+ */
+function get_fork_key() {
+    static $fork_key = null;
+    $fork_key_path = APP_DIR . "/.forkkey";
+    if ($fork_key === null) {
+        if (\file_exists($fork_key_path)) {
+            $fork_key = \file_get_contents($fork_key_path);
+            if (\preg_match('#^[0-9a-f]{16,16}$#', $fork_key))
+                return $fork_key;
+        }
+        $fork_key = \strtolower(string\random_hex_str(16));
+        \file_put_contents($fork_key_path, $fork_key);
+    }
+    return $fork_key;
+}
+
+/**
+ * Returns true if the current request is a fork.
+ * @return boolean
+ */
+function req_is_fork() {
+    return \defined("REQ_IS_FORK") && REQ_IS_FORK;
+}
+
+/**
+ * Returns true if the current request is IPV4.
+ * @return boolean
+ */
+function req_is_ipv4() {
+    static $is_ipv4 = null;
+    if ($is_ipv4 === null) 
+        $is_ipv4 = \preg_match('#^\d{1,3}(\.\d{1,3}){3,3}$#', $_SERVER["SERVER_ADDR"]) != 0;
+    return $is_ipv4;
 }
 
 /**
