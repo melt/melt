@@ -388,13 +388,15 @@ function verify_keyword($word) {
     trigger_error("The identifier name you used '$word' was detected to be reserved by the list '$err'. Using that identifier should be avoided as it can break SQL queries now or in the future. Please choose another name.", \E_USER_ERROR);
 }
 
-function name_lock_is_free($named_lock) {
-    $db_lock = strfy(config\NAME . "_" . config\PREFIX . $named_lock);
-    $r = query("SELECT IS_FREE_LOCK($db_lock)");
-    $r = next_array($r);
-    return $r[0] == 1;
-}
-
+/**
+ * Enters a critical section identified by the specified named lock.
+ * If timeout is not specified, the program will wait indefinetly
+ * for an unlock and then return true.
+ * If timeout is specified, the program will wait a maximum of $timeout
+ * seconds and then return false if the named lock was not unlocked during
+ * the period.
+ * @return boolean
+ */
 function enter_critical_section($named_lock, $timeout = null) {
     $db_lock = strfy(config\NAME . "_" . config\PREFIX . $named_lock);
     $db_timeout = $timeout === null? 0: \intval($timeout);
@@ -404,13 +406,18 @@ function enter_critical_section($named_lock, $timeout = null) {
         $r = $r[0];
         if ($r == 0) {
             if ($timeout !== null)
-                throw new CriticalSectionTimeoutException();
+                return false;
             else
                 \usleep(25000);
         }
     } while ($r == 0);
+    return true;
 }
 
+/**
+ * Exits critical section by releasing the named lock.
+ * @return void
+ */
 function exit_critical_section($named_lock) {
     $db_lock = strfy(config\NAME . "_" . config\PREFIX . $named_lock);
     query("SELECT RELEASE_LOCK($db_lock)");
