@@ -14,6 +14,7 @@ abstract class SpooledMailModel_app_overrideable extends \nmvc\AppModel {
     public $smtp_timeout = array('core\IntegerType');
     public $smtp_from_host = array('core\TextType', 128);
 
+    public $last_attempt = array('core\TimestampType');
     public $next_attempt = array('core\TimestampType');
     public $last_failure = array('core\TextType', 128);
 
@@ -57,32 +58,33 @@ abstract class SpooledMailModel_app_overrideable extends \nmvc\AppModel {
                 $smtp_from_host = \gethostname();
             // Connect to SMTP server and send the mail.
             $smtp = new Smtp();
-            $smtp->Connect($this->smtp_host, $this->smtp_port, $this->smtp_timeout);
-            if (!$smtp->Connected())
+            @$smtp->Connect($this->smtp_host, $this->smtp_port, $this->smtp_timeout);
+            if (!@$smtp->Connected())
                 throw new \Exception(__CLASS__ . " failed, could not connect to SMTP host " . $this->smtp_host . ":" . $this->smtp_port . "! (Timeout is " . $this->smtp_timeout. " seconds). Message: " . var_export($smtp->error, true));
-            if (!$smtp->Hello($smtp_from_host))
+            if (!@$smtp->Hello($smtp_from_host))
                 throw new \Exception(__CLASS__ . " failed, HELO/EHLO command error. Message: " . var_export($smtp->error, true));
             if ($this->smtp_auth_enable) {
-                if (!$smtp->Authenticate($this->smtp_auth_user, $this->smtp_auth_password))
+                if (!@$smtp->Authenticate($this->smtp_auth_user, $this->smtp_auth_password))
                     throw new \Exception(__CLASS__ . " failed, authentication error. Message: " . var_export($smtp->error, true));
             }
-            if (!$smtp->Mail($this->from_email))
+            if (!@$smtp->Mail($this->from_email))
                 throw new \Exception(__CLASS__ . " failed, MAIL command error. Message: " . var_export($smtp->error, true));
             foreach ($this->rcpt_list as $rcpt_email) {
-                if (!$smtp->Recipient($rcpt_email))
+                if (!@$smtp->Recipient($rcpt_email))
                     throw new \Exception(__CLASS__ . " failed, RCPT command error. Message: " . var_export($smtp->error, true));
             }
-            if (!$smtp->Data($this->mail_data))
+            if (!@$smtp->Data($this->mail_data))
                 throw new \Exception(__CLASS__ . " failed, DATA command error. Message: " . var_export($smtp->error, true));
             // It might seem unnessecary to throw an exception on failed
             // quit but the mailer NEED to make sure the mail has been sent.
-            if (!$smtp->Quit(true))
+            if (!@$smtp->Quit(true))
                 throw new \Exception(__CLASS__ . " failed, QUIT command error. Message: " . var_export($smtp->error, true));
             // Mail was successfully sent, done.
             $this->unlink();
         } catch (\Exception $ex) {
             $this->last_failure = $ex->getMessage();
-            $this->next_attempt = $this->next_attempt + config\SPOOL_RETRY_INTERVAL_SECONDS;
+            $this->last_attempt = time();
+            $this->next_attempt = time() + config\SPOOL_RETRY_INTERVAL_SECONDS;
             $this->store();
         }
     }
