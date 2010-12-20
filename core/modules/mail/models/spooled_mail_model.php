@@ -52,19 +52,25 @@ abstract class SpooledMailModel_app_overrideable extends \nmvc\AppModel {
 
     public function sendMail() {
         try {
-            // Evaluate smtp 'from' host.
-            $smtp_from_host = $this->smtp_from_host;
+            // Evaluate all SMTP settings.
+            $smtp_from_host = $this->smtp_from_host !== null? $this->smtp_from_host: config\SMTP_FROM_HOST;
             if ($smtp_from_host == null)
                 $smtp_from_host = \gethostname();
+            $smtp_host = $this->smtp_host !== null? $this->smtp_host: config\SMTP_HOST;
+            $smtp_port = $this->smtp_port !== null? $this->smtp_port: config\SMTP_PORT;
+            $smtp_timeout = $this->smtp_timeout !== null? $this->smtp_timeout: config\SMTP_TIMEOUT;
+            $smtp_auth_enable = $this->smtp_auth_enable !== null? $this->smtp_auth_enable: config\SMTP_AUTH_ENABLE;
+            $smtp_auth_user = $this->smtp_auth_user !== null? $this->smtp_auth_user: config\SMTP_AUTH_USER;
+            $smtp_auth_password = $this->smtp_auth_password !== null? $this->smtp_auth_password: config\SMTP_AUTH_PASSWORD;
             // Connect to SMTP server and send the mail.
             $smtp = new Smtp();
-            @$smtp->Connect($this->smtp_host, $this->smtp_port, $this->smtp_timeout);
+            @$smtp->Connect($smtp_host, $smtp_port, $smtp_timeout);
             if (!@$smtp->Connected())
                 throw new \Exception(__CLASS__ . " failed, could not connect to SMTP host " . $this->smtp_host . ":" . $this->smtp_port . "! (Timeout is " . $this->smtp_timeout. " seconds). Message: " . var_export($smtp->error, true));
             if (!@$smtp->Hello($smtp_from_host))
                 throw new \Exception(__CLASS__ . " failed, HELO/EHLO command error. Message: " . var_export($smtp->error, true));
-            if ($this->smtp_auth_enable) {
-                if (!@$smtp->Authenticate($this->smtp_auth_user, $this->smtp_auth_password))
+            if ($smtp_auth_enable) {
+                if (!@$smtp->Authenticate($smtp_auth_user, $smtp_auth_password))
                     throw new \Exception(__CLASS__ . " failed, authentication error. Message: " . var_export($smtp->error, true));
             }
             if (!@$smtp->Mail($this->from_email))

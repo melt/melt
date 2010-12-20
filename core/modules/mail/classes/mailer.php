@@ -30,19 +30,19 @@ class Mailer {
         $this->bcc = new AddressList();
     }
 
-    public $smtp_from_host = config\SMTP_FROM_HOST;
+    public $smtp_from_host = null;
     /** @var string Host name to send mail to. Default is config value. */
-    public $smtp_host = config\SMTP_HOST;
+    public $smtp_host = null;
     /** @var integer Host port to send mail to. Default is config value. */
-    public $smtp_port = config\SMTP_PORT;
+    public $smtp_port = null;
     /** @var integer Timeout when connecting to SMTP host. Default is config value. */
-    public $smtp_timeout = config\SMTP_TIMEOUT;
+    public $smtp_timeout = null;
     /** @var boolean True to enable SMTP authentication. Default is config value. */
-    public $smtp_auth_enable = config\SMTP_AUTH_ENABLE;
+    public $smtp_auth_enable = null;
     /** @var string Username to use with SMTP authentication. Default is config value. */
-    public $smtp_auth_user = config\SMTP_AUTH_USER;
+    public $smtp_auth_user = null;
     /** @var string Password to use with SMTP authentication. Default is config value. */
-    public $smtp_auth_password = config\SMTP_AUTH_PASSWORD;
+    public $smtp_auth_password = null;
 
     private function addressEmail() {
         // If from is not set directly then use config.
