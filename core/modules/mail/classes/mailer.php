@@ -34,9 +34,9 @@ class Mailer {
     /** @var string Host name to send mail to. Default is config value. */
     public $smtp_host = null;
     /** @var integer Host port to send mail to. Default is config value. */
-    public $smtp_port = null;
+    public $smtp_port = 0;
     /** @var integer Timeout when connecting to SMTP host. Default is config value. */
-    public $smtp_timeout = null;
+    public $smtp_timeout = 0;
     /** @var boolean True to enable SMTP authentication. Default is config value. */
     public $smtp_auth_enable = null;
     /** @var string Username to use with SMTP authentication. Default is config value. */
