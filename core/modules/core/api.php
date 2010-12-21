@@ -31,7 +31,7 @@ function fork($callback, $parameters = array()) {
     $server_port = \intval($_SERVER["SERVER_PORT"]);
     // Using a socket directly so we can open and close as quickly as possible.
     $host = APP_ROOT_HOST;
-    $cookie_header = APP_IN_DEVELOPER_MODE? "\r\nCookie: NMVC_DEVKEY=" . nmvc\core\config\DEVELOPER_KEY: "";
+    $cookie_header = APP_IN_DEVELOPER_MODE? "\r\nCookie: NMVC_DEVKEY=" . config\DEVELOPER_KEY: "";
     $request_data = "POST $base_path/core/callback/fork HTTP/1.1\r\nHost: $host"
     . "\r\nContent-Type: text/plain"
     . "\r\nContent-Length: " . \strlen($data)
@@ -69,7 +69,7 @@ function get_fork_key() {
             if (\preg_match('#^[0-9a-f]{16,16}$#', $fork_key))
                 return $fork_key;
         }
-        $fork_key = \strtolower(string\random_hex_str(16));
+        $fork_key = \strtolower(\nmvc\string\random_hex_str(16));
         \file_put_contents($fork_key_path, $fork_key);
     }
     return $fork_key;
