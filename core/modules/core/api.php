@@ -1,5 +1,7 @@
 <?php namespace nmvc\core;
 
+const NMVC_CORE_FORK_TIMEOUT = 10;
+
 /**
  * Forks a function call, allowing parallell execution.
  * Note that forking has a relativly high overhead in terms of
@@ -19,25 +21,26 @@ function fork($callback, $parameters = array()) {
         "Host" => APP_ROOT_HOST,
         "User-Agent" => "nanoMVC/" . \nmvc\internal\VERSION . " (Internal Fork)",
     );
-    $data = \serialize(array(
-        "forkkey" => get_fork_key(),
+    $rpc_payload = \nmvc\string\simple_crypt(\serialize(array(
         "callback" => $callback,
         "parameters" => $parameters,
-    ));
+        "time" => time(),
+    )), get_fork_key());
     $base_path = APP_ROOT_PATH;
     if (\substr($base_path, -1) == "/")
         $base_path = \substr($base_path, 0, -1);
     $loopback_addr = req_is_ipv4()? "127.0.0.1": "::1";
     $server_port = \intval($_SERVER["SERVER_PORT"]);
+    $server_addr = $_SERVER["SERVER_ADDR"];
     // Using a socket directly so we can open and close as quickly as possible.
     $host = APP_ROOT_HOST;
     $cookie_header = APP_IN_DEVELOPER_MODE? "\r\nCookie: NMVC_DEVKEY=" . config\DEVELOPER_KEY: "";
     $request_data = "POST $base_path/core/callback/fork HTTP/1.1\r\nHost: $host"
     . "\r\nContent-Type: text/plain"
-    . "\r\nContent-Length: " . \strlen($data)
+    . "\r\nContent-Length: " . \strlen($rpc_payload)
     . $cookie_header
-    . "\r\n\r\n$data";
-    $stream = \fsockopen($loopback_addr, $server_port, $errno, $errstr, 10);
+    . "\r\n\r\n$rpc_payload";
+    $stream = \fsockopen($server_addr, $server_port, $errno, $errstr, NMVC_CORE_FORK_TIMEOUT);
     \fwrite($stream, $request_data);
     \stream_set_timeout($stream, 10);
     // Just grab the first chunk with the status code and close the

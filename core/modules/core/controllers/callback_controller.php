@@ -4,7 +4,7 @@
  * @internal
  */
 class CallbackController extends \nmvc\core\InternalController {
-    private $data;
+    private $rpc_data;
 
     public function beforeFilter($action_name, $parameters) {
         /* Only accepts incomming forks if request is trusted.
@@ -15,21 +15,23 @@ class CallbackController extends \nmvc\core\InternalController {
         This is however not a security breach as read permission would allow
         you to read other sensitive data anyway, like passwords or session keys.
         Read permission therefore indicates a sufficient level of trust.*/
-        if ($_SERVER['REMOTE_ADDR'] != "127.0.0.1"
-        && $_SERVER['REMOTE_ADDR'] != "::1")
+        $this->rpc_data = \nmvc\string\simple_decrypt(
+            \file_get_contents("php://input")
+            , get_fork_key()
+        );
+        if ($this->rpc_data === false)
             $this->dropRequest();
-        $this->data = \unserialize(\file_get_contents("php://input"));
-        if (!\is_array($this->data))
-            $this->dropRequest();
-        if (get_fork_key() != $this->data['forkkey'])
+        $this->rpc_data = \unserialize($this->rpc_data);
+        // Only allow fresh rpc data as an extra security measure.
+        if (($this->rpc_data["time"] + NMVC_CORE_FORK_TIMEOUT + 1) < time())
             $this->dropRequest();
     }
 
     public function fork() {
-        $callback = $this->data['callback'];
+        $callback = $this->rpc_data['callback'];
         if (!\is_callable($callback))
             \trigger_error("Fork callback got uncallable callback: " . \print_r($callback, true), \E_USER_ERROR);
-        $parameters = $this->data['parameters'];
+        $parameters = $this->rpc_data['parameters'];
         // Fork accepted, unhook from the current request to prevent
         // the parent from waiting for this request to finish, allowing
         // parallell execution.
