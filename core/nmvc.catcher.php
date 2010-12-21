@@ -88,7 +88,7 @@ function remove_cache_headers() {
 
 function development_crash($type, $variables) {
     if (!\nmvc\core\config\MAINTENANCE_MODE)
-        trigger_error("Development Error Caught: " . $message, \E_USER_ERROR);
+        trigger_error("Development Error Caught: " . $type, \E_USER_ERROR);
     \nmvc\request\reset();
     remove_cache_headers();
     if (!headers_sent()) {
