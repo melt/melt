@@ -31,9 +31,11 @@ function fork($callback, $parameters = array()) {
     $server_port = \intval($_SERVER["SERVER_PORT"]);
     // Using a socket directly so we can open and close as quickly as possible.
     $host = APP_ROOT_HOST;
+    $cookie_header = APP_IN_DEVELOPER_MODE? "\r\nCookie: NMVC_DEVKEY=" . nmvc\core\config\DEVELOPER_KEY: "";
     $request_data = "POST $base_path/core/callback/fork HTTP/1.1\r\nHost: $host"
     . "\r\nContent-Type: text/plain"
     . "\r\nContent-Length: " . \strlen($data)
+    . $cookie_header
     . "\r\n\r\n$data";
     $stream = \fsockopen($loopback_addr, $server_port, $errno, $errstr, 10);
     \fwrite($stream, $request_data);
