@@ -33,6 +33,10 @@ call_user_func(function() {
         $time = time();
         \nmvc\core\SessionDataModel::select()->where("last_store_attempt")->isLessThan($time - $maxlifetime)->unlink();
     });
+    // Set session ID by get parameter if set. This enables perserving
+    // sessions when doing cross domain redirection.
+    if (isset($_GET["_SESSION_ID"]) && \nmvc\string\in_range($_GET["_SESSION_ID"], 8, 32))
+        \session_id($_GET["_SESSION_ID"]);
     // Forward session cookie parameters from configuration.
     $session_domain = \is_string(\nmvc\core\config\SESSION_DOMAIN);
     if (!\is_string($session_domain) || $session_domain === "")
