@@ -691,23 +691,6 @@ abstract class Model implements \IteratorAggregate, \Countable {
     }
 
     /**
-     * This is an expensive operation that commits the current transaction
-     * and then starts a new one. After the new transaction has begun
-     * all instances that has been loaded so far is re syncronized to reflect
-     * any changes made during the transaction.
-     * This function is critical when keeping the database state in sync
-     * with neccesary side effects (effects which is not isolated to the
-     * database state).
-     * @return void
-     */
-    public static final function commitSession() {
-        if (!db\config\REQUEST_LEVEL_TRANSACTIONALIY)
-            return;
-        db\query("COMMIT");
-        db\query("START TRANSACTION WITH CONSISTENT SNAPSHOT");
-    }
-
-    /**
      * Reverts all changes made to this model instance by flushing all
      * fields and reading them from database again.
      * Note: Unlinked instances cannot be reverted. Nothing happens on those.
@@ -1084,7 +1067,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $left_joins_sql = \implode(" ", $left_joins_sql);
         $table_name = db\table(self::classNameToTableName($from_model));
         $found_rows_identifier = $select_query->getIsCalcFoundRows()? "SQL_CALC_FOUND_ROWS": "";
-        return "SELECT $found_rows_identifier $columns_sql FROM $table_name AS $base_model_alias $left_joins_sql $sql_select_expr";
+        return "SELECT $found_rows_identifier $columns_sql FROM $table_name AS $base_model_alias $left_joins_sql $sql_select_expr LOCK IN SHARE MODE";
     }
 
     /**
