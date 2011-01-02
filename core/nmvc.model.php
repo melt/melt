@@ -906,6 +906,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
     public static function selectChildren(Model $parent, $fields = null) {
         $ptr_fields = static::getParentPointers(\get_class($parent));
         $id = $parent->getID();
+        if ($fields != null && \is_string($fields))
+            $fields = array($fields);
         $select_query = new db\SelectQuery(\get_called_class(), $fields);
         foreach ($ptr_fields as $ptr_field)
             $select_query->or($ptr_field)->is($id);
