@@ -120,6 +120,8 @@ function login_challenge($username, $cleartext_password, $remember_session = fal
     if ($user !== null) {
         $hashed_password = $user->type("password")->getStoredHashedValue();
         if (validate_password($hashed_password, $cleartext_password)) {
+            if (!$user->loginChallengeFilter())
+                return false;
             $user->last_login_time = time();
             $user->type("last_login_ip")->setToRemoteAddr();
             if ($remember_session) {
@@ -133,8 +135,7 @@ function login_challenge($username, $cleartext_password, $remember_session = fal
             $user->store();
             // Remember username for two years.
             set_host_aware_cookie("LAST_USER", $username, time() + 60 * 60 * 24 * 365 * 2);
-            // Replace any current shell with this shell.
-            logout();
+            // Stack any current shell on top of this shell.
             login($user);
             return true;
         }

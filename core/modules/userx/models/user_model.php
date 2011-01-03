@@ -25,6 +25,17 @@ abstract class UserModel_app_overrideable extends \nmvc\AppModel implements \nmv
 
     /**
      * Overridable callback event method.
+     * Called before logging in a user trough "login_challenge".
+     * If the function returns true, the login attempt will be succeed while
+     * returning false forcefully fails the challenge.
+     * @return boolean
+     */
+    public function loginChallengeFilter() {
+        return true;
+    }
+
+    /**
+     * Overridable callback event method.
      * Called for every request the user has authorized
      * and logged in. If this function returns a string instead of NULL,
      * the string will be flashed as an error message
