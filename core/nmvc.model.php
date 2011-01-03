@@ -960,7 +960,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
             $columns[] = "id";
             $select_query->setFromModel($model_class_name);
             $select_query->setSelectFields($columns);
-            $result = $model_class_name::getDataForSelection($select_query);
+            $result = $model_class_name::getDataForSelection($select_query, true);
             if ($is_counting) {
                 $sum += $result;
                 continue;
@@ -975,14 +975,17 @@ abstract class Model implements \IteratorAggregate, \Countable {
 
 
     /**
-     * Finds and returns the data for the given select query.
+     * Finds and returns snapshot data for the given select query.
+     * By default no row locking is used but this can be enabled
+     * by setting $locking_read to true.
      * @param string $select_query
+     * @param boolean $locking_read Set this to true to enable row locking.
      * @return mixed
      */
-    public static function getDataForSelection(db\SelectQuery $select_query) {
+    public static function getDataForSelection(db\SelectQuery $select_query, $locking_read = false) {
         if ($select_query->getFromModel() === null)
             \trigger_error("Selection query has no source/from model set.", \E_USER_ERROR);
-        $query = static::buildSelectQuery($select_query, true);
+        $query = self::buildSelectQuery($select_query, $locking_read);
         $result = db\query($query);
         if ($select_query->getIsCounting()) {
             $row = db\next_array($result);
