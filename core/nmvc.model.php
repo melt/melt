@@ -657,7 +657,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         if (isset($pointer_map[$name]))
         foreach ($pointer_map[$name] as $pointer) {
             list($child_model, $child_column) = $pointer;
-            $instances = $child_model::select()->where($child_column)->is($old_id)->all();
+            $instances = $child_model::select()->where($child_column)->is($old_id)->forUpdate()->all();
             if (count($instances) == 0)
                 continue;
             $table_name = self::classNameToTableName($child_model);
