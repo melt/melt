@@ -827,9 +827,11 @@ abstract class Model implements \IteratorAggregate, \Countable {
     /**
      * Returns the model instance of the class called as
      * and linked with the specified id.
+     * @param boolean $is_for_update Select to true to select for update.
+     * This
      * @return Model The model with the ID specified or NULL.
      */
-    public static function selectByID($id) {
+    public static function selectByID($id, $is_for_update = false) {
         $id = intval($id);
         if ($id <= 0)
             return null;
@@ -851,12 +853,12 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 $columns = $model_class_name::getColumnNames(false);
                 $columns[] = "id";
                 $select->setSelectFields($columns);
-                $select = self::buildSelectQuery($select);
-                $cached_query = $select . ((strpos($select, "WHERE") === false)? " WHERE id = ": " AND id = ");
+                $select = self::buildSelectQuery($select, false);
+                $cached_query = $select . (\strpos($select, " WHERE ") === false? " WHERE id = ": " AND id = ");
                 $cached_queries[$model_class_name] = $cached_query;
             } else
                 $cached_query = $cached_queries[$model_class_name];
-            $result = db\query($cached_query . $id);
+            $result = db\query($cached_query . $id . " " . ($is_for_update? "FOR UPDATE": "LOCK IN SHARE MODE"));
             $row = db\next_array($result);
             if ($row !== false)
                 return $model_class_name::instanceFromData(intval(end($row)), $row);
@@ -980,7 +982,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
     public static function getDataForSelection(db\SelectQuery $select_query) {
         if ($select_query->getFromModel() === null)
             \trigger_error("Selection query has no source/from model set.", \E_USER_ERROR);
-        $query = static::buildSelectQuery($select_query);
+        $query = static::buildSelectQuery($select_query, true);
         $result = db\query($query);
         if ($select_query->getIsCounting()) {
             $row = db\next_array($result);
@@ -996,7 +998,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
     /**
      * Builds a selection query in context of called model class.
      */
-    private static function buildSelectQuery(db\SelectQuery $select_query, $columns_data = array(), &$alias_offset = 0, $base_model_alias = null, $query_stack = array()) {
+    private static function buildSelectQuery(db\SelectQuery $select_query, $locking_read = true, $columns_data = array(), &$alias_offset = 0, $base_model_alias = null, $query_stack = array()) {
         $from_model = $select_query->getFromModel();
         if ($from_model === null)
             \trigger_error("Given select query does not have an associated model.", \E_USER_ERROR);
@@ -1051,7 +1053,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                     $sql_select_expr .= " (";
                     $inner_columns_data = array();
                     \array_push($query_stack, &$columns_data);
-                    $sql_select_expr .= self::buildSelectQuery($token, $inner_columns_data, $alias_offset, null, $query_stack);
+                    $sql_select_expr .= self::buildSelectQuery($token, false, $inner_columns_data, $alias_offset, null, $query_stack);
                     \array_pop($query_stack);
                     $sql_select_expr .= ")";
                 }
@@ -1067,7 +1069,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $left_joins_sql = \implode(" ", $left_joins_sql);
         $table_name = db\table(self::classNameToTableName($from_model));
         $found_rows_identifier = $select_query->getIsCalcFoundRows()? "SQL_CALC_FOUND_ROWS": "";
-        $locking_read_mode = $select_query->getIsForUpdate()? "FOR UPDATE": "LOCK IN SHARE MODE";
+        $locking_read_mode = $locking_read? ($select_query->getIsForUpdate()? "FOR UPDATE": "LOCK IN SHARE MODE"): "";
         return "SELECT $found_rows_identifier $columns_sql FROM $table_name AS $base_model_alias $left_joins_sql $sql_select_expr $locking_read_mode";
     }
 
