@@ -48,6 +48,9 @@ call_user_func(function() {
         $session_domain = APP_ROOT_HOST;
     $secure = \nmvc\core\config\SESSION_ENFORCE_HTTPS == true;
     \session_set_cookie_params(0, "/", $session_domain, $secure);
+    // Using a custom session name based on domain hash to prevent
+    // sessions for superset domains to override current domain.
+    \session_name("PHPSESSID_" . \substr(\sha1($session_domain, false), 0, 10));
     // Start session.
     \session_start();
 });
