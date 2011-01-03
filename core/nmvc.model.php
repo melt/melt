@@ -1067,7 +1067,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $left_joins_sql = \implode(" ", $left_joins_sql);
         $table_name = db\table(self::classNameToTableName($from_model));
         $found_rows_identifier = $select_query->getIsCalcFoundRows()? "SQL_CALC_FOUND_ROWS": "";
-        return "SELECT $found_rows_identifier $columns_sql FROM $table_name AS $base_model_alias $left_joins_sql $sql_select_expr LOCK IN SHARE MODE";
+        $locking_read_mode = $select_query->getIsForUpdate()? "FOR UPDATE": "LOCK IN SHARE MODE";
+        return "SELECT $found_rows_identifier $columns_sql FROM $table_name AS $base_model_alias $left_joins_sql $sql_select_expr $locking_read_mode";
     }
 
     /**

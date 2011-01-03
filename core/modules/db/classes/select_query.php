@@ -11,6 +11,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
     
     private $is_counting = false;
     private $is_calc_found_rows = false;
+    private $is_for_update = false;
 
     private $internal_result_cache = null;
     private $internal_result_count_cache = null;
@@ -102,6 +103,10 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
         return $this->is_calc_found_rows;
     }
 
+    public function getIsForUpdate() {
+        return $this->is_for_update;
+    }
+
     private function setOrderedField($operator, &$tokens_array, $field, $order) {
         $field_key = "f$field";
         $order_key = "o$field";
@@ -159,6 +164,23 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
      */
     public function orderBy($field, $order = "ASC") {
         $this->setOrderedField("ORDER BY", $this->order_tokens, $field, $order);
+        return $this;
+    }
+
+    /**
+     * This statement should be added to selections of instances that will
+     * later be modified. If forUpdate is not used in such selections,
+     * deadlocks could occour in rare cases.
+     * This function also limits the asynchronicity of the
+     * selection, so it should only be used for selections of instances that
+     * will later be stored/unlinked.
+     * @see http://dev.mysql.com/doc/refman/5.1/en/innodb-locking-reads.html
+     */
+    public function forUpdate() {
+        if ($this->is_for_update)
+            return;
+        $this->resetInternalResult();
+        $this->is_for_update = true;
         return $this;
     }
 
