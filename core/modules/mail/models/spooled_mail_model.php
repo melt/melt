@@ -33,20 +33,21 @@ abstract class SpooledMailModel_app_overrideable extends \nmvc\AppModel {
         if (\nmvc\core\req_is_fork()) {
             \nmvc\db\enter_critical_section(__FUNCTION__);
             // Process mail queue.
-            foreach (self::selectReadyMail() as $spooled_mail)
+            foreach (self::selectReadyMail()->forUpdate() as $spooled_mail)
                 $spooled_mail->sendMail();
-            \nmvc\db\exit_critical_section(__FUNCTION__);
+            \nmvc\db\exit_critical_section(__METHOD__);
         } else {
-            // Cancel if mail queue is alredy beeing proccessed.
-            if (!\nmvc\db\enter_critical_section(__FUNCTION__, 0))
+            // Cancel if mail queue is alredy beeing proccessed
+            // (prevents beeing blocked when checking).
+            if (!\nmvc\db\enter_critical_section(__METHOD__, 0))
                 return;
             // Check if there are any mail ready to send.
-            $mail_ready = $check_first? (self::selectReadyMail()->limit(1)->count() != 0): true;
-            \nmvc\db\exit_critical_section(__FUNCTION__);
+            $mail_ready = $check_first? (self::selectReadyMail()->limit(1)->count() > 0): true;
+            \nmvc\db\exit_critical_section(__METHOD__);
             if (!$mail_ready)
                 return;
-            // Fork child and send mail.
-            \nmvc\core\fork(array('nmvc\mail\SpooledMailModel', __FUNCTION__));
+            // Do work of sending mail in another thread.
+            \nmvc\core\fork(array('nmvc\mail\SpooledMailModel', __METHOD__));
         }
     }
 
