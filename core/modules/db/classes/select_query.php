@@ -107,9 +107,9 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
         return $this->is_for_update;
     }
 
-    private function setOrderedField($operator, &$tokens_array, $field, $order) {
-        $field_key = "f$field";
-        $order_key = "o$field";
+    private function setOrderedField($operator, &$tokens_array, $field, $field_id, $order) {
+        $field_key = "f$field_id";
+        $order_key = "o$field_id";
         $adding = !\array_key_exists($field_key, $tokens_array);
         if ($adding) {
             if (\count($tokens_array) > 0)
@@ -117,7 +117,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
             else
                 $tokens_array[] = $operator;
         }
-        $tokens_array[$field_key] = new ModelField($field);
+        $tokens_array[$field_key] = $field;
         $order = \strtoupper($order);
         if ($order != "ASC" && $order != "DESC")
             \trigger_error(__METHOD__ . " error: Unexpected \$order argument. Expected 'ASC' or 'DESC'.", \E_USER_ERROR);
@@ -150,7 +150,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
      * @see SQL GROUP BY
      */
     public function groupBy($field, $order = "ASC") {
-        $this->setOrderedField("GROUP BY", $this->group_by_tokens, $field, $order);
+        $this->setOrderedField("GROUP BY", $this->group_by_tokens, new ModelField($field), $field, $order);
         return $this;
     }
 
@@ -163,7 +163,16 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
      * @see SQL ORDER BY
      */
     public function orderBy($field, $order = "ASC") {
-        $this->setOrderedField("ORDER BY", $this->order_tokens, $field, $order);
+        $this->setOrderedField("ORDER BY", $this->order_tokens, new ModelField($field), $field, $order);
+        return $this;
+    }
+
+    /**
+     * Orders the result randomly.
+     * @see orderBy
+     */
+    public function orderRandomly() {
+        $this->setOrderedField("ORDER BY", $this->order_tokens, "RAND()", "__rand", $order);
         return $this;
     }
 
