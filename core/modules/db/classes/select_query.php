@@ -172,7 +172,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
      * @see orderBy
      */
     public function orderRandomly() {
-        $this->setOrderedField("ORDER BY", $this->order_tokens, "RAND()", "__rand", $order);
+        $this->setOrderedField("ORDER BY", $this->order_tokens, "RAND()", "__rand", "ASC");
         return $this;
     }
 
