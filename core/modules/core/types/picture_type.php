@@ -148,7 +148,7 @@ class PictureType extends \nmvc\cache\BlobPointerType {
         if ($max_height < 0 || !is_integer($max_height))
             $max_height == 0;
         $file_name = $max_width . "x" . $max_height . "!" . $file_name;
-        $thumb_path = $this->getCachePath($file_name, ".jpg");
+        $thumb_path = $this->getCachePath($file_name, ".png");
         // Generate thumbnail if it doesn't exist.
         if (!is_file($thumb_path)) {
             // Get blob from database.
