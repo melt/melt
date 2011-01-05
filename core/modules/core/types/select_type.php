@@ -2,7 +2,6 @@
 
 /** SelectType, for selecting multiple options. */
 class SelectType extends \nmvc\AppType {
-    /** @var Where condition to filter targets. */
     private $options;
 
     public function __construct($column_name, $options = null) {
