@@ -102,6 +102,15 @@ abstract class InterfaceCallback_app_overrideable {
     }
 
     /**
+     * This function returns true if there are manually pushed errors that are
+     * awaiting beeing forwarded by invalid redirecting.
+     * @return boolean
+     */
+    protected final function isPushedErrorsPending() {
+        return \count($this->invalidation_data) > 0;
+    }
+
+    /**
      * Validates instances and invalid redirect if invalid fields is found.
      * It will disregard fields that are not part of current generated
      * interface.
