@@ -219,7 +219,6 @@ function crash($message, $file, $line, $trace) {
         \chdir(APP_DIR);
         $log_entry = "Exception Caught " . date("r") . "\n\n$errraised\n$errmessage\n$errtrace\nError tag: #$errcode\n\n\n";
         \file_put_contents(\nmvc\core\config\ERROR_LOG, $log_entry, \FILE_APPEND);
-        restore_workdir();
     }
     if (!APP_IN_DEVELOPER_MODE && !\nmvc\core\config\FORCE_ERROR_DISPLAY) {
         // Do not unsafly print error information for non developers.
@@ -230,8 +229,9 @@ function crash($message, $file, $line, $trace) {
         // Show error information for developers.
         $topic = "nanoMVC - Exception Caught";
         // If it's too late to set the right content type, use text error.
-        $use_texterror = false;
-        if (headers_sent()) {
+        // Text errors are always used in script request mode.
+        $use_texterror = REQ_IS_SCRIPT;
+        if (!$use_texterror && headers_sent()) {
             foreach (headers_list() as $header) {
                 $ct_header = "content-type: ";
                 $text_html = "text/html";
