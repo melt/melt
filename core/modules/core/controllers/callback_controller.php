@@ -7,6 +7,8 @@ class CallbackController extends \nmvc\core\InternalController {
     private $rpc_data;
 
     public function beforeFilter($action_name, $parameters) {
+        if ($action_name == "script_fork")
+            return;
         /* Only accepts incomming forks if request is trusted.
         Definition of trusted request: Localhost that can read our fork key.
         Technically, this would allow a localhost on a shared server
@@ -27,10 +29,23 @@ class CallbackController extends \nmvc\core\InternalController {
             $this->dropRequest();
     }
 
+    public function script_fork($callback_payload) {
+        // This security measure is sufficient. Being able to start NanoMVC
+        // in scripted mode can only be done by administrators.
+        if (!REQ_IS_SCRIPT)
+            $this->dropRequest();
+        // Commence execution.
+        list($callback, $parameters) = \unserialize(\nmvc\string\base64_alphanum_decode($callback_payload));
+        if (!\is_callable($callback))
+            \trigger_error(__METHOD__ . " got uncallable callback: " . \print_r($callback, true), \E_USER_ERROR);
+        \call_user_func_array($callback, $parameters);
+        exit;
+    }
+
     public function fork() {
         $callback = $this->rpc_data['callback'];
         if (!\is_callable($callback))
-            \trigger_error("Fork callback got uncallable callback: " . \print_r($callback, true), \E_USER_ERROR);
+            \trigger_error(__METHOD__ . " got uncallable callback: " . \print_r($callback, true), \E_USER_ERROR);
         $parameters = $this->rpc_data['parameters'];
         // Fork accepted, unhook from the current request to prevent
         // the parent from waiting for this request to finish, allowing

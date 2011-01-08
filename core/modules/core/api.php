@@ -59,6 +59,31 @@ function fork($callback, $parameters = array()) {
 }
 
 /**
+ * Forks a function call, allowing parallell execution.
+ * Like core\fork() this is expensive and likley even more expensive as
+ * the apache request handling usually has PHP instances ready to go while
+ * this function starts a PHP process from scratch.
+ * In terms of blocking however this could be faster as it returns
+ * immediately after the process is started.
+ * @return void
+ */
+function script_fork($callback, $parameters = array()) {
+    call_user_func($callback);
+    if (!\is_callable($callback))
+        \trigger_error("The callback '$callback' is invalid!", \E_USER_ERROR);
+    if (!\is_executable(\nmvc\core\config\PHP_BINARY))
+        \trigger_error("PHP_BINARY is not executable (" . \nmvc\core\config\PHP_BINARY . ")", \E_USER_ERROR);
+    $callback_payload = \nmvc\string\base64_alphanum_encode(\serialize(array($callback, $parameters)));
+    $slash = on_windows()? "\\": "/";
+    $cmdline = \escapeshellarg(\nmvc\core\config\PHP_BINARY) . " " . \escapeshellarg(APP_DIR . $slash . "core" . $slash . "core.php") . " /core/callback/script_fork/" . $callback_payload;
+    // Asyncronously execute command.
+    if (on_windows())
+        exec(debug("START \"\" /B $cmdline"));
+    else
+        exec("$cmdline 2>$1 & echo $!");
+}
+
+/**
  * Returns the internal fork key used to validate fork requests.
  * @internal
  * @return string

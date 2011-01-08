@@ -6,4 +6,5 @@
     "DEFAULT_LANGUAGE" => "en",
     "SESSION_DOMAIN" => "",
     "SESSION_ENFORCE_HTTPS" => false,
+    "PHP_BINARY" => "php",
 );
