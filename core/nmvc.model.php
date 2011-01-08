@@ -46,9 +46,6 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * requests so their changes cannot be saved, nor can they
      * be linked/unlinked. */
     private $_is_volatile = false;
-    /** @var boolean True if revert needs to be executed before any
-     * further field access is made. */
-    private $_requires_revert = false;
 
     const TRANSITION_STABLE = 0;
     const TRANSITION_BLOCKING = 3;
@@ -223,6 +220,42 @@ abstract class Model implements \IteratorAggregate, \Countable {
     }
 
     /**
+     * Will commit and start a new chanined transaction. This is a
+     * DANGEROUS and TIME CONSUMING operation that should be avoided
+     * and only used in very special cases. Normally, you should write your
+     * application so that a work unit is equal to a request. See request
+     * level transactionality in the manual for more information. However,
+     * for cron jobs and other scripts with side effects it can be impossible
+     * to define a unit of work as a request. In that case a new transaction
+     * has to be restarted. Commiting a transaction is trivial in MySQL but
+     * dangerous in a NanoMVC request as the object database layer of NanoMVC
+     * considers PHP instances and database instances equal and guarantees
+     * that the selected instances the request works with exists.
+     * Guaranteeing this is however no longer possible after a commit
+     * so all instances immediately become obsolete. In addition, it is not
+     * possible to explicitly destruct PHP object instances. NanoMVC chooses
+     * the middleground here by deleting all instance data hopefully releasing
+     * as much memory as possible while making all selected instances
+     * impossible to use. AS A DEVELOPER, YOU SHOULD MAKE SURE THAT YOUR
+     * APPLICATION DOES NOT ACCESS ANY PREVIOUSLY SELECTED INSTANCE AFTER
+     * CALLING THIS FUNCTION. THE RESULTING EFFECT FROM DOING THIS IS
+     * UNDEFINED.
+     * @return void
+     */
+    public static function chainedTransactionCommit() {
+        if (!db\config\REQUEST_LEVEL_TRANSACTIONALIY)
+            return;
+        // Unset as much instance data as possible.
+        foreach (self::$_instance_cache as $instance) {
+            foreach (\get_object_vars($instance) as $var => $data)
+                unset($instance->$var);
+        }
+        self::$_instance_cache = array();
+        // Restart transaction.
+        db\query("COMMIT AND CHAIN");
+    }
+
+    /**
      * Returns true if this model instance is volatile.
      * Volatile model instances will ignore store and unlink
      * requests so their changes cannot be saved, nor can they
@@ -390,6 +423,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
 
     /** Assignment overloading. Returns value. */
     public function __get($name) {
+        if (!\property_exists($this, "_id"))
+            \trigger_error("Trying to access deprecated model instance. Accessing instances saved and selected before chainedTransactionCommit is unsafe and not allowed!", \E_USER_ERROR);
         $get_closure = $this->resolveGetClosure($name);
         if (is_string($get_closure))
             \trigger_error($get_closure, \E_USER_NOTICE);
