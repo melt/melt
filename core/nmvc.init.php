@@ -59,7 +59,6 @@ function read_server_var($var_name, $alt_var_name = null) {
 }
 
 \call_user_func(function() {
-    \define("APP_CORE_DIR", dirname(__FILE__));
     // Start output buffering.
     \ob_start();
     // Send Powered By Header.
@@ -76,6 +75,7 @@ function read_server_var($var_name, $alt_var_name = null) {
         \trigger_error("nanoMVC initialization failed: realpath() error when evaluating APP_DIR.", \E_USER_ERROR);
     // Read configuration, local configuration first if it exist.
     \define("APP_DIR", $app_dir);
+    \define("APP_CORE_DIR", dirname(__FILE__));
     // Read configuration.
     $local_config = APP_DIR . "/config.local.php";
     \define("APP_CONFIG", is_file($local_config)? $local_config: APP_DIR . "/config.php");
