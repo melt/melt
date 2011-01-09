@@ -82,8 +82,6 @@ function read_server_var($var_name, $alt_var_name = null) {
     require APP_CONFIG;
     if (modules_using() === null)
         \trigger_error("nanoMVC initialization failed: config.php did not set what modules the application is using.", \E_USER_ERROR);
-    // Evaluate whether PHP is running in 64 bit mode.
-    \define("APP_64_BIT", PHP_INT_MAX > 0x7FFFFFFF);
     // Make sure core directives that it requires right away is included.
     put_configuration_directive('nmvc\core\config\DEVELOPER_KEY', "");
     put_configuration_directive('nmvc\core\config\MAINTENANCE_MODE', true);
@@ -92,6 +90,13 @@ function read_server_var($var_name, $alt_var_name = null) {
     put_configuration_directive('nmvc\core\config\ERROR_LOG', null);
     put_configuration_directive('nmvc\core\config\PEAR_AUTOLOAD', false);
     put_configuration_directive('nmvc\core\config\TRANSLATION_ENABLED', false);
+    put_configuration_directive('nmvc\core\config\IGNORE_64_BIT_WARNING', false);
+    // Evaluate whether NanoMVC is compatible with PHP environment.
+    \define("APP_64_BIT", PHP_INT_MAX > 0x7FFFFFFF);
+    if (\version_compare(\phpversion(), "5.3.3") < 0)
+        \trigger_error("nanoMVC initialization failed: NanoMVC requires PHP version >= 5.3.3.", \E_USER_ERROR);
+    if (!APP_64_BIT && !\nmvc\core\config\IGNORE_64_BIT_WARNING)
+        \trigger_error("nanoMVC initialization failed: NanoMVC expects 64 bit PHP. Using 32 bit PHP can result in obscure problems like ID sequence exhaustion after 2147483647. This check can be disabled in configuration (IGNORE_64_BIT_WARNING).", \E_USER_ERROR);
     // Check if running as apache child or in script mode.
     \define("REQ_IS_SCRIPT", !\function_exists("apache_get_version") || \apache_get_version() === false);
     if (!REQ_IS_SCRIPT) {
