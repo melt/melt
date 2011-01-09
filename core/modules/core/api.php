@@ -77,7 +77,7 @@ function script_fork($callback, $parameters = array()) {
     $cmdline = \escapeshellarg(\nmvc\core\config\PHP_BINARY) . " " . \escapeshellarg(APP_DIR . $slash . "core" . $slash . "core.php") . " /core/callback/script_fork/" . $callback_payload;
     // Asyncronously execute command.
     if (on_windows())
-        exec(debug("START \"\" /B $cmdline"));
+        exec("START \"\" /B $cmdline");
     else
         exec("$cmdline 2>$1 & echo $!");
 }
