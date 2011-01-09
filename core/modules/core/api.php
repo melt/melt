@@ -68,7 +68,6 @@ function fork($callback, $parameters = array()) {
  * @return void
  */
 function script_fork($callback, $parameters = array()) {
-    call_user_func($callback);
     if (!\is_callable($callback))
         \trigger_error("The callback '$callback' is invalid!", \E_USER_ERROR);
     if (!\is_executable(\nmvc\core\config\PHP_BINARY))
