@@ -7,7 +7,7 @@
 function reset() {
     // Remove previous buffers.
     $info = ob_get_status(false);
-    $level = intval($info['level']);
+    $level = intval(@$info['level']);
     for (;$level > 1; $level--)
         ob_end_clean();
     // Reset to default content type.
