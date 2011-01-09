@@ -27,7 +27,7 @@
             // as we need to still require object instancing at that point.)
             \session_write_close();
             // If using request level transactionality, now is the time to commit.
-            if (\nmvc\db\config\REQUEST_LEVEL_TRANSACTIONALIY)
+            if (\nmvc\db\config\REQUEST_LEVEL_TRANSACTIONALITY)
                 \nmvc\db\query("COMMIT");
             // Process any unsent mails in mail queue.
             if (!REQ_IS_CORE_DEV_ACTION)

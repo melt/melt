@@ -103,7 +103,7 @@ function storage_engine() {
     if ($configured_engine == "custom")
         return null;
     else if ($configured_engine == "auto")
-        $configured_engine = config\REQUEST_LEVEL_TRANSACTIONALIY? "innodb": "myisam";
+        $configured_engine = config\REQUEST_LEVEL_TRANSACTIONALITY? "innodb": "myisam";
     return $configured_engine;
 }
 
@@ -178,7 +178,7 @@ function run($query) {
             throw new \Exception("No database name specified!");
         $initialized = true;
         query("USE " . config\NAME);
-        if (config\REQUEST_LEVEL_TRANSACTIONALIY) {
+        if (config\REQUEST_LEVEL_TRANSACTIONALITY) {
             // Applying per-request transactionality. Rolling back any previous
             // uncommited changes on this transaction and starting a new.
             query("ROLLBACK");

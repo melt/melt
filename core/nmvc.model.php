@@ -243,7 +243,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * @return void
      */
     public static function chainedTransactionCommit() {
-        if (!db\config\REQUEST_LEVEL_TRANSACTIONALIY)
+        if (!db\config\REQUEST_LEVEL_TRANSACTIONALITY)
             return;
         // Unset as much instance data as possible.
         foreach (self::$_instance_cache as $instance) {

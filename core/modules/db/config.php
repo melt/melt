@@ -6,6 +6,6 @@
     "PREFIX" => "nanomvc",
     "USE_TRIGGER_SEQUENCING" => true,
     "DEBUG_QUERY_BENCHMARK" => false,
-    "REQUEST_LEVEL_TRANSACTIONALIY" => true,
+    "REQUEST_LEVEL_TRANSACTIONALITY" => true,
     "STORAGE_ENGINE" => "auto",
 );
