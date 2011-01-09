@@ -109,9 +109,21 @@ function read_server_var($var_name, $alt_var_name = null) {
         if (!preg_match('#/core/core\.php$#', $php_self))
             trigger_error("nanoMVC initialization failed: PHP_SELF does not end with '/core/core.php'. Make sure the core is installed properly.", \E_USER_ERROR);
         \define("APP_ROOT_PATH", substr($php_self, 0, -strlen("core/core.php")));
-        // Parse the request url which is relatie to the application root path.
-        define("REQ_URL", substr(read_server_var("REDIRECT_SCRIPT_URL", "REDIRECT_URL"), strlen(APP_ROOT_PATH) - 1));
-        \define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
+        // Determine if this is a proxy request or not, allowing nanomvc to act as a proxy.
+        if (isset($_SERVER["REQUEST_URI"]) && \preg_match('#^https?://#', \strtolower($_SERVER["REQUEST_URI"]))) {
+            // For proxy requests the local REQ_URL is actually not defined,
+            // so this special placeholder will be used.
+            \define("REQ_IS_PROXY", true);
+            \define("REQ_PROXY_URL", $_SERVER["REQUEST_URI"]);
+            \define("REQ_URL", "/proxy");
+            \define("REQ_URL_QUERY", REQ_URL);
+        } else {
+            // Parse the request url which is relatie to the application root path.
+            \define("REQ_IS_PROXY", false);
+            \define("REQ_PROXY_URL", null);
+            \define("REQ_URL", substr(read_server_var("REDIRECT_SCRIPT_URL", "REDIRECT_URL"), strlen(APP_ROOT_PATH) - 1));
+            \define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
+        }
     } else {
         $hostname = \gethostname();
         // Script request mode does not have a developer validation mechanism.
