@@ -1,6 +1,6 @@
 <?php namespace nmvc\core; ?>
 <?php $this->layout->enterSection("head"); ?>
-<title>Service Temporary Unavailible</title>
+<title><?php echo _("Service Temporary Unavailible"); ?></title>
 <style type="text/css">
     body {
         background-color: #efefef;
