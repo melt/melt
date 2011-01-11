@@ -2,7 +2,7 @@
 
 class BytesType extends \nmvc\AppType {
     public function getSQLType() {
-        return "int";
+        return "bigint";
     }
 
     public function getSQLValue() {
