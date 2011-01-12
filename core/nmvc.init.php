@@ -66,6 +66,8 @@ function read_server_var($var_name, $alt_var_name = null) {
     // Explicitly set the default timezone to UTC.
     \date_default_timezone_set("UTC");
     // Using UTF-8 for everything.
+    if (!\extension_loaded("iconv"))
+        \trigger_error("nanoMVC initialization failed: The iconv extention is required for UTF-8 support.", \E_USER_ERROR);
     \iconv_set_encoding("internal_encoding", "UTF-8");
     \iconv_set_encoding("output_encoding", "UTF-8");
     // Walk down from the script filename to get the app dir.
