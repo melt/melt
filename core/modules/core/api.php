@@ -502,6 +502,3 @@ function current_locale($new_locale = false) {
     else
         LocalizationEngine::setNextLocale($new_locale);
 }
-
-// Import some functions to the global namespace.
-include __DIR__ . "/imports.php";

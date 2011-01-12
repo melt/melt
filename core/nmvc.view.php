@@ -9,6 +9,8 @@ final class View {
     private function __construct(Controller $controller, $path, $module_context) {
         $this->_controller = $controller;
         $this->_module_context = $module_context;
+        if (\nmvc\core\config\MAINTENANCE_MODE)
+            internal\check_require_prefix($path, $module_context);
         require $path;
     }
 

@@ -55,6 +55,3 @@ function create_linked_tree(\nmvc\core\ModelTree $tree, $get_url_arg = null) {
     }
     echo "</ul>";
 }
-
-// Import some functions to the global namespace.
-include __DIR__ . "/imports.php";

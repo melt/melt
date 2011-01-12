@@ -339,6 +339,3 @@ function current_url_in($local_url) {
     else
         return false;
 }
-
-// Import some functions to the global namespace.
-include __DIR__ . "/imports.php";

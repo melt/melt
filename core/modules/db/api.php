@@ -6,9 +6,9 @@
  */
 function enable_display() {
     \nmvc\request\reset();
-    header('Content-Type: text/plain');
-    define("OUTPUT_MYSQL_QUERIES", true);
-    ob_end_clean();
+    \header('Content-Type: text/plain');
+    \define("OUTPUT_MYSQL_QUERIES", true);
+    \ob_end_clean();
 }
 
 function get_auto_increment($table) {
@@ -44,11 +44,8 @@ function insert_id() {
  */
 function strfy($string, $max_length = null) {
     if ($max_length !== null && $max_length >= 0)
-        $string = iconv_substr($string, 0, $max_length);
-    // Have to connect for mysql_real_escape_string to work.
-    if (!defined("NANOMVC_DB_LINK"))
-        run("");
-    return "'" . mysql_real_escape_string($string) . "'";
+        $string = \iconv_substr($string, 0, $max_length);
+    return "'" . get_link()->real_escape_string($string) . "'";
 }
 
 /**
@@ -61,11 +58,8 @@ function strfy($string, $max_length = null) {
  */
 function like_pattern_strfy($string, $max_length = null) {
     if ($max_length !== null && $max_length >= 0)
-        $string = iconv_substr($string, 0, $max_length);
-    // Have to connect for mysql_real_escape_string to work.
-    if (!defined("NANOMVC_DB_LINK"))
-        run("");
-    $string = mysql_real_escape_string($string);
+        $string = \iconv_substr($string, 0, $max_length);
+    $string = get_link()->real_escape_string($string);
     return \str_replace(array('%', '_'), array('\%', '\_'), $string);
 }
 
@@ -78,7 +72,7 @@ function php_value_to_sql($php_value) {
     if (\is_null($php_value))
         return "0";
     else if (!\is_scalar($php_value)) {
-        trigger_error("Cannot represent non scalar values in sql!", \E_USER_WARNING);
+        \trigger_error("Cannot represent non scalar values in sql!", \E_USER_WARNING);
         return "0";
     } else if (\is_string($php_value))
         return strfy($php_value);
@@ -108,27 +102,22 @@ function storage_engine() {
 }
 
 /**
- * @desc Queries the database, and throws specified error on failure.
- * @desc It will throw an exception if query fails.
- * @param String $query The SQL query.
- * @param String $errmsg Additional information about the action that will be
- * thrown if query fails.
+ * Queries the database, and throws specified error on failure.
+ * It will throw an exception if query fails.
+ * @param string $query The SQL query.
  * @see To query without errorhandling, use db\run().
  * @return mixed Returns a result resource handle on success, TRUE if no rows were returned, or FALSE on error.
  */
-function query($query, $errmsg = "") {
+function query($query) {
     $result = run($query);
     if ($result === FALSE) {
-        $err = mysql_error();
-        if (strlen($query) > 512)
-            $query = substr($query, 0, 512);
-        $query = var_export($query, true);
-        if ($errmsg == "")
-            $errmsg = "A SQL query { ".$query." } to the database failed;\nSQL error: ".$err;
-        else
-            $errmsg = "A SQL query { ".$query." } to the database failed;\nOperation information:\n".$errmsg."\nSQL error: ".$err;
-        if (!defined("OUTPUT_MYSQL_QUERIES"))
-            trigger_error($errmsg, \E_USER_ERROR);
+        $err = get_link()->error;
+        if (\strlen($query) > 512)
+            $query = \substr($query, 0, 512);
+        $query = \var_export($query, true);
+        $errmsg = "A MySQL query failed: {\n\t".$query."\n}\nSQL error: ".$err;
+        if (!\defined("OUTPUT_MYSQL_QUERIES"))
+            \trigger_error($errmsg, \E_USER_ERROR);
         else
             echo $errmsg;
         exit;
@@ -137,142 +126,155 @@ function query($query, $errmsg = "") {
 }
 
 /**
- * @desc Runs a query on the database, ignoring any failure.
- * @param String $query The SQL query to execute on acms DB connection.
+ * Runs a query on the database, ignoring any failure.
+ * @param string $query The SQL query to execute on acms DB connection.
  * @see To query with errorhandling, use db\query().
  * @return mixed A result resource handle on success, TRUE if no rows were returned, or FALSE on error.
  */
 function run($query) {
-    static $initialized = false;
-    if (!$initialized) {
-        // Make sure mysql extention is loaded.
-        if (!extension_loaded("mysql"))
-            trigger_error("Error: The MySQL extention is not loaded. Your PHP installation is not compatible with nanoMVC!", \E_USER_ERROR);
-        // Can spend 10 seconds max connecting or half the request time limit.
-        $max_mysql_timeout = intval(ini_get("max_execution_time"))  / 2;
-        if ($max_mysql_timeout > 10)
-            $max_mysql_timeout = 10;
-        ini_set("mysql.connect_timeout", $max_mysql_timeout);
-        // Connect to the database.
-        $link = mysql_connect(config\HOST, config\USER, config\PASSWORD);
-        if ($link === false)
-            trigger_error("The mySQL connection could not be established. " . mysql_error(), \E_USER_ERROR);
-        define("NANOMVC_DB_LINK", $link);
-        mysql_set_charset('utf8');
-        // Throw away magic quotes, the standard database injection protection for badly written PHP code.
-        if (ini_get("magic_quotes_runtime") && set_magic_quotes_runtime(0) === FALSE)
-            trigger_error("Unable to disable magic_quotes_runtime ini option!", \E_USER_ERROR);
-        // Using a stripslashes callback for any gpc data.
-        if (get_magic_quotes_gpc()) {
-            function _stripslashes_deep($value) {
-                $value = is_array($value)? array_map('\nmvc\db\_stripslashes_deep', $value): stripslashes($value);
-                return $value;
-            }
-            $_POST = array_map('\nmvc\db\_stripslashes_deep', $_POST);
-            $_GET = array_map('\nmvc\db\_stripslashes_deep', $_GET);
-            $_COOKIE = array_map('\nmvc\db\_stripslashes_deep', $_COOKIE);
-            $_REQUEST = array_map('\nmvc\db\_stripslashes_deep', $_REQUEST);
-        }
-        // USE the configured database.
-        if (strlen(config\NAME) == 0)
-            throw new \Exception("No database name specified!");
-        $initialized = true;
-        query("USE " . config\NAME);
-        if (config\REQUEST_LEVEL_TRANSACTIONALITY) {
-            // Applying per-request transactionality. Rolling back any previous
-            // uncommited changes on this transaction and starting a new.
-            query("ROLLBACK");
-            query("SET autocommit = 0");
-            query("START TRANSACTION WITH CONSISTENT SNAPSHOT");
-        }
-    }
     if ($query == "")
         return true;
-    if (defined("OUTPUT_MYSQL_QUERIES")) {
+    if (\defined("OUTPUT_MYSQL_QUERIES")) {
         echo $query . "\r\n";
-        ob_flush();
+        \ob_flush();
     }
     if (!config\DEBUG_QUERY_BENCHMARK)
-        return mysql_query($query);
+        return get_link()->query($query);
     // Benchmark query and log.
     $time_start = microtime(true);
-    $ret = mysql_query($query);
-    $total = microtime(true) - $time_start;
-    $debug_info = date("r") . ": $query\n^-" . round($total * 1000, 1) . " ms\ncaller: " . \nmvc\internal\get_user_callpoint() . "\n\n";
-    file_put_contents(APP_DIR . "/db_debug_query_benchmark.log", $debug_info, FILE_APPEND);
+    $ret = get_link()->query($query);
+    $total = \microtime(true) - $time_start;
+    $debug_info = \date("r") . ": $query\n^-" . \round($total * 1000, 1) . " ms\ncaller: " . \nmvc\internal\get_user_callpoint() . "\n\n";
+    \file_put_contents(APP_DIR . "/db_debug_query_benchmark.log", $debug_info, FILE_APPEND);
     return $ret;
 }
 
-/** Returns the number of affected rows in the last query. */
+/**
+ * Returns the database backend link.
+ * @return \mysqli
+ */
+function get_link() {
+    static $mysqli = null;
+    if ($mysqli !== null)
+        return $mysqli;
+    // Make sure mysql extention is loaded.
+    if (!\extension_loaded("mysqli"))
+        \trigger_error("Error: The MySQLi extention is not loaded. Your PHP installation is not compatible with nanoMVC!", \E_USER_ERROR);
+    // Can spend 10 seconds max connecting or half the request time limit.
+    // This allows graceful handling of timeouts.
+    $max_mysql_timeout = \intval(\ini_get("max_execution_time"))  / 2;
+    if ($max_mysql_timeout > 10)
+        $max_mysql_timeout = 10;
+    // Use specified database.
+    if (\strlen(config\NAME) == 0)
+        trigger_error("No database name specified in configuration! This is required.", \E_USER_ERROR);
+    // Connect to the database.
+    $mysqli = \mysqli_init();
+    $mysqli->options(\MYSQLI_OPT_CONNECT_TIMEOUT, $max_mysql_timeout);
+    $connected = $mysqli->real_connect(config\HOST, config\USER, config\PASSWORD, config\NAME, \intval(config\PORT));
+    if (!$connected)
+        \trigger_error("The mySQLi connection could not be established. " . mysqli_error(), \E_USER_ERROR);
+    $mysqli->set_charset('utf8');
+    if (config\REQUEST_LEVEL_TRANSACTIONALITY) {
+        // Applying per-request transactionality. Rolling back any previous
+        // uncommited changes on this transaction and starting a new.
+        $mysqli->query("ROLLBACK");
+        $mysqli->query("SET autocommit = 0");
+        $mysqli->query("START TRANSACTION WITH CONSISTENT SNAPSHOT;");
+    }
+    return $mysqli;
+}
+
+/**
+ * Returns the number of affected rows in the last query.
+ * @return integer
+ */
 function affected_rows() {
-    return mysql_affected_rows();
+    return get_link()->affected_rows;
 }
 
-/** Number of rows in result. */
-function get_num_rows($result) {
-    return mysql_numrows($result);
+/**
+ * Number of rows in result.
+ * @return integer
+ */
+function get_num_rows(\mysqli_result $result) {
+    return $result->num_rows;
 }
 
-/** Number of columns in result. */
-function get_num_cols($result) {
-    return mysql_numfields($result);
+/**
+ * Number of columns in result.
+ * @return integer
+ */
+function get_num_cols(\mysqli_result $result) {
+    return $result->field_count;
 }
 
 /** Returns the next row in result as an associative array,
- * or FALSE if there are no more rows. */
-function next_assoc($result) {
-    return mysql_fetch_assoc($result);
-}
-
-/** Seeks the result position to row n. */
-function data_seek($result, $n) {
-    return mysql_data_seek($result, $n);
-}
-
-/**
-* @return The next row in result as a numeric array, or FALSE if there are no more rows.
-*/
-function next_array($result) {
-    return mysql_fetch_array($result, MYSQL_NUM);
+ * or FALSE if there are no more rows.
+ * @return array
+ */
+function next_assoc(\mysqli_result $result) {
+    $row = $result->fetch_assoc();
+    return \is_array($row)? $row: false;
 }
 
 /**
-* @desc Returns false if the current column is a subset of the specified column.
+ * Returns the next row in result as a numeric array,
+ * or FALSE if there are no more rows.
+ * @return array
+ */
+function next_array(\mysqli_result $result) {
+    $row = $result->fetch_row();
+    return \is_array($row)? $row: false;
+}
+
+/**
+ * Seeks the result position to row n.
+ * Returns true if successful.
+ * @return boolean
+ */
+function data_seek(\mysqli_result $result, $n) {
+    return $result->data_seek($n);
+}
+
+/**
+* Returns false if the current column is a subset of the specified column.
 * If current is int(9) or int(123) and specified is int, this returns false.
 * However, if current is int(23) and specified is int(12), this returns true.
+ * @return boolean
 */
 function sql_column_need_update($specified, $current) {
     $lengthy_pattern = '#(\w+)\s*\((\d+)\)#';
-    $specified_is_lengthy = (1 == preg_match($lengthy_pattern, $specified, $lengthy_specified));
-    $current_is_lengthy = (1 == preg_match($lengthy_pattern, $current, $lengthy_current));
+    $specified_is_lengthy = (1 == \preg_match($lengthy_pattern, $specified, $lengthy_specified));
+    $current_is_lengthy = (1 == \preg_match($lengthy_pattern, $current, $lengthy_current));
     if (!$current_is_lengthy && !$specified_is_lengthy) {
         // Needs update if they differ.
-        return strtolower($specified) != strtolower($current);
+        return \strtolower($specified) != \strtolower($current);
     } else if ($current_is_lengthy && !$specified_is_lengthy) {
         // Needs update if type differ.
-        $current_type = strtolower($lengthy_current[1]);
-        return $current_type != strtolower($specified);
+        $current_type = \strtolower($lengthy_current[1]);
+        return $current_type != \strtolower($specified);
     } else if (!$current_is_lengthy && $specified_is_lengthy) {
         // Needs update (specified has length).
         return true;
     } else {
         // Needs update if length differs.
-        $current_length = intval($lengthy_current[2]);
-        $specified_length = intval($lengthy_specified[2]);
+        $current_length = \intval($lengthy_current[2]);
+        $specified_length = \intval($lengthy_specified[2]);
         if ($current_length != $specified_length)
             return true;
         // Needs update if type differs.
-        return strtolower($lengthy_current[1]) != strtolower($lengthy_specified[1]);
+        return \strtolower($lengthy_current[1]) != \strtolower($lengthy_specified[1]);
     }
 }
 
 /**
-* @desc Syncronizes a table in the database with
-* @desc the generic table model used by nanoMVC.
-* @param String $table_name The raw table name, the identifier without prefixing.
-* @param array $parsed_col_array Parsed column array of model.
+* Syncronizes a table in the database with
+* the generic table model used by nanoMVC.
+* @paam string $table_name The raw table name, the identifier without prefixing.
+* @param $parsed_col_array array Parsed column array of model.
 */
-function sync_table_layout_with_model($table_name, $parsed_col_array) {
+function sync_table_layout_with_model($table_name, array $parsed_col_array) {
     // Make an array where [name] => sql_type
     $columns = array();
     // Check names and fetches types.
@@ -280,7 +282,7 @@ function sync_table_layout_with_model($table_name, $parsed_col_array) {
         if ($column->is_volatile)
             continue;
         verify_keyword($name);
-        $columns[strtolower($name)] = $column->getSQLType();
+        $columns[\strtolower($name)] = $column->getSQLType();
     }
     sync_table_layout_with_columns($table_name, $columns);
 }
@@ -293,24 +295,25 @@ function get_all_tables() {
         $all_tables = array();
         $all_tables_query = query("SHOW TABLES");
         while (false !== ($table = next_array($all_tables_query)))
-            $all_tables[] = strtolower($table[0]);
+            $all_tables[] = \strtolower($table[0]);
     }
     return $all_tables;
 }
 
 /**
-* @desc Syncronizes a table in the database with the given column structure.
-* @param String $table_name The literal name of the table in the database.
-* @param Array $columns Array of columns mapped to their SQL types, eg "total => int(11), ...".
-*/
-function sync_table_layout_with_columns($table_name, $columns) {
+ * Syncronizes a table in the database with the given column structure.
+ * @param string $table_name The literal name of the table in the database.
+ * @param $columns array Array of columns mapped to their SQL types, eg "total => int(11), ...".
+ * @return void
+ */
+function sync_table_layout_with_columns($table_name, array $columns) {
     $all_tables = get_all_tables();
-    if (in_array(substr(table($table_name), 1, -1), $all_tables)) {
+    if (\in_array(\substr(table($table_name), 1, -1), $all_tables)) {
         // Altering existing table.
         $current_columns = query("DESCRIBE " . table($table_name));
         while (false !== ($column = next_array($current_columns))) {
-            $current_name = strtolower($column[0]);
-            $current_type = strtolower($column[1]);
+            $current_name = \strtolower($column[0]);
+            $current_type = \strtolower($column[1]);
             $supports_null = \strcasecmp($column[2], "no") != 0;
             // ID column is special case.
             if ($current_name == 'id') {
@@ -371,21 +374,21 @@ function verify_keyword($word) {
                                                   "HIGH_PRIORITY","HOUR_SECOND","IN","INNER","INSERT","INT2","INT8","INTO","JOIN","KILL","LEFT","LINES","LOCALTIMESTAMP","LONGBLOB","LOW_PRIORITY","MEDIUMINT","MINUTE_MICROSECOND","MODIFIES","NO_WRITE_TO_BINLOG","ON","OPTIONALLY","OUT","PRECISION","PURGE","REAL","RELEASE","REPLACE","RETURN","RLIKE","SECOND_MICROSECOND","SEPARATOR","SMALLINT","SPECIFIC","SQLSTATE","SQL_CALC_FOUND_ROWS","STARTING","TERMINATED","TINYINT","TRAILING","UNDO","UNLOCK","USAGE","UTC_DATE","VALUES","VARCHARACTER","WHERE","WRITE","ZEROFILL");
     $keywords_mysql_new =    array("ASENSITIVE","CONNECTION","DECLARE","ELSEIF","GOTO","ITERATE","LOOP","READS","RETURN","SENSITIVE","SQLEXCEPTION","TRIGGER","WHILE","CALL","CONTINUE","DETERMINISTIC","EXIT","INOUT","LABEL","MODIFIES","RELEASE","SCHEMA","SPECIFIC","SQLSTATE","UNDO","CONDITION","CURSOR","EACH","FETCH","INSENSITIVE","LEAVE","OUT","REPEAT","SCHEMAS","SQL","SQLWARNING","UPGRADE");
     $keywords_mysql_allowed= array("ACTION","BIT","DATE","ENUM","NO","TEXT","TIME","TIMESTAMP");
-    $word = strtoupper($word);
-    if (in_array($word, $keywords_mssql))
+    $word = \strtoupper($word);
+    if (\in_array($word, $keywords_mssql))
         $err = "msSQL Keywords";
-    else if (in_array($word, $keywords_odbc))
+    else if (\in_array($word, $keywords_odbc))
         $err = "ODBC Keywords";
-    else if (in_array($word, $keywords_mssql_future))
+    else if (\in_array($word, $keywords_mssql_future))
         $err = "msSQL Future Keywords";
-    else if (in_array($word, $keywords_mysql))
+    else if (\in_array($word, $keywords_mysql))
         $err = "mySQL Keywords";
-    else if (in_array($word, $keywords_mysql_new))
+    else if (\in_array($word, $keywords_mysql_new))
         $err = "mySQL New Keywords (v.5)";
-    else if (in_array($word, $keywords_mysql_allowed))
+    else if (\in_array($word, $keywords_mysql_allowed))
         $err = "Keywords to Avoid (Depricated)";
     else return;
-    trigger_error("The identifier name you used '$word' was detected to be reserved by the list '$err'. Using that identifier should be avoided as it can break SQL queries now or in the future. Please choose another name.", \E_USER_ERROR);
+    \trigger_error("The identifier name you used '$word' was detected to be reserved by the list '$err'. Using that identifier should be avoided as it can break SQL queries now or in the future. Please choose another name.", \E_USER_ERROR);
 }
 
 /**
@@ -435,6 +438,3 @@ function table($table_name) {
         return $cache[$table_name];
     return $cache[$table_name] = '`' . config\PREFIX . $table_name . '`';
 }
-
-// Import some functions to the global namespace.
-include __DIR__ . "/imports.php";

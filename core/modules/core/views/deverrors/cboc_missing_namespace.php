@@ -15,9 +15,9 @@
 </p>
 <p>
     <?php $this->layout->enterSection("code"); ?>
-    <?php echo "<?php"; ?> namespace <?php echo preg_replace('#\\\\[^\\\\]*$#', "", $this->class_name); ?>;
+    <?php echo "<?php"; ?> namespace <?php echo \preg_replace('#\\\\[^\\\\]*$#', "", $this->class_name); ?>;
 
-    class <?php echo preg_replace('#^([^\\\\]+\\\\)*#', "", $this->class_name) ?>
+    class <?php echo \preg_replace('#^([^\\\\]+\\\\)*#', "", $this->class_name) ?>
     <?php $this->layout->exitSection(); ?>
     <?php highlight_string($this->code); ?>
 </p>

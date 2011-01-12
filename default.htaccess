@@ -1,8 +1,9 @@
 # Only utf-8 policy.
 AddDefaultCharset utf-8
 
-# Turn off indexing.
+# Turn off indexing and directory slash correction.
 Options -Indexes
+DirectorySlash Off
 
 # Enable symlinks.
 Options +FollowSymLinks

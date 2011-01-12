@@ -37,6 +37,7 @@ namespace nmvc\db\config {
     const USE_TRIGGER_SEQUENCING = true;
     /** Theese are standard database configuration options. */
     const HOST = 'localhost';
+    const PORT = 3306;
     const NAME = 'nanomvc';
     const PREFIX = 'nanomvc_';
     const USER = 'root';

@@ -57,6 +57,16 @@ function create_blank_override_class($path, $class, $extends) {
     file_put_contents($path, $file_data);
 }
 
+function check_require_prefix($path, $module_name) {
+    // Validate required file prefix.
+    $prefix = $module_name == ""? "<?php namespace nmvc;": "<?php namespace nmvc\\$module_name;";
+    $h = \fopen($path, "r");
+    $found = \fread($h, \strlen($prefix));
+    if ($found != $prefix)
+        development_crash("invalid_prefix", array("path" => $path, "prefix" => $prefix, "found" => $found));
+    \fclose($h);
+}
+
 /**
  * The nanoMVC internal autoload function.
  * Its function are determined by the naming rules of
@@ -86,6 +96,7 @@ function autoload($name) {
                 continue;
             $path = APP_DIR;
             $subdir = "";
+            $module_name = "";
             $file_name = $parts[1];
             $class_name = "nmvc\\" . ucfirst($parts[1]);
             $app_overridable_declarable = false;
@@ -152,6 +163,8 @@ function autoload($name) {
         if ($pending_app_override)
             // This is an application override, must extend the _app_overrideable declared class.
             $must_extend = $class_ao_name;
+        if (\nmvc\core\config\MAINTENANCE_MODE)
+            check_require_prefix($path, $module_name);
         require $path;
         if ($required_app_override) {
             $class_ao_name = $class_name . "_app_overrideable";
@@ -180,15 +193,6 @@ function autoload($name) {
             // Also check case sensitivity.
             if (!in_array($class_name, get_declared_classes()) && !in_array($class_name, get_declared_interfaces()))
                 development_crash("invalid_class_name", array("path" => $path, "expected_name" => $class_name));
-            // Also check file initializor.
-            $namespace = preg_replace('#\\\\[^\\\\]*$#', "", $class_name);
-            $prefix = "<?php namespace $namespace;";
-            $h = fopen($path, "r");
-            $found = fread($h, strlen($prefix));
-            if ($found != $prefix)
-                development_crash("invalid_prefix", array("path" => $path, "prefix" => $prefix, "found" => $found));
-            fclose($h);
-
         }
         if ($must_extend !== null && !is_subclass_of($class_name, $must_extend))
             development_crash("invalid_parent_class", array("path" => $path,  "class_name" => $class_name, "must_extend" => $must_extend));
@@ -212,21 +216,27 @@ function pear_autoload($name) {
 
 \call_user_func(function() {
     // Registers autoload function.
-    spl_autoload_register("nmvc\internal\autoload");
-
+    \spl_autoload_register("nmvc\internal\autoload");
     // Register pear autoload function if used.
     if (\nmvc\core\config\PEAR_AUTOLOAD) {
         \spl_autoload_register("nmvc\internal\pear_autoload");
         // Some pear classes include stuff themselves and requires include path to be set.
-        set_include_path(get_include_path() . PATH_SEPARATOR . APP_DIR . "/vendors/pear/");
+        \set_include_path(get_include_path() . PATH_SEPARATOR . APP_DIR . "/vendors/pear/");
     }
-
     // Include the API's of all modules and configure them.
     foreach (get_all_modules() as $module_name => $module_parameters) {
         $module_path = $module_parameters[1];
-        $api_path = $module_path . "/api.php";
-        if (is_file($api_path))
-            require $api_path;
+        // Include module api.
+        $path = "$module_path/api.php";
+        if (\is_file($path)) {
+            if (\nmvc\core\config\MAINTENANCE_MODE)
+                check_require_prefix($path, $module_name);
+            require $path;
+        }
+        // Include module imports.
+        $path = "$module_path/imports.php";
+        if (\is_file($path))
+            require $path;
         // Configure module.
         $mod_cfg_path = $module_path . "/config.php";
         if (is_file($mod_cfg_path)) {
@@ -239,7 +249,6 @@ function pear_autoload($name) {
             }
         }
     }
-
     // Include application specifyers.
     foreach(array(
     array('\nmvc\AppController', '\nmvc\Controller', 'app_controller.php'),

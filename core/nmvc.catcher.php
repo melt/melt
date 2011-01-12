@@ -35,7 +35,7 @@ function exception_handler(\Exception $exception) {
     // Remove any crap on top of trace.
     if (@$trace[0]['file'] == '') {
         unset($trace[0]);
-        $trace = array_values($trace);
+        $trace = \array_values($trace);
     }
     $file = @$trace[0]['file'];
     $line = @$trace[0]['line'];
@@ -45,12 +45,12 @@ function exception_handler(\Exception $exception) {
 
 function error_handler($errno, $errstr, $errfile, $errline) {
     // Bypass this error if it should not report it.
-    if ((error_reporting() & $errno) == 0)
+    if ((\error_reporting() & $errno) == 0)
         return true;
     // Bypass static function should not be abstract, because it's a useful design pattern.
     if ($errno == \E_STRICT && substr($errstr, -22) == "should not be abstract")
         return true;
-    $backtrace = debug_backtrace();
+    $backtrace = \debug_backtrace();
     unset($backtrace[0]["function"]);
     unset($backtrace[0]["args"]);
     if ($errno == E_USER_ERROR) {
@@ -159,7 +159,7 @@ function crash($message, $file, $line, $trace) {
             $prev_file = @$call['file'];;
             $prev_function = @$call['function'];
             $first_trace = false;
-        } else if (@$prev_function == "trigger_error" || @$prev_file == INTERNAL_LOCATION || basename(@$prev_file) == "imports.php") {
+        } else if (@$prev_function == "trigger_error" || @$prev_file == INTERNAL_LOCATION || \basename(@$prev_file) == "imports.php") {
             $file = @$call['file'];
             $line = @$call['line'];
             $prev_file = @$call['file'];
@@ -169,16 +169,16 @@ function crash($message, $file, $line, $trace) {
             $prev_function = null;
         }
         // Format the trace line.
-        $trace_line = '#' . (count($trace) - $key) . ' ' . basename($call['file']) . "(" . $call['line'] . ") ";
+        $trace_line = '#' . (\count($trace) - $key) . ' ' . \basename($call['file']) . "(" . $call['line'] . ") ";
         if (isset($call['function'])) {
             $trace_line .= $call['function'] . '(';
             $first = false;
             if (isset($call['args'])) {
                 foreach ($call['args'] as $arg) {
-                    if (is_string($arg))
-                        $arg = '"' . (strlen($arg) <= 64? $arg: substr($arg, 0, 64) . "…") . '"';
-                    else if (is_object($arg))
-                        $arg = "[Instance of '".get_class($arg)."']";
+                    if (\is_string($arg))
+                        $arg = '"' . (\strlen($arg) <= 64? $arg: \substr($arg, 0, 64) . "…") . '"';
+                    else if (\is_object($arg))
+                        $arg = "[Instance of '" . \get_class($arg) . "']";
                     else if ($arg === true)
                         $arg = "true";
                     else if ($arg === false)
@@ -186,7 +186,7 @@ function crash($message, $file, $line, $trace) {
                     else if ($arg === null)
                         $arg = "null";
                     else
-                        $arg = strval($arg);
+                        $arg = \strval($arg);
                     if (!$first) $first = true; else $arg = ', ' . $arg;
                     $trace_line .= $arg;
                 }
@@ -231,12 +231,12 @@ function crash($message, $file, $line, $trace) {
         // If it's too late to set the right content type, use text error.
         // Text errors are always used in script request mode.
         $use_texterror = REQ_IS_SCRIPT;
-        if (!$use_texterror && headers_sent()) {
-            foreach (headers_list() as $header) {
+        if (!$use_texterror && \headers_sent()) {
+            foreach (\headers_list() as $header) {
                 $ct_header = "content-type: ";
                 $text_html = "text/html";
-                if (strtolower(substr($header, 0, strlen($ct_header))) == strtolower($ct_header)) {
-                    $use_texterror = substr($header, strlen($ct_header), strlen($text_html)) != $text_html;
+                if (\strtolower(\substr($header, 0, \strlen($ct_header))) == \strtolower($ct_header)) {
+                    $use_texterror = \substr($header, \strlen($ct_header), \strlen($text_html)) != $text_html;
                     break;
                 }
             }
@@ -246,17 +246,17 @@ function crash($message, $file, $line, $trace) {
         if (!$use_texterror && is_file($file)) {
             $zero_offseted_line = $line - 1;
             // Don't read more than 10 MB.
-            $file_lines = explode("\n", file_get_contents($file, null, null, 0, 10000000));
+            $file_lines = \explode("\n", \file_get_contents($file, null, null, 0, 10000000));
             // Show two lines below and two lines above.
             $top_line = $zero_offseted_line - 2;
-            $file_lines = array_slice($file_lines, $top_line > 0? $top_line: 0, 5, true);
-            if (count($file_lines) > 0) {
-                end($file_lines);
-                $pad_len = strlen(key($file_lines) + 1);
+            $file_lines = \array_slice($file_lines, $top_line > 0? $top_line: 0, 5, true);
+            if (\count($file_lines) > 0) {
+                \end($file_lines);
+                $pad_len = \strlen(\key($file_lines) + 1);
                 foreach ($file_lines as $line => &$file_line)
-                    $file_line = " " . \htmlentities(str_pad($line + 1, $pad_len, "0", STR_PAD_LEFT) . ": " . str_replace("\t", "    ", rtrim($file_line)), null, "UTF-8");
+                    $file_line = " " . \htmlentities(str_pad($line + 1, $pad_len, "0", STR_PAD_LEFT) . ": " . \str_replace("\t", "    ", \rtrim($file_line)), null, "UTF-8");
                 $file_lines[$zero_offseted_line] = "<b style=\"color:red;\">" . $file_lines[$zero_offseted_line] . "</b>";
-                $errsample = "__Sample:\n" . implode("\n", $file_lines) . "\n\n";
+                $errsample = "__Sample:\n" . \implode("\n", $file_lines) . "\n\n";
             }
         }
         if (!$use_texterror) {
@@ -268,11 +268,11 @@ function crash($message, $file, $line, $trace) {
             die("\n\n$topic\n\n" . $msg);
         $msg = "<pre>$msg</pre>";
     }
-    if (!headers_sent()) {
-        header("HTTP/1.x 500 Internal Server Error");
-        header("Status: 500 Internal Server Error");
+    if (!\headers_sent()) {
+        \header("HTTP/1.x 500 Internal Server Error");
+        \header("Status: 500 Internal Server Error");
     }
-    define("NMVC_REQUEST_CRASHED", true);
+    \define("NMVC_REQUEST_CRASHED", true);
     die("<h1>" . $topic . "</h1>" . $msg);
 }
 
