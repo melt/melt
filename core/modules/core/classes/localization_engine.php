@@ -549,15 +549,17 @@ class LocalizationEngine {
             if (isset($_SERVER['HTTP_ACCEPT_LANGUAGE'])) {
                 // 2. Set by accept-language, if it can.
                 $server_accept_language = \preg_replace('#\s#', '', $_SERVER['HTTP_ACCEPT_LANGUAGE']);
-                $accept_langs = \explode(',', $server_accept_language);
+                $accept_lang_tokens = \array_reverse(\explode(',', $server_accept_language));
                 $lang_try_order = array();
-                foreach ($accept_langs as $locale) {
-                    if (false !== ($qp = \strpos($locale, ';q='))) {
-                        $q = \floatval(\substr($locale, $qp + 3));
-                    } else
-                        $q = 1;
-                    $locale = \substr($locale, 0, 2);
-                    $lang_try_order[$locale] = $q;
+                $q = 0.5;
+                foreach ($accept_lang_tokens as $lang_token) {
+                    $lang_token = \trim($lang_token);
+                    if (false !== ($qp = \strpos($lang_token, ';q=')))
+                        $q = \floatval(\substr($lang_token, $qp + 3));
+                    if ($q < config\TRANSLATION_MIN_Q)
+                        continue;
+                    $lang_token = \substr($lang_token, 0, 2);
+                    $lang_try_order[$lang_token] = $q;
                 }
                 \arsort($lang_try_order);
                 foreach ($lang_try_order as $locale => $q)

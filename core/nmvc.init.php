@@ -84,7 +84,8 @@ function read_server_var($var_name, $alt_var_name = null) {
     require APP_CONFIG;
     if (modules_using() === null)
         \trigger_error("nanoMVC initialization failed: config.php did not set what modules the application is using.", \E_USER_ERROR);
-    // Make sure core directives that it requires right away is included.
+    // Declaring all configuration directives that is used before the loader
+    // has loaded them here.
     put_configuration_directive('nmvc\core\config\DEVELOPER_KEY', "");
     put_configuration_directive('nmvc\core\config\MAINTENANCE_MODE', true);
     put_configuration_directive('nmvc\core\config\FORCE_ERROR_DISPLAY', false);
@@ -92,6 +93,7 @@ function read_server_var($var_name, $alt_var_name = null) {
     put_configuration_directive('nmvc\core\config\ERROR_LOG', null);
     put_configuration_directive('nmvc\core\config\PEAR_AUTOLOAD', false);
     put_configuration_directive('nmvc\core\config\TRANSLATION_ENABLED', false);
+    put_configuration_directive('nmvc\core\config\TRANSLATION_MIN_Q', 0.4);
     put_configuration_directive('nmvc\core\config\IGNORE_64_BIT_WARNING', false);
     // Evaluate whether NanoMVC is compatible with PHP environment.
     \define("APP_64_BIT", PHP_INT_MAX > 0x7FFFFFFF);
