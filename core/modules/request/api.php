@@ -197,10 +197,10 @@ function go_back() {
 */
 function current_url($clean_get = false) {
     if ($clean_get) {
-        $rquri = explode("?", $_SERVER['REQUEST_URI'], 2);
+        $rquri = explode("?", @$_SERVER['REQUEST_URI'], 2);
         $rquri = $rquri[0];
-    } else $rquri = $_SERVER['REQUEST_URI'];
-    return "http://" . $_SERVER['HTTP_HOST'] . urldecode($rquri);
+    } else $rquri = @$_SERVER['REQUEST_URI'];
+    return "http://" . @$_SERVER['HTTP_HOST'] . urldecode($rquri);
 }
 
 /**
