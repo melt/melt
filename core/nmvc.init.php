@@ -81,9 +81,9 @@ function read_server_var($var_name, $alt_var_name = null) {
     // Read configuration.
     $local_config = APP_DIR . "/config.local.php";
     if (is_file($local_config))
-        require $local_config;
+        @require $local_config;
     \define("APP_CONFIG", APP_DIR . "/config.php");
-    require APP_CONFIG;
+    @require APP_CONFIG;
     if (modules_using() === null)
         \trigger_error("nanoMVC initialization failed: config.php did not set what modules the application is using.", \E_USER_ERROR);
     // Declaring all configuration directives that is used before the loader
