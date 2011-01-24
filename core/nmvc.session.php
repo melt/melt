@@ -53,5 +53,4 @@ call_user_func(function() {
     \session_name("PHPSESSID_" . \substr(\sha1($session_domain, false), 0, 10));
     // Start session.
     \session_start();
-    exit;
 });
