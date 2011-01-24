@@ -43,9 +43,9 @@ call_user_func(function() {
     if (isset($_GET["_SESSION_ID"]) && \nmvc\string\in_range($_GET["_SESSION_ID"], 8, 32))
         \session_id($_GET["_SESSION_ID"]);
     // Forward session cookie parameters from configuration.
-    $session_domain = \is_string(\nmvc\core\config\SESSION_DOMAIN);
+    $session_domain = \nmvc\core\config\SESSION_DOMAIN;
     if (!\is_string($session_domain) || $session_domain === "")
-        $session_domain = APP_ROOT_HOST;
+        $session_domain = null;
     $secure = \nmvc\core\config\SESSION_ENFORCE_HTTPS == true;
     \session_set_cookie_params(0, "/", $session_domain, $secure);
     // Using a custom session name based on domain hash to prevent
@@ -53,4 +53,5 @@ call_user_func(function() {
     \session_name("PHPSESSID_" . \substr(\sha1($session_domain, false), 0, 10));
     // Start session.
     \session_start();
+    exit;
 });
