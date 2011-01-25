@@ -89,8 +89,8 @@ function deny($message = null) {
  * @param integer $expires
  * @return void
  */
-function set_host_aware_cookie($name, $value, $expires = 0) {
-    setcookie($name, $value, $expires, "/", config\COOKIE_HOST !== null? config\COOKIE_HOST: APP_ROOT_PATH);
+function set_cookie($name, $value, $expires = 0) {
+    setcookie($name, $value, $expires, "/");
 }
 
 /**
@@ -99,8 +99,8 @@ function set_host_aware_cookie($name, $value, $expires = 0) {
  * @param string $name
  * @return void
  */
-function unset_host_aware_cookie($name) {
-    setcookie($name, "", 0, "/", config\COOKIE_HOST !== null? config\COOKIE_HOST: APP_ROOT_PATH);
+function unset_cookie($name) {
+    setcookie($name, "", 0, "/");
 }
 
 /**
@@ -129,12 +129,12 @@ function login_challenge($username, $cleartext_password, $remember_session = fal
                 $user->user_remember_key = $user_remember_key;
                 $user->user_remember_key_expires = $expires = time() + 60 * 60 * 24 * intval(config\REMEMBER_ME_DAYS);
                 // Remember user, allowing auto-login for time period configured.
-                set_host_aware_cookie("REMBR_USR_KEY", $user_remember_key, $expires);
+                set_cookie("REMBR_USR_KEY", $user_remember_key, $expires);
             } else if (isset($_COOKIE["REMBR_USR_KEY"]))
-                unset_host_aware_cookie("REMBR_USR_KEY");
+                unset_cookie("REMBR_USR_KEY");
             $user->store();
             // Remember username for two years.
-            set_host_aware_cookie("LAST_USER", $username, time() + 60 * 60 * 24 * 365 * 2);
+            set_cookie("LAST_USER", $username, time() + 60 * 60 * 24 * 365 * 2);
             // Stack any current shell on top of this shell.
             login($user);
             return true;
@@ -159,7 +159,7 @@ function logout() {
                     $user->store();
                 }
             }
-            unset_host_aware_cookie("REMBR_USR_KEY");
+            unset_cookie("REMBR_USR_KEY");
         }
     } else {
         $_SESSION['userx\auth']['user'] = array_pop($_SESSION['userx\auth']['shells']);
