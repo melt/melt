@@ -99,12 +99,14 @@ class WhereCondition {
                 $this->where_tokens[] = "NOT";
             $this->where_tokens[] = $op;
             if ($op == "IN") {
-                // Expects WhereCondition argument.
-                if (!($arg instanceof WhereCondition))
+                // Expects array or WhereCondition argument.
+                if (\is_array($arg))
+                    $arg = new ModelFieldValue($arg);
+                else if (!($arg instanceof WhereCondition))
                     trigger_error(__CLASS__ . " error: Unexpected argument. IN operator expects WhereCondition argument! Got: " . gettype($arg), \E_USER_ERROR);
-                if ($arg->getFromModel() === null)
+                else if ($arg->getFromModel() === null)
                     trigger_error(__CLASS__ . " error: Unexpected argument. WhereCondition argument for IN operator has from model missing!", \E_USER_ERROR);
-                if ($arg->getSelectFields() === null || count($arg->getSelectFields()) != 1)
+                else if ($arg->getSelectFields() === null || count($arg->getSelectFields()) != 1)
                     trigger_error(__CLASS__ . " error: Unexpected argument. WhereCondition argument for IN operator must have exactly one select field!", \E_USER_ERROR);
             } else if ($op == "LIKE") {
                 if (!is_scalar($arg))

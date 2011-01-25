@@ -1080,11 +1080,23 @@ abstract class Model implements \IteratorAggregate, \Countable {
                     $sql_select_expr .= " " . $column_data[0];
                     $current_field_prototype_type = $column_data[4];
                 } else if ($token instanceof db\ModelFieldValue) {
-                    if ($current_field_prototype_type !== null && !($current_field_prototype_type instanceof core\PointerType)) {
-                        $current_field_prototype_type->set($token->getValue());
-                        $sql_select_expr .= " " . $current_field_prototype_type->getSQLValue();
+                    $sqlize_value_fn = function($value) use ($current_field_prototype_type) {
+                        if ($current_field_prototype_type !== null && !($current_field_prototype_type instanceof core\PointerType)) {
+                            $current_field_prototype_type->set($value);
+                            return " " . $current_field_prototype_type->getSQLValue();
+                        } else {
+                            return " " . intval(id($value));
+                        }
+                    };
+                    $value = $token->getValue();
+                    if (!\is_array($value)) {
+                        // Single  value.
+                        $sql_select_expr .= $sqlize_value_fn($value);
                     } else {
-                        $sql_select_expr .= " " . intval(id($token->getValue()));
+                        // Mysql array/set of values. (uncommon)
+                        foreach ($value as &$value_value)
+                            $value_value = $sqlize_value_fn($value_value);
+                        $sql_select_expr .= "(" . \implode(",", $value) . ")";
                     }
                 } else if ($token instanceof db\SelectQuery) {
                     // Inner selection.
