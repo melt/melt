@@ -20,7 +20,7 @@ class SelectModelType extends PointerType {
             return $target_model::select();
         if (!\is_callable(array($this->parent, $this->options)))
             \trigger_error(__CLASS__ . " configured incorrectly! Parent " . \get_class($this->parent) . " has no function " . $this->options, \E_USER_ERROR);
-        $options = \call_user_func(array($this->parent, $this->options));
+        $options = \call_user_func(array($this->parent, $this->options), $target_model);
         if (!($options instanceof \nmvc\db\WhereCondition))
             \trigger_error(__CLASS__ . " configured incorrectly! Parent " . \get_class($this->parent) . " did not return nmvc\db\WhereCondition as expected.", \E_USER_ERROR);
         return $target_model::select()->where($options);
