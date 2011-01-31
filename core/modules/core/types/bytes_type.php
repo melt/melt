@@ -10,7 +10,7 @@ class BytesType extends \nmvc\AppType {
     }
 
     public function getInterface($name) {
-        $value = escape($this->value . " B");
+        $value = escape(self::byteUnit($this->value));
         return "<input type=\"text\" name=\"$name\" id=\"$name\" value=\"$value\" />";
     }
 
@@ -19,59 +19,72 @@ class BytesType extends \nmvc\AppType {
     }
 
     public function set($value) {
-        $this->value = intval($value);
+        $this->value = \intval($value);
     }
 
     public function readInterface($name) {
         $value = @$_POST[$name];
-        $number =  floatval($value);
-        $text = preg_replace("#[^A-Z]#", "", strtoupper($value));
+        $number =  \floatval($value);
+        $text = \preg_replace("#[^A-Z]#", "", \strtoupper($value));
         $units = array(
             "B" => 1,
             "KB" => 1000,
-            "MB" => pow(1000, 2),
-            "GB" => pow(1000, 3),
-            "TB" => pow(1000, 4),
-            "PB" => pow(1000, 5),
-            "EB" => pow(1000, 6),
-            "ZB" => pow(1000, 7),
-            "YB" => pow(1000, 8),
+            "MB" => \pow(1000, 2),
+            "GB" => \pow(1000, 3),
+            "TB" => \pow(1000, 4),
+            "PB" => \pow(1000, 5),
+            "EB" => \pow(1000, 6),
+            "ZB" => \pow(1000, 7),
+            "YB" => \pow(1000, 8),
             "KIB" => 1024,
-            "MIB" => pow(1024, 2),
-            "GIB" => pow(1024, 3),
-            "TIB" => pow(1024, 4),
-            "PIB" => pow(1024, 5),
-            "EIB" => pow(1024, 6),
-            "ZIB" => pow(1024, 7),
-            "YIB" => pow(1024, 8),
+            "MIB" => \pow(1024, 2),
+            "GIB" => \pow(1024, 3),
+            "TIB" => \pow(1024, 4),
+            "PIB" => \pow(1024, 5),
+            "EIB" => \pow(1024, 6),
+            "ZIB" => \pow(1024, 7),
+            "YIB" => \pow(1024, 8),
         );
         $scale = isset($units[$text])? $units[$text]: 1;
-        $this->value = intval(abs($number) * $scale);
+        $this->value = \intval(\abs($number) * $scale);
     }
 
     public function __toString() {
-        return self::byte_unit(intval($this->value));
+        return self::byteUnit(\intval($this->value));
     }
 
     /**
-    * @param Integer $byte Number of bytes.
-    * @param Boolean $si Set this to false to use IEC standard size notation instead of the SI notation. (SI: 1000 b/Kb, IEC: 1024 b/KiB)
-    * @return String The number of bytes in a readable unit representation.
-    */
-    public static function byte_unit($byte, $si = true) {
-        $byte = intval($byte);
+     * @param integer $byte_count Number of bytes.
+     * @param boolean $si Set this to false to use IEC standard size notation
+     * instead of the SI notation. (SI: 1000 b/Kb, IEC: 1024 b/KiB)
+     * @param integer $max_decimals Maximum number of decimals in result.
+     * @return string The number of bytes in a readable unit representation.
+     */
+    public static function byteUnit($byte_count, $si = true, $max_decimals = 2) {
+        $byte_count = \intval($byte_count);
         if ($si) {
-            $u = 1000;
-            $uarr = array("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB");
+            $base_unit = 1000;
+            $unit_array = array("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB");
         } else {
-            $u = 1024;
-            $uarr = array("B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB");
+            $base_unit = 1024;
+            $unit_array = array("B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB");
         }
-        foreach ($uarr as $unit) {
-            if ($byte < $u) return strval(round($byte, 2)) . " " . $unit;
-            else $byte /= $u;
+        $ret_fn = function($byte_count, $unit) {
+            return \strval(\round($byte_count, 2)) . " " . $unit;
+        };
+        foreach ($unit_array as $unit) {
+            $point_pos = \strpos($byte_count, ".");
+            if ($point_pos !== false) {
+                $decimals = \strlen(\substr($byte_count, $point_pos + 1));
+                if ($decimals >= $max_decimals)
+                    return $ret_fn($byte_count, $unit);
+            }
+            if ($byte_count < $base_unit)
+                return $ret_fn($byte_count, $unit);
+            $byte_count /= $base_unit;
         }
-        return strval(round($byte, 2)) . " " . $uarr[count($uarr) - 1];
+        $byte_count *= $base_unit;
+        return $ret_fn($byte_count, $unit);
     }
 }
 
