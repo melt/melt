@@ -2,7 +2,7 @@
 
 abstract class RestrictedController extends \nmvc\AppController {
 
-    private static function getGroupPermitted($group, $controller_class_name, $invoke_data) {
+    private static function getGroupPermitted($group, $controller_class_name, $invoke_data, &$special_permissions) {
         // Root groups can always login.
         if ($group !== null && $group->root)
             return true;
@@ -47,7 +47,7 @@ abstract class RestrictedController extends \nmvc\AppController {
             return true;
         // Access now depends on group.
         if ($group_or_user === null)
-            return self::getGroupPermitted(null, $controller_class_name, $invoke_data);
+            return self::getGroupPermitted(null, $controller_class_name, $invoke_data, $special_permissions);
         else if ($group_or_user instanceof UserModel) {
             if (config\MULTIPLE_GROUPS) {
                 // Iterate trough all group membership.
@@ -58,14 +58,14 @@ abstract class RestrictedController extends \nmvc\AppController {
                 if (!\array_key_exists($user->id, $cached_user_groups))
                     $cached_user_groups[$user->id] = UserGroupModel::selectChildren($user);
                 foreach ($cached_user_groups[$user->id] as $user_group) {
-                    if (self::getGroupPermitted($user_group->group, $controller_class_name, $invoke_data))
+                    if (self::getGroupPermitted($user_group->group, $controller_class_name, $invoke_data, $special_permissions))
                         return true;
                 }
-                return self::getGroupPermitted(null, $controller_class_name, $invoke_data);
+                return self::getGroupPermitted(null, $controller_class_name, $invoke_data, $special_permissions);
             } else
-                return self::getGroupPermitted($group_or_user->group, $controller_class_name, $invoke_data);
+                return self::getGroupPermitted($group_or_user->group, $controller_class_name, $invoke_data, $special_permissions);
         } else if ($group_or_user instanceof GroupModel)
-            return self::getGroupPermitted($group_or_user, $controller_class_name, $invoke_data);
+            return self::getGroupPermitted($group_or_user, $controller_class_name, $invoke_data, $special_permissions);
         else
             trigger_error(__METHOD__ . " got unexpected \$group_or_user: " . \gettype($group_or_user), \E_USER_ERROR);
     }
