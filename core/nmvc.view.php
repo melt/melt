@@ -230,6 +230,7 @@ final class View {
         if ($controller->layout->getLevel() != $level)
             trigger_error("nanoMVC: After rendering '$view_path.php', a level imbalance was detected! The enterSections() does not have a balanced ammount of exitSections().", \E_USER_ERROR);
         // Should render if it prepared the layout and returned to root level.
+        $content = null;
         if ($layout_path != null && $controller->layout->getLevel() == 0) {
             // Throw away any output that was ignored.
             ob_end_clean();
@@ -237,9 +238,10 @@ final class View {
             // Reset layout now when it has been rendered.
             $controller->layout = $layout_path;
         } else {
-            // Get render content from the ob, but ignore
-            // the content if not sub-rendering.
-            $content = ($controller->layout->getLevel() > 0)? ob_get_contents(): null;
+            // Throw away default level content if outputting by echo and
+            // this render is not a sub render.
+            if ($return || $controller->layout->getLevel() > 0)
+                $content = \ob_get_contents();
             ob_end_clean();
             // Restore the non-set layout.
             if ($final)
