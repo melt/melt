@@ -8,6 +8,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
 
     private $from_model = null;
     private $select_fields = null;
+    private $is_ignoring_children = false;
     
     private $is_counting = false;
     private $is_calc_found_rows = false;
@@ -77,6 +78,14 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
     public function setFromModel($from_model) {
         $this->validateModelName($from_model);
         $this->from_model = $from_model;
+    }
+
+    public function getIsIgnoringChildren() {
+        return $this->is_ignoring_children;
+    }
+
+    public function setIsIgnoringChildren($is_ignoring_children) {
+        $this->is_ignoring_children = ($is_ignoring_children == true);
     }
 
     public function getSelectFields() {

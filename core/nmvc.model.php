@@ -910,6 +910,20 @@ abstract class Model implements \IteratorAggregate, \Countable {
     }
 
     /**
+     * Returns/begins a selection query for instances of this exact model,
+     * ignoring any child model instances.
+     * @param mixed $fields Array of fields or single field to limit selection.
+     * Note that this is ignored when instancing selection. It is only useful
+     * when fetching data matrix directly or selecting in subqueries.
+     * @return db\SelectQuery
+     */
+    public static function selectSelf($fields = null) {
+        $selection = static::select($fields);
+        $selection->setIsIgnoringChildren(true);
+        return $selection;
+    }
+
+    /**
      * Returns/begins a selection query for the children that has the
      * specified parent.
      * @param Model $parent
@@ -982,7 +996,10 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $out_array = array();
         $is_counting = $select_query->getIsCounting();
         $sum = 0;
-        foreach (static::getChildModels() as $model_class_name) {
+        $child_models = static::getChildModels();
+        if ($select_query->getIsIgnoringChildren())
+            $child_models = \array_intersect($child_models, \get_called_class());
+        foreach ($child_models as $model_class_name) {
             $columns = $model_class_name::getColumnNames(false);
             $columns[] = "id";
             $select_query->setFromModel($model_class_name);
