@@ -933,7 +933,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * @return db\SelectQuery
      */
     public static function selectChildren(Model $parent, $fields = null) {
-        $ptr_fields = static::getParentPointers(\get_class($parent));
+        $ptr_fields = static::getParentPointers(\get_class($parent), true);
         $id = $parent->getID();
         if ($fields != null && \is_string($fields))
             $fields = array($fields);
@@ -943,8 +943,37 @@ abstract class Model implements \IteratorAggregate, \Countable {
         return $select_query;
     }
 
+    /**
+     * Returns an array of model instances of this type that refer to this
+     * model and the name of the refering pointers.
+     * @return array Tuples of array(instance, pointer_field).
+     */
+    public static function getReferences(Model $parent, $is_for_update) {
+        $out_array = array();
+        if (!$parent->isLinked())
+            return $out_array;
+        $parent_id = $parent->id;
+        foreach (static::getChildModels() as $model_class_name) {
+            $ptr_fields = $model_class_name::getParentPointers(\get_class($parent), false);
+            if (\count($ptr_fields) == 0)
+                continue;
+            $select_query = new db\SelectQuery(\get_called_class(), $fields);
+            foreach ($ptr_fields as $ptr_field)
+                $select_query->or($ptr_field)->is($id);
+            if ($is_for_update)
+                $select_query->forUpdate();
+            $instances = $select_query->all();
+            foreach ($instances as $instance)
+            foreach ($ptr_fields as $ptr_field) {
+                if ($instance->{$ptr_field . "_id"} == $parent_id)
+                    $out_array[] = array($instance, $ptr_field);
+            }
+        }
+        return $out_array;
+    }
+
     /** Returns the name(s) of the child pointer fields. */
-    private static function getParentPointers($parent_model_class) {
+    private static function getParentPointers($parent_model_class, $expecting_pointers) {
         $child_model_class = \get_called_class();
         $ptr_fields = array();
         foreach ($child_model_class::getColumnNames(false) as $col_name) {
@@ -952,7 +981,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
             is($parent_model_class, $child_model_class::getTargetModel($col_name)))
                 $ptr_fields[] = $col_name;
         }
-        if (count($ptr_fields) == 0)
+        if ($expecting_pointers && count($ptr_fields) == 0)
             \trigger_error("Invalid child model: '" . $child_model_class . "'. Does not contain pointer(s) to '$parent_model_class'.", \E_USER_ERROR);
         return $ptr_fields;
     }
