@@ -237,8 +237,9 @@ final class View {
             // Reset layout now when it has been rendered.
             $controller->layout = $layout_path;
         } else {
-            // Get render content from the ob.
-            $content = ob_get_contents();
+            // Get render content from the ob, but ignore
+            // the content if not sub-rendering.
+            $content = ($controller->layout->getLevel() > 0)? ob_get_contents(): null;
             ob_end_clean();
             // Restore the non-set layout.
             if ($final)
@@ -248,7 +249,8 @@ final class View {
         if ($return) {
             return $content;
         } else {
-            echo $content;
+            if ($content != null)
+                echo $content;
             return true;
         }
     }
