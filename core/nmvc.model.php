@@ -872,6 +872,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
             return null;
         if (\array_key_exists($id, self::$_instance_cache)) {
             $model = self::$_instance_cache[$id];
+            $base_name = \get_called_class();
             return ($model instanceof $base_name)? $model: null;
         }
         $id = (string) $id;
