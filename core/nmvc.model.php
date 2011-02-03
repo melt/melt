@@ -870,19 +870,13 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $id = intval($id);
         if ($id <= 0)
             return null;
-        $base_name = \get_called_class();
         if (\array_key_exists($id, self::$_instance_cache)) {
             $model = self::$_instance_cache[$id];
             return ($model instanceof $base_name)? $model: null;
         }
-        static $family_tree = null;
-        if ($family_tree === null)
-            $family_tree = self::getMetaData("family_tree");
-        if (!isset($family_tree[$base_name]))
-            \trigger_error("Model '$base_name' is out of sync with database.", \E_USER_ERROR);
         $id = (string) $id;
         static $cached_queries = array();
-        foreach ($family_tree[$base_name] as $model_class_name) {
+        foreach (static::getChildModels() as $model_class_name) {
             if (!\array_key_exists($model_class_name, $cached_queries)) {
                 $select = $model_class_name::select();
                 $columns = $model_class_name::getColumnNames(false);
@@ -984,13 +978,10 @@ abstract class Model implements \IteratorAggregate, \Countable {
             \trigger_error("Selection query has no source/from model set.", \E_USER_ERROR);
         // Clone select query to prevent/isolate side effects.
         $select_query = clone $select_query;
-        $family_tree = self::getMetaData("family_tree");
         $out_array = array();
-        if (!isset($family_tree[$from_model]))
-            \trigger_error("Model '$from_model' is out of sync with database.", \E_USER_ERROR);
         $is_counting = $select_query->getIsCounting();
         $sum = 0;
-        foreach ($family_tree[$from_model] as $model_class_name) {
+        foreach (static::getChildModels() as $model_class_name) {
             $columns = $model_class_name::getColumnNames(false);
             $columns[] = "id";
             $select_query->setFromModel($model_class_name);
@@ -1006,6 +997,20 @@ abstract class Model implements \IteratorAggregate, \Countable {
             }
         }
         return $is_counting? $sum: $out_array;
+    }
+
+    /**
+     * Returns child models of this model.
+     * @return array
+     */
+    public static function getChildModels() {
+        $current_model = \get_called_class();
+        if ($current_model == __CLASS__)
+            $current_model = 'nmvc\AppModel';
+        $family_tree = self::getMetaData("family_tree");
+        if (!isset($family_tree[$current_model]))
+            \trigger_error("Model '$current_model' is out of sync with database.", \E_USER_ERROR);
+        return $family_tree[$current_model];
     }
 
 
