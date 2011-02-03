@@ -55,6 +55,19 @@ abstract class Type {
     }
 
     /**
+     * Returns true if this type can safely be assigned this value.
+     * Types should force values into the closest representation when being
+     * set as this follows PHP standard convention. If types are picky with
+     * what values they set however, they MUST override this and return
+     * false for those values.
+     * @param boolean $value
+     * @return boolean
+     */
+    public function takes($value) {
+        return true;
+    }
+
+    /**
      * Constructs this typed field with this column name.
      */
     public function __construct($column_name) {

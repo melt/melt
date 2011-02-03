@@ -141,7 +141,7 @@ class PointerType extends \nmvc\AppType {
      * instance that has the in memory object pointer and where the
      * second index is the name of the pointer field that points to the
      * given instance. The keys or order of the returned array is undefined.
-     * @return array Array of array(nmvc\Model, string)
+     * @return array Array of array(\nmvc\Model, string)
      */
     public static function getIncommingMemoryObjectPointers(\nmvc\Model $for_instance) {
         $key = spl_object_hash($for_instance);
@@ -187,6 +187,20 @@ class PointerType extends \nmvc\AppType {
             self::$memory_object_pointer_backlinks[spl_object_hash($value)][spl_object_hash($this)] = array($this->parent, $this->key);
         // Store memory object pointer.
         $this->value = $value;
+    }
+
+    public function takes($value) {
+        $target_model = $this->target_model;
+        if (\is_integer($value)) {
+            if ($value <= 0)
+                return true;
+            return $target_model::selectByID($value) !== null;
+        }
+        if (\is_object($value))
+            return \is_a($value, $target_model);
+        else if (\is_null($value))
+            return true;
+        return false;
     }
     
     public function getSQLType() {
