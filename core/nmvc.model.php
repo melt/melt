@@ -581,6 +581,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
     /**
      * Stores any changes to this model instance to the database.
      * If this is a new instance, it's inserted, otherwise, it's updated.
+     * @return void
      */
     public function store() {
         // Volatile models cannot be stored.
@@ -945,16 +946,27 @@ abstract class Model implements \IteratorAggregate, \Countable {
 
     /**
      * Returns an array of model instances of this type that refer to this
-     * model and the name of the refering pointers.
+     * instance and the name of the refering pointers. The returned instances
+     * is not neccessarly linked. The memory relation graph state is
+     * used, not the database one.
+     * @param boolean $is_for_update Set to true if instances are intended
+     * to be updated to reduce deadlock risk.
      * @return array Tuples of array(instance, pointer_field).
      */
-    public static function getReferences(Model $parent, $is_for_update) {
+    public static function getReferences(Model $instance, $is_for_update = true) {
         $out_array = array();
-        if (!$parent->isLinked())
+        $called_class = \get_called_class();
+        // Populate array with local references to the instance.
+        foreach (core\PointerType::getIncommingMemoryObjectPointers($instance) as $reference) {
+            list($instance, $ptr_field) = $reference;
+            if (is(\get_class($instance), $called_class))
+                $out_array[\spl_object_hash($instance) . "_" . $ptr_field] = $reference;
+        }
+        if (!$instance->isLinked())
             return $out_array;
-        $parent_id = $parent->id;
+        $instance_id = $instance->id;
         foreach (static::getChildModels() as $model_class_name) {
-            $ptr_fields = $model_class_name::getParentPointers(\get_class($parent), false);
+            $ptr_fields = $model_class_name::getParentPointers(\get_class($instance), false);
             if (\count($ptr_fields) == 0)
                 continue;
             $select_query = new db\SelectQuery(\get_called_class(), $fields);
@@ -965,11 +977,54 @@ abstract class Model implements \IteratorAggregate, \Countable {
             $instances = $select_query->all();
             foreach ($instances as $instance)
             foreach ($ptr_fields as $ptr_field) {
-                if ($instance->{$ptr_field . "_id"} == $parent_id)
-                    $out_array[] = array($instance, $ptr_field);
+                if ($instance->{$ptr_field . "_id"} == $instance_id)
+                    $out_array[\spl_object_hash($instance) . "_" . $ptr_field] = array($instance, $ptr_field);
             }
         }
         return $out_array;
+    }
+
+    /**
+     * Morphs this instance into a new type of model, updating all in-memory
+     * references to it. If this instance is linked, it will be unlinked and
+     * the new instance stored in its place.
+     * @param string $new_model_class Model to morph instance into.
+     * @param boolean $copy_fields Set to false to not transfer field data
+     * for fields with the same name.
+     * @return Model The new morphed model instance.
+     */
+    public function morph($new_model_class, $copy_fields = true) {
+        // Sanity checking.
+        $called_class = \get_called_class();
+        if (\strcasecmp($called_class, $new_model_class) === 0)
+            return $this;
+        if (!\is($new_model_class, __CLASS__))
+            \trigger_error("The new model class is not a model class.", \E_USER_ERROR);
+        if (core\is_abstract($called_class))
+            \trigger_error("The new model class is abstract.", \E_USER_ERROR);
+        // Create the instance to morph into.
+        $morphed_instance = new $new_model_class();
+        // Copy shared data.
+        if ($copy_fields) {
+            $from_fields = $this->getColumns();
+            $to_fields = $morphed_instance->getColumns();
+            foreach (\array_intersect_key($from_fields, $to_fields) as $shared_field => $from_type) {
+                $type = $morphed_instance->type($shared_field);
+                if ($type->takes($from_type->get()))
+                    $type->set($from_type->get());
+            }
+        }
+        // Update the relation graph state.
+        foreach (Model::getReferences($this, true) as $reference) {
+            list($instance, $ptr_field) = $reference;
+            $instance->$ptr_field = $morphed_instance;
+        }
+        // Flip stored state.
+        if ($this->isLinked()) {
+            $morphed_instance->store();
+            $this->unlink();
+        }
+        return $morphed_instance;
     }
 
     /** Returns the name(s) of the child pointer fields. */
