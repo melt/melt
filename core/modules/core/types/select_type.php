@@ -13,7 +13,7 @@ class SelectType extends \nmvc\AppType {
 
     private function checkOptions() {
         if (!is_array($this->options) || count($this->options) == 0)
-            trigger_error(__CLASS_ . " expects an array array of at least one option. Got: " . gettype($this->options), \E_USER_ERROR);
+            trigger_error(__CLASS__ . " expects an array array of at least one option. Got: " . gettype($this->options), \E_USER_ERROR);
         foreach ($this->options as $k => $v) {
             if (!is_integer($k))
                 trigger_error("All keys in the " . __CLASS__ . " options array has to be integers. Found: " . gettype($k));
