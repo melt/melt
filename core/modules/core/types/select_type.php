@@ -105,10 +105,12 @@ class SelectType extends \nmvc\AppType {
     }
 
     public function getSQLValue() {
+        $this->prepareOptions();
         return $this->key_to_hash_map[$this->value];
     }
 
     public function setSQLValue($value) {
+        $this->prepareOptions();
         if (isset($this->hash_to_key_map[$value]))
             $this->value = $this->hash_to_key_map[$value];
         else
