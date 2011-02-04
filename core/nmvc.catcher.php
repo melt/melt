@@ -289,4 +289,7 @@ function crash($message, $file, $line, $trace) {
         \error_reporting(E_ALL | E_STRICT);
     else
         \error_reporting(E_USER_ERROR);
+    // Check that the database is configured.
+    if (\nmvc\db\config\HOST == null)
+        development_crash("no_database", array());
 });
