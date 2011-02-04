@@ -1,10 +1,10 @@
 <?php return array(
-    "HOST" => "localhost",
+    "HOST" => null,
     "USER" => "root",
     "PASSWORD" => "",
     "PORT" => 3306,
     "NAME" => "nanomvc",
-    "PREFIX" => "nanomvc",
+    "PREFIX" => "",
     "USE_TRIGGER_SEQUENCING" => true,
     "DEBUG_QUERY_BENCHMARK" => false,
     "REQUEST_LEVEL_TRANSACTIONALITY" => true,
