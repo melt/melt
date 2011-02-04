@@ -19,7 +19,6 @@
     Change your current class declaration to something like:
 </p>
 <p>
-    <?php define("foo", "bar"); ?>
     <?php $this->layout->enterSection("code"); ?>
     <?php echo "<?php"; ?> namespace <?php echo preg_replace('#\\\\[^\\\\]*$#', "", $this->expected_name); ?>;
 
