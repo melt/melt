@@ -1630,14 +1630,15 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $db_engines = $fn_get_db_engines();
         $table_names = \array_merge(\array_keys($model_classes), array("core__seq", "core__metadata"));
         foreach ($table_names as $table_name) {
-            if (!isset($db_engines[$table_name]))
-                \trigger_error("Table `$table_name` was unexpectedly not found when reflecting database.", \E_USER_ERROR);
-            if ($db_engines[$table_name] != $config_engine) {
+            $prefixed_table_name = db\config\PREFIX . $table_name;
+            if (!isset($db_engines[$prefixed_table_name]))
+                \trigger_error("Table `$prefixed_table_name` was unexpectedly not found when reflecting database.", \E_USER_ERROR);
+            if ($db_engines[$prefixed_table_name] != $config_engine) {
                 db\query("ALTER TABLE " . db\table($table_name) . " ENGINE = $config_engine");
                 // Verify that table engine was altered correctly.
                 $db_engines = $fn_get_db_engines();
-                if ($db_engines[$table_name] != $config_engine)
-                    \trigger_error("Altering engine of table `$table_name` to $config_engine failed!", \E_USER_ERROR);
+                if ($db_engines[$prefixed_table_name] != $config_engine)
+                    \trigger_error("Altering engine of table `$prefixed_table_name` to $config_engine failed!", \E_USER_ERROR);
             }
         }
     }
