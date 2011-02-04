@@ -502,3 +502,33 @@ function current_locale($new_locale = false) {
     else
         LocalizationEngine::setNextLocale($new_locale);
 }
+
+/**
+ * Inserts array2 into array1 by merging the entire array into before the
+ * key $before_key. If keys are shared between array and array2 the
+ * last/second appearance of the key value pair will be ignored while
+ * building the new array from left to right (or top down).
+ * This function takes O(n + m) time where n and m is length of array
+ * and array2 respectivly.
+ * @param array $array
+ * @param mixed $before_key
+ * @param array $array2
+ * @return array
+ */
+function array_insert(array $array, $before_key, array $array2) {
+    if (!\array_key_exists($before_key, $array))
+        \trigger_error("The key '$before_key' does not exist in \$array.", \E_USER_ERROR);
+    $new_array = array();
+    foreach ($array as $key => $value) {
+        if ($key === $before_key) {
+            foreach ($array2 as $key2 => $value2) {
+                if (!\array_key_exists($key2, $new_array))
+                    $new_array[$key2] = $value2;
+            }
+            $before_key = null;
+        }
+        if (!\array_key_exists($key, $new_array))
+            $new_array[$key] = $value;
+    }
+    return $new_array;
+}
