@@ -14,7 +14,7 @@ class SelectModelType extends PointerType {
         parent::__construct($column_name, $target_model, $disconnect_reaction);
     }
 
-    private function getOptions() {
+    protected function getOptions() {
         $target_model = $this->target_model;
         if ($this->options === null)
             return $target_model::select();
