@@ -402,9 +402,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 $ret = $columns[$id_companion];
                 if ($subresolve !== null) {
                     $ret = $ret->get();
-                    if ($ret === null)
-                        \trigger_error("Trying to subresolve null pointer ($id_companion" . "->).", \E_USER_ERROR);
-                    $ret = $ret->type($subresolve);
+                    if ($ret !== null)
+                        $ret = $ret->type($subresolve);
                 }
                 return $ret;
             };
