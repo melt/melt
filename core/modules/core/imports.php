@@ -33,7 +33,7 @@ function id($instance = null) {
 /**
  * Global gettext function. Translates string.
  */
-function __() {
+function __($msgid) {
     $sprintf_args = array_slice(func_get_args(), 1);
     return nmvc\core\LocalizationEngine::translate($msgid, "", "", 1, $sprintf_args);
 }
