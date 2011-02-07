@@ -31,13 +31,6 @@ function id($instance = null) {
 }
 
 /**
- * Global gettext function alias.
- */
-function _() {
-    return call_user_func_array('_', func_get_args());
-}
-
-/**
  * Global gettext function. Translates string.
  */
 function __() {
