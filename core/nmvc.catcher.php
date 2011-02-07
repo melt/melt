@@ -137,6 +137,43 @@ function get_call_file_domain($file) {
         return "app";
 }
 
+/**
+ * Returns a text formated call signature from a backtrace call array.
+ * @param array $call
+ * @return string
+ */
+function get_call_signature($call) {
+    $call_signature = "";
+    if (isset($call['file']))
+        $call_signature .= \basename($call['file']) . " ";
+    if (isset($call['line']))
+        $call_signature .= "(" . $call['line'] . ") ";
+    if (isset($call['function'])) {
+        $call_signature .= $call['function'] . '(';
+        $first = false;
+        if (isset($call['args'])) {
+            foreach ($call['args'] as $arg) {
+                if (\is_string($arg))
+                    $arg = '"' . (\strlen($arg) <= 64? $arg: \substr($arg, 0, 64) . "…") . '"';
+                else if (\is_object($arg))
+                    $arg = "[Instance of '" . \get_class($arg) . "']";
+                else if ($arg === true)
+                    $arg = "true";
+                else if ($arg === false)
+                    $arg = "false";
+                else if ($arg === null)
+                    $arg = "null";
+                else
+                    $arg = \strval($arg);
+                if (!$first) $first = true; else $arg = ', ' . $arg;
+                $call_signature .= $arg;
+            }
+        }
+        $call_signature .= ")";
+    }
+    return $call_signature;
+}
+
 function crash($message, $file, $line, $trace) {
     // Restore output buffer.
     \nmvc\request\reset();
@@ -169,30 +206,7 @@ function crash($message, $file, $line, $trace) {
             $prev_function = null;
         }
         // Format the trace line.
-        $trace_line = '#' . (\count($trace) - $key) . ' ' . \basename($call['file']) . "(" . $call['line'] . ") ";
-        if (isset($call['function'])) {
-            $trace_line .= $call['function'] . '(';
-            $first = false;
-            if (isset($call['args'])) {
-                foreach ($call['args'] as $arg) {
-                    if (\is_string($arg))
-                        $arg = '"' . (\strlen($arg) <= 64? $arg: \substr($arg, 0, 64) . "…") . '"';
-                    else if (\is_object($arg))
-                        $arg = "[Instance of '" . \get_class($arg) . "']";
-                    else if ($arg === true)
-                        $arg = "true";
-                    else if ($arg === false)
-                        $arg = "false";
-                    else if ($arg === null)
-                        $arg = "null";
-                    else
-                        $arg = \strval($arg);
-                    if (!$first) $first = true; else $arg = ', ' . $arg;
-                    $trace_line .= $arg;
-                }
-            }
-            $trace_line .= ")";
-        }
+        $trace_line = '#' . (\count($trace) - $key) . ' ' . get_call_signature($call);
         $errtrace .= "$trace_line\n";
         switch (get_call_file_domain($call["file"])) {
         case "php":
