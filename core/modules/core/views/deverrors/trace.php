@@ -37,7 +37,7 @@
 <body>
     <p>
         Tracing is currently enabled by using _trace query key, the request was
-        therefore halted after completion. Here is the full graph trace:
+        therefore halted after completion. Here is the full trace graph:
     </p>
     <input type="button" onclick="javascript: autoload_toggle(false)" value="Hide Autoloads" />
     <input type="button" onclick="javascript: autoload_toggle(true)" value="Show Autoloads" />
