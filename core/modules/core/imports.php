@@ -41,12 +41,12 @@ if (!function_exists("_") || \nmvc\core\config\TRANSLATION_ENABLED) {
 
 
 if (!function_exists("__") || \nmvc\core\config\TRANSLATION_ENABLED) {
-/**
- * Alias for gettext.
- */
-function __() {
-    return call_user_func_array('gettext', func_get_args());
-}
+    /**
+     * Alias for gettext.
+     */
+    function __() {
+        return call_user_func_array('gettext', func_get_args());
+    }
 }
 
 if (!function_exists("gettext") || \nmvc\core\config\TRANSLATION_ENABLED) {
