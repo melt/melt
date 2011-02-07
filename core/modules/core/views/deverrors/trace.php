@@ -26,8 +26,11 @@
     <script type="text/javascript">
         function autoload_toggle(visible) {
             var elements = document.getElementsByClassName("autoload_call");
-            for (var i in elements)
+            for (var i in elements) {
+                if (!elements[i].style)
+                    continue;
                 elements[i].style.display = visible? "block": "none";
+            }
         }
     </script>
 </head>
