@@ -21,7 +21,7 @@ class CountryType extends \nmvc\AppType {
         $selected = ' selected="selected"';
         foreach ($countries_list as $country_id => $country) {
             $s = ($value == $country_id)? $selected: null;
-            $country_name = \scape($country[2]);
+            $country_name = escape($country[2]);
             $html .= "<option$s value=\"$country_id\">$country_name</option>";
         }
         $html .= "</select>";
