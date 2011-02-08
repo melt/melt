@@ -10,8 +10,8 @@ class SelectModelType extends PointerType {
      * which filters possible options. */
     public $options = null;
 
-    public function __construct($column_name, $target_model, $disconnect_reaction = "SET NULL", $label_column = null) {
-        parent::__construct($column_name, $target_model, $disconnect_reaction);
+    public function __construct($target_model, $disconnect_reaction = "SET NULL", $label_column = null) {
+        parent::__construct($target_model, $disconnect_reaction);
     }
 
     protected function getOptions() {

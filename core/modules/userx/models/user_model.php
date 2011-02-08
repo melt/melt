@@ -13,7 +13,7 @@ abstract class UserModel_app_overrideable extends \nmvc\AppModel implements \nmv
     public $user_remember_key_expires = 'core\TimestampType';
     public $disabled = 'core\YesNoType';
 
-    public $remember_login = array(VOLATILE_FIELD, 'core\BooleanType');
+    public $remember_login = array(VOLATILE, 'core\BooleanType');
 
     protected function initialize() {
         parent::initialize();

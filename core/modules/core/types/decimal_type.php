@@ -10,8 +10,8 @@ class DecimalType extends \nmvc\AppType {
     public $scale = 10;
     protected $value = "0";
 
-    public function __construct($column_name, $precision = 20, $scale = 10) {
-        parent::__construct($column_name);
+    public function __construct($precision = 20, $scale = 10) {
+        parent::__construct();
         $this->precision = \intval($precision);
         $this->scale = \intval($scale);
         if ($this->precision < 0)

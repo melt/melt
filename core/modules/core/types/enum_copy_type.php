@@ -7,8 +7,8 @@ class EnumCopyType extends \nmvc\core\TextType {
     private $label_column;
     private $target_model;
 
-    public function __construct($column_name, $target_model, $label_column = null, $varchar_size = 128) {
-        parent::__construct($column_name, $varchar_size);
+    public function __construct($target_model, $label_column = null, $varchar_size = 128) {
+        parent::__construct($varchar_size);
         $target_model = 'nmvc\\' . $target_model;
         if (!class_exists($target_model) || !is_subclass_of($target_model, 'nmvc\Model'))
             trigger_error("Attempted to declare a pointer pointing to a non existing model '$target_model'.");

@@ -3,8 +3,8 @@
 class BinaryType extends \nmvc\AppType {
     private $varbinary_size = null;
 
-    public function __construct($column_name, $varbinary_size = null) {
-        parent::__construct($column_name);
+    public function __construct($varbinary_size = null) {
+        parent::__construct();
         if ($varbinary_size !== null && (!is_integer($varbinary_size) || $varbinary_size < 0 || $varbinary_size > 65535))
             trigger_error("varbinary_size must be a number between 0 and 65535.", \E_USER_ERROR);
         $this->varbinary_size = $varbinary_size;

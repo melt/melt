@@ -11,8 +11,8 @@ class RecaptchaType extends \nmvc\AppType {
     const RECAPTCHA_API_SECURE_SERVER = "https://www.google.com/recaptcha/api";
     const RECAPTCHA_VERIFY_SERVER = "http://www.google.com/recaptcha/api/verify";
 
-    public function __construct($column_name) {
-        parent::__construct($column_name);
+    public function __construct() {
+        parent::__construct();
         $this->value = false;
     }
     public function get() {

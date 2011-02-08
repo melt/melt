@@ -3,13 +3,55 @@
 /** A type defines what a model column stores, and how. */
 abstract class Type {
     /** @var string The key of this type instance. */
-    protected $key = null;
+    private $key = null;
+    /** @var Model The parent of this type instance. */
+    private $parent = null;
+    /** @var The type of storage used for the field data.
+     * One of: NON_INDEXED, VOLATILE, INDEXED, INDEXED_UNIQUE. */
+    private $storage_type = null;
+    /** @var boolean True if the type has been prepared. */
+    private $prepared = false;
+    
+    /**
+     * Prepares this type.*
+     */
+    public function prepare($key = null, Model $parent = null, $storage_type = null) {
+        if ($this->prepared)
+            \trigger_error("Prepare can only be called one after instance initialization.", \E_USER_ERROR);
+        if ($key !== null)
+            $this->key = $key;
+        if ($parent !== null)
+            $this->parent = $parent;
+        if ($storage_type !== null)
+            $this->storage_type = $storage_type;
+        $this->prepared = true;
+    }
+
+    public function __construct() {}
+
+    public function __clone() {
+        $this->prepared = false;
+    }
+
+    public final function __get($name) {
+        return $this->$name;
+    }
+
+    public final function __set($name, $value) {
+        switch ($name) {
+        case "key":
+        case "parent":
+        case "storage_type":
+        case "prepared":
+            \trigger_error("Trying to write read-only property '$name'.", \E_USER_ERROR);
+            break;
+        default:
+            $this->$name = $value;
+        }
+    }
+    
     /** @var mixed The value of this type instance. */
     protected $value = null;
-    /** @var Model The parent of this type instance. */
-    public $parent = null;
-    /** @var boolean True if field is volatile. */
-    public $is_volatile = false;
     /** @var mixed The original value that was set from SQL. */
     protected $original_value = null;
 
@@ -65,13 +107,6 @@ abstract class Type {
      */
     public function takes($value) {
         return true;
-    }
-
-    /**
-     * Constructs this typed field with this column name.
-     */
-    public function __construct($column_name) {
-        $this->key = $column_name;
     }
 
     /**

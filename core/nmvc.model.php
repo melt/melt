@@ -46,7 +46,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * requests so their changes cannot be saved, nor can they
      * be linked/unlinked. */
     private $_is_volatile = false;
-
+    
     const TRANSITION_STABLE = 0;
     const TRANSITION_BLOCKING = 3;
     const TRANSITION_STORING = 2;
@@ -150,7 +150,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         if (isset($parsed_model_cache[$model_name]))
             return $parsed_model_cache[$model_name];
         $parsed_col_array = array();
-        $vars = get_class_vars($model_name);
+        $vars = \get_class_vars($model_name);
         foreach ($vars as $column_name => $column_args) {
             // Ignore non column members.
             if ($column_name[0] == '_')
@@ -160,17 +160,22 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 continue;
             $column_construct_args = array();
             $column_attributes = array();
-            $is_volatile = false;
+            $storage_type = null;
             if (!is_array($column_args)) {
                 $type_class_name = $column_args;
             } else {
                 // Read the first value, which should be it's type class.
                 reset($column_args);
                 $type_class_name = current($column_args);
-                if ($type_class_name == VOLATILE_FIELD) {
+                switch ($type_class_name) {
+                case VOLATILE:
+                case INDEXED:
+                case NON_INDEXED:
+                case INDEXED_UNIQUE:
+                    $storage_type = $type_class_name;
                     unset($column_args[key($column_args)]);
                     $type_class_name = current($column_args);
-                    $is_volatile = true;
+                    break;
                 }
                 if (!is_string($type_class_name))
                     \trigger_error("Invalid type: '$model_name.\$$column_name' does not specify a type class.", \E_USER_ERROR);
@@ -194,22 +199,22 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 \trigger_error("Invalid model column: $model_name.\$$column_name. The field ends with '_id' which is a reserved suffix for pointer type fields.", \E_USER_ERROR);
             else if (!$ends_with_id && $is_pointer_type)
                 \trigger_error("Invalid model column: $model_name.\$$column_name. Pointer type fields must end with '_id'.", \E_USER_ERROR);
+            // Set default storage type if not set.
+            if ($storage_type === null)
+                $storage_type = $is_pointer_type? INDEXED: NON_INDEXED;
             // Reflect the type constructor.
             $type_reflector = new \ReflectionClass($type_class_name);
-            // The first argument is always the Type name.
-            array_unshift($column_construct_args, $column_name);
             // Check if correct number of args where passed to constructor.
             $constr_reflector = new \ReflectionMethod($type_class_name, "__construct");
-            $tot_args = count($column_construct_args);
+            $tot_args = \count($column_construct_args);
             $max_args = $constr_reflector->getNumberOfParameters();
             $min_args = $constr_reflector->getNumberOfRequiredParameters();
             if ($tot_args < $min_args || $tot_args > $max_args) {
-                $tot_args--; $max_args--; $min_args--;
                 \trigger_error("Invalid model column: $model_name.\$$column_name - You supplied $tot_args arguments and the constructor of '$type_class_name' takes $min_args to $max_args arguments!", \E_USER_ERROR);
             }
-            // Call the constructor.
+            // Call the constructor and prepare arguments.
             $type_handler = $type_reflector->newInstanceArgs($column_construct_args);
-            $type_handler->is_volatile = $is_volatile;
+            $type_handler->prepare($column_name, null, $storage_type);
             foreach ($column_attributes as $key => $attribute)
                 $type_handler->$key = $attribute;
             // Cache this untouched type instance and clone it to other new instances.
@@ -284,7 +289,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
             unset($this->$column_name);
             // Cloning parsed type instance and link myself.
             $type_instance = clone $type_instance;
-            $type_instance->parent = $this;
+            $type_instance->prepare(null, $this, null);
         }
         // Enter default values.
         if (!self::$_skip_initialize)
@@ -490,7 +495,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         // Clone and relink all type handlers.
         foreach ($this->_cols as $column_name => &$type_instance) {
             $type_instance = clone $type_instance;
-            $type_instance->parent = $this;
+            $type_instance->prepare(null, $this, null);
         }
     }
 
@@ -538,15 +543,10 @@ abstract class Model implements \IteratorAggregate, \Countable {
         if (isset($columns_name_cache[$include_volatile][$name]))
             return $columns_name_cache[$include_volatile][$name];
         $columns = array();
-        foreach (get_class_vars($name) as $colname => $default) {
-            if ($default === null || $colname[0] == '_')
+        foreach (static::getParsedColumnArray() as $name => $column) {
+            if (!$include_volatile && $column->storage_type === VOLATILE)
                 continue;
-            if (!$include_volatile && is_array($default)) {
-                reset($default);
-                if (current($default) == VOLATILE_FIELD)
-                    continue;
-            }
-            $columns[$colname] = $colname;
+            $columns[$name] = $name;
         }
         $columns_name_cache[$include_volatile][$name] = $columns;
         return $columns;
@@ -780,7 +780,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         foreach (static::getParsedColumnArray() as $col_name => $column) {
             if (!($column instanceof core\PointerType))
                 continue;
-            if ($column->is_volatile)
+            if ($column->storage_type === VOLATILE)
                 continue;
             if (!$as_id_fields)
                 $col_name = substr($col_name, 0, -3);
@@ -818,7 +818,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
             $key_list = $key_list_cache[$table_name];
         $value_list = array();
         foreach ($this->getColumns() as $colname => $column) {
-            if ($column->is_volatile)
+            if ($column->storage_type === VOLATILE)
                 continue;
             $column->prepareSQLValue();
             $value = $column->getSQLValue();
@@ -843,7 +843,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         foreach ($this->getColumns() as $colname => $column) {
             if (!$column->hasChanged())
                 continue;
-            if ($column->is_volatile)
+            if ($column->storage_type === VOLATILE)
                 continue;
             $column->prepareSQLValue();
             $value = $column->getSQLValue();
@@ -1054,7 +1054,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $instance->_id = $id;
         $value = reset($data_row);
         foreach ($instance->getColumns() as $column) {
-            if ($column->is_volatile)
+            if ($column->storage_type === VOLATILE)
                 continue;
             $column->setSQLValue($value);
             $column->setSyncPoint();

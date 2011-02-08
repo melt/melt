@@ -7,8 +7,8 @@
 class DateType extends \nmvc\AppType {
     private $varchar_size = null;
 
-    public function __construct($column_name) {
-        parent::__construct($column_name);
+    public function __construct() {
+        parent::__construct();
         $this->value = null;
     }
 

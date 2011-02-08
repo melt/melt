@@ -268,24 +268,6 @@ function sql_column_need_update($specified, $current) {
     }
 }
 
-/**
-* Syncronizes a table in the database with
-* the generic table model used by nanoMVC.
-* @paam string $table_name The raw table name, the identifier without prefixing.
-* @param $parsed_col_array array Parsed column array of model.
-*/
-function sync_table_layout_with_model($table_name, array $parsed_col_array) {
-    // Make an array where [name] => sql_type
-    $columns = array();
-    // Check names and fetches types.
-    foreach ($parsed_col_array as $name => $column) {
-        if ($column->is_volatile)
-            continue;
-        verify_keyword($name);
-        $columns[\strtolower($name)] = $column->getSQLType();
-    }
-    sync_table_layout_with_columns($table_name, $columns);
-}
 
 /** Returns all tables in the database. */
 function get_all_tables() {
@@ -301,20 +283,29 @@ function get_all_tables() {
 }
 
 /**
- * Syncronizes a table in the database with the given column structure.
- * @param string $table_name The literal name of the table in the database.
- * @param $columns array Array of columns mapped to their SQL types, eg "total => int(11), ...".
- * @return void
- */
-function sync_table_layout_with_columns($table_name, array $columns) {
+* Syncronizes a table in the database with
+* the generic table model used by nanoMVC.
+* @paam string $table_name The raw table name, the identifier without prefixing.
+* @param $parsed_col_array array Parsed column array of model.
+*/
+function sync_table_layout_with_model($table_name, array $parsed_col_array) {
+    // Make an array where [name] => sql_type
+    $column_types = array();
+    // Check names and fetches types.
+    foreach ($parsed_col_array as $name => $column) {
+        if ($column->storage_type == VOLATILE)
+            continue;
+        verify_keyword($name);
+        $column_types[\strtolower($name)] = $column->getSQLType();
+    }
     $all_tables = get_all_tables();
     if (\in_array(\substr(table($table_name), 1, -1), $all_tables)) {
         // Altering existing table.
         $current_columns = query("DESCRIBE " . table($table_name));
-        while (false !== ($column = next_array($current_columns))) {
-            $current_name = \strtolower($column[0]);
-            $current_type = \strtolower($column[1]);
-            $supports_null = \strcasecmp($column[2], "no") != 0;
+        while (false !== ($index = next_array($current_columns))) {
+            $current_name = \strtolower($index[0]);
+            $current_type = \strtolower($index[1]);
+            $supports_null = \strcasecmp($index[2], "no") != 0;
             // ID column is special case.
             if ($current_name == 'id') {
                 if (!\nmvc\string\starts_with($current_type, "bigint"))
@@ -322,19 +313,19 @@ function sync_table_layout_with_columns($table_name, array $columns) {
                 continue;
             }
             // Skip unknown columns.
-            if (!isset($columns[$current_name]))
+            if (!isset($column_types[$current_name]))
                 continue;
-            $expected_type = $columns[$current_name];
-            if ($supports_null || isset($columns[$current_name]) && sql_column_need_update($expected_type, $current_type)) {
+            $expected_type = $column_types[$current_name];
+            if ($supports_null || isset($column_types[$current_name]) && sql_column_need_update($expected_type, $current_type)) {
                 // Invalid datatype, alter it.
                 query("ALTER TABLE " . table($table_name) . " MODIFY COLUMN $current_name $expected_type NOT NULL");
             }
             // This column was confirmed.
-            unset($columns[$current_name]);
+            unset($column_types[$current_name]);
         }
         // Insert the rest of the columns.
         $adds = array();
-        foreach ($columns as $name => $type)
+        foreach ($column_types as $name => $type)
             $adds[] = "$name $type NOT NULL";
         $adds = implode(", ", $adds);
         if (strlen($adds) > 0)
@@ -342,9 +333,42 @@ function sync_table_layout_with_columns($table_name, array $columns) {
     } else {
         // Creating new table.
         $adds = 'id BIGINT UNSIGNED NOT NULL, PRIMARY KEY (id)';
-        foreach ($columns as $name => $type)
+        foreach ($column_types as $name => $type)
             $adds .= ", $name $type NOT NULL";
         query("CREATE TABLE " . table($table_name) . " ( $adds )");
+    }
+    // Scan and update indexes.
+    $expected_indexes = array();
+    foreach ($parsed_col_array as $name => $type) {
+        if ($type->storage_type === INDEXED)
+            $expected_indexes["_nmvc_" . $name] = array("unique" => false, "column_name" => $name);
+        else if ($type->storage_type === INDEXED_UNIQUE)
+            $expected_indexes["_nmvc_" . $name] = array("unique" => true, "column_name" => $name);
+    }
+    $current_columns = query("SHOW INDEXES IN " . table($table_name));
+    while (false !== ($index = next_assoc($current_columns))) {
+        $key_name = $index["Key_name"];
+        if ($key_name === "PRIMARY")
+            continue;
+        $user_index = !\nmvc\string\starts_with($key_name, '_nmvc_');
+        if ($user_index)
+            continue;
+        $unique = $index["Non_unique"] == 0;
+        $column_name = $index["Column_name"];
+        if (!isset($expected_indexes[$key_name])
+        || $unique != $expected_indexes[$key_name]["unique"]
+        || $column_name != $expected_indexes[$key_name]["column_name"]) {
+            // Index found but incorrect.
+            query("DROP INDEX $key_name ON " . table($table_name));
+        } else {
+            // Index found and was correct.
+            unset($expected_indexes[$key_name]);
+        }
+    }
+    // Add all expected indexes that wasn't added.
+    foreach ($expected_indexes as $key_name => $index) {
+        $unique = $index["unique"]? " UNIQUE": "";
+        query("CREATE$unique INDEX $key_name ON " . table($table_name) . "(" . $index["column_name"] . ")");
     }
     // Finally reset the auto id trigger.
     $trigger = table("aid_trigger_" . $table_name);

@@ -6,8 +6,8 @@ class SelectType extends \nmvc\AppType {
     private $hash_to_key_map = array();
     private $key_to_hash_map = array();
 
-    public function __construct($column_name, $options = null) {
-        parent::__construct($column_name);
+    public function __construct($options = null) {
+        parent::__construct();
         $this->options = $options;
         if (!\is_string($options))
             $this->finalizeOptions();

@@ -1,8 +1,8 @@
 <?php namespace nmvc\core;
 
 class SerializedType extends \nmvc\AppType {
-    public function __construct($column_name) {
-        parent::__construct($column_name);
+    public function __construct() {
+        parent::__construct();
         $this->value = null;
     }
 

@@ -50,8 +50,7 @@ class PointerType extends \nmvc\AppType {
      * @param $disconnect_reaction Currently supported are 'SET NULL',
      * 'CASCADE' and 'CALLBACK'. See manual for more information.
      */
-    public function __construct($column_name, $target_model, $disconnect_reaction = "SET NULL") {
-        $this->key = $column_name;
+    public function __construct($target_model, $disconnect_reaction = "SET NULL") {
         $target_model = 'nmvc\\' . $target_model;
         if (!class_exists($target_model) || !is_subclass_of($target_model, 'nmvc\Model'))
             trigger_error("Attempted to declare a pointer pointing to a non existing model '$target_model'.");
@@ -128,6 +127,7 @@ class PointerType extends \nmvc\AppType {
      * memory object pointer backlink structure intact.
      */
     public function __clone() {
+        parent::__clone();
         $value = $this->value;
         if (!is_object($value))
             return;
