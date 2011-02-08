@@ -532,3 +532,40 @@ function array_insert(array $array, $before_key, array $array2) {
     }
     return $new_array;
 }
+
+/**
+ * Translates string.
+ * @param string $msgid Must be string litteral expression. Function call is
+ * parsed by localization engine.
+ * @return string Locale translated string.
+ */
+function gettext($msgid) {
+    $sprintf_args = array_slice(func_get_args(), 1);
+    return LocalizationEngine::translate($msgid, "", "", 1, $sprintf_args);
+}
+
+
+/**
+ * Translates by plural form.
+ * @param string $msgid Must be string litteral expression. Function call is
+ * parsed by localization engine.
+ * @param string $msgid_plural
+ * @param integer $n
+ * @return string Locale translated string.
+ */
+function ngettext($msgid, $msgid_plural, $n) {
+    $sprintf_args = array_slice(func_get_args(), 2);
+    return LocalizationEngine::translate($msgid, $msgid_plural, "", $n, $sprintf_args);
+}
+
+/**
+ * Translates by context.
+ * @param string $context Context of string.
+ * @param string $msgid Must be string litteral expression. Function call is
+ * parsed by localization engine.
+ * @return string Locale translated string.
+ */
+function pgettext($context, $msgid) {
+    $sprintf_args = array_slice(func_get_args(), 2);
+    return LocalizationEngine::translate($msgid, "", $context, 1, $sprintf_args);
+}

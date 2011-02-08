@@ -211,13 +211,13 @@ function crash($message, $file, $line, $trace) {
         switch (get_call_file_domain($call["file"])) {
         case "php":
         case "core":
-            $html_errtrace .= escape($trace_line) . "\n";
+            $html_errtrace .= \nmvc\html\escape($trace_line) . "\n";
             break;
         case "module":
-            $html_errtrace .= "<span style=\"color: green;\">" . escape($trace_line) . "</span>\n";
+            $html_errtrace .= "<span style=\"color: green;\">" . \nmvc\html\escape($trace_line) . "</span>\n";
             break;
         default:
-            $html_errtrace .= "<span style=\"color: blue;\">" . escape($trace_line) . "</span>\n";
+            $html_errtrace .= "<span style=\"color: blue;\">" . \nmvc\html\escape($trace_line) . "</span>\n";
             break;
         }
     }
@@ -275,7 +275,7 @@ function crash($message, $file, $line, $trace) {
         }
         if (!$use_texterror) {
             $errtrace = $html_errtrace;
-            $errmessage = escape($errmessage);
+            $errmessage = \nmvc\html\escape($errmessage);
         }
         $msg = "$errlocation\n$errraised\n$errmessage\n$errsample$errtrace\nError tag: #$errcode";
         if ($use_texterror)

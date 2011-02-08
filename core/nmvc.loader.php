@@ -233,10 +233,6 @@ function pear_autoload($name) {
                 check_require_prefix($path, $module_name);
             require $path;
         }
-        // Include module imports.
-        $path = "$module_path/imports.php";
-        if (\is_file($path))
-            require $path;
         // Configure module.
         $mod_cfg_path = $module_path . "/config.php";
         if (is_file($mod_cfg_path)) {
@@ -244,11 +240,44 @@ function pear_autoload($name) {
             if (!is_array($config_directives))
                 trigger_error("The file '$mod_cfg_path' did not return an array as expected!");
             foreach ($config_directives as $config_var_name => $default_value) {
-                $config_var_fqn = "nmvc\\$module_name\\config\\$config_var_name";
+                $config_var_fqn = "nmvc\\module_name\\config\\$config_var_name";
                 put_configuration_directive($config_var_fqn, $default_value);
             }
         }
     }
+    // Run imports for all modules.
+    $import_code = array("" => "namespace nmvc;");
+    foreach (get_all_modules() as $target_module_name => $target_module_parameters) {
+        // Import functions from module to other namespaces.
+        $module_path = $target_module_parameters[1];
+        $path = "$module_path/imports.php";
+        if (!\is_file($path))
+            continue;
+        $imports = require($path);
+        if (!\is_array($imports))
+            \trigger_error("Import file at $path did not return an import declaration array as expected!", \E_USER_ERROR);
+        foreach ($imports as $alias => $function) {
+            $target_function_name = "nmvc\\$target_module_name\\$function";
+            if (!\function_exists($target_function_name))
+                \trigger_error("Function $target_function_name referenced by $target_module_name module imports is not declared!", \E_USER_ERROR);
+            // Plain import or alias?
+            $function_alias = \is_integer($alias)? $function: $alias;
+            // Import to all modules with this function alias undeclared.
+            $forward = "function $function_alias(){return \\call_user_func_array('$target_function_name',\\func_get_args());}";
+            $import_code[""] .= $forward;
+            foreach (get_all_modules() as $source_module_name => $source_module_parameters) {
+                $source_function_name = "nmvc\\$source_module_name\\$function_alias";
+                if (\function_exists($source_function_name))
+                    continue;
+                if (!isset($import_code[$source_module_name]))
+                    $import_code[$source_module_name] = "namespace nmvc\\$source_module_name;";
+                $import_code[$source_module_name] .= $forward;
+            }
+        }
+    }
+    // Evaluate import statements to populate symbol table.
+    foreach ($import_code as $code)
+        eval($code);
     // Include application specifyers.
     foreach(array(
     array('\nmvc\AppController', '\nmvc\Controller', 'app_controller.php'),
