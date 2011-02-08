@@ -133,7 +133,7 @@
             $clear_arg[] = $url_token;
         if (\count($url_tokens) != \count($clear_arg)) {
             $clear_arg = \count($clear_arg) > 0? "/" . \implode("/", $clear_arg): "";
-            \nmvc\request\redirect(url($clear_arg));
+            \nmvc\request\redirect(\nmvc\request\url($clear_arg));
             exit;
         }
     }
