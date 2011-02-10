@@ -240,7 +240,7 @@ function pear_autoload($name) {
             if (!is_array($config_directives))
                 trigger_error("The file '$mod_cfg_path' did not return an array as expected!");
             foreach ($config_directives as $config_var_name => $default_value) {
-                $config_var_fqn = "nmvc\\module_name\\config\\$config_var_name";
+                $config_var_fqn = "nmvc\\$module_name\\config\\$config_var_name";
                 put_configuration_directive($config_var_fqn, $default_value);
             }
         }
