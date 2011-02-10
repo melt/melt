@@ -157,6 +157,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
      * @param string $field
      * @param string $order ASC or DESC.
      * @see SQL GROUP BY
+     * @return SelectQuery
      */
     public function groupBy($field, $order = "ASC") {
         $this->setOrderedField("GROUP BY", $this->group_by_tokens, new ModelField($field), $field, $order);
@@ -170,6 +171,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
      * @param string $field
      * @param string $order ASC or DESC.
      * @see SQL ORDER BY
+     * @return SelectQuery
      */
     public function orderBy($field, $order = "ASC") {
         $this->setOrderedField("ORDER BY", $this->order_tokens, new ModelField($field), $field, $order);
@@ -177,8 +179,85 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
     }
 
     /**
+     * Quick key lookup. This function supports limited subset of possible
+     * queries (including constant field condition, order by and group by)
+     * since it attempts to match a declared index with your selection.
+     * An index must exists which matches the constant conditions from
+     * the leftmost side and from that, keeps matching the order fields.
+     * This ensures that the selection you make is optimized to take
+     * constant time in respect to the table size and where the number of
+     * matched rows is part of the constant.
+     * Note that this function can reject combinations that would be
+     * partially or even fully optimized. Customized selections can be
+     * fast as well but no guarantees are made about that by this function.
+     * For more information, read about MySQL index optimization and B-Trees.
+     * @see http://dev.mysql.com/doc/refman/5.5/en/mysql-indexes.html
+     * @param array $constants Array of fields mapped to constants.
+     * Only instances which match the constants will be selected.
+     * @param array $order_fields Array of fields to order
+     * and possibly also group.
+     * @param string $direction ASC or DESC.
+     * @param boolean $group Set to true to also group by order_fields.
+     * @return SelectQuery
+     */
+    public function byKey(array $constants = array(), array $order_fields = array(), $direction = "ASC", $group = false) {
+        /*
+        $from_model = $this->from_model;
+        if (\count($arguments) < 2)
+            \trigger_error("key() expects at least two arguments.", \E_USER_ERROR);
+        else if ((\count($arguments) % 2) != 0)
+            \trigger_error("key() expects a even number of arguments.", \E_USER_ERROR);
+        \reset($arguments);*/
+        $keys = array();
+        $note_key_fn = function($key) use (&$keys) {
+            $key = trim_id($key);
+            if (\array_key_exists($key, $keys))
+                \trigger_error("Cannot use key more than once!", \E_USER_ERROR);
+            $keys[$key] = 1;
+            return $key;
+        };
+        $subresolve = false;
+        $constant_keys = array();
+        if (\count($constants) > 0) {
+            $where_constant = new WhereCondition();
+            foreach ($constants as $key => $constant) {
+                $key = $note_key_fn($key);
+                $constant_keys[] = $key;
+                $pos = \strrpos($key, "->");
+                if ($pos !== false) {
+                    $this_subresolve = \substr($key, 0, $pos);
+                    if ($subresolve === false) {
+                        $subresolve = $this_subresolve;
+                    } else if ($this_subresolve !== $subresolve) {
+                        \trigger_error("Using different arrow fields for constant constraints!"
+                        . " All constant constraints must be resolved the same way.", \E_USER_ERROR);
+                    }
+                } else if ($subresolve === false)
+                    $subresolve === null;
+                $where_constant->and($key)->is($constant);
+            }
+            $this->and($where_constant);
+        }
+        if ($subresolve === false)
+            $subresolve = null;
+        if (\count($order_fields) > 0 && $subresolve !== null)
+            \trigger_error("Using arrow fields for constant constraints is not compatible with also supplying order/group fields.", \E_USER_ERROR);
+        $order_keys = array();
+        foreach ($order_fields as $field) {
+            $field = $note_key_fn($field);
+            $order_keys[] = $field;
+            $this->orderBy($field, $direction);
+            if ($group)
+                $this->groupBy($field, $direction);
+        }
+        $this->where_tokens[] = new IndexRequirement($constant_keys, $order_keys, $subresolve);
+        return $this;
+    }
+
+    /**
      * Orders the result randomly.
      * @see orderBy
+     * @return SelectQuery
      */
     public function orderRandomly() {
         $this->setOrderedField("ORDER BY", $this->order_tokens, "RAND()", "__rand", "ASC");
@@ -193,6 +272,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
      * selection, so it should only be used for selections of instances that
      * will later be stored/unlinked.
      * @see http://dev.mysql.com/doc/refman/5.1/en/innodb-locking-reads.html
+     * @return SelectQuery
      */
     public function forUpdate() {
         if ($this->is_for_update)
@@ -201,11 +281,22 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
         $this->is_for_update = true;
         return $this;
     }
+    
+    /**
+     * Negates the effects of ->forUpdate() but only if the actual data has
+     * not been selected from the database yet.
+     * @return SelectQuery
+     */
+    public function forRead() {
+        $this->is_for_update = false;
+        return $this;
+    }
 
     /**
      * Limits result by the specified number.
      * @param integer $limit
      * @see SQL LIMIT
+     * @return SelectQuery
      */
     public function limit($limit) {
         $limit = intval($limit);
@@ -224,6 +315,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
      * Offsets result by the specified number.
      * @param integer $offset
      * @see SQL OFFSET
+     * @return SelectQuery
      */
     public function offset($offset) {
         $offset = intval($offset);
@@ -241,6 +333,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
     /**
      * Tells the database to calculate how many rows there would be in the
      * result set, disregarding any LIMIT clause.
+     * @return integer
      */
     public function countFoundRows() {
         if ($this->internal_found_rows_count_cache === null) {

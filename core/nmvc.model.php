@@ -55,6 +55,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
     /** @var integer Current transition state of this model instance. */
     private $_transition = self::TRANSITION_STABLE;
 
+    /** @var array Array of index groups for this model. */
+    protected $index_groups = array();
     
     /**
      * Returns the ID of this model instance or NULL if unlinked.
@@ -153,7 +155,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $vars = \get_class_vars($model_name);
         foreach ($vars as $column_name => $column_args) {
             // Ignore non column members.
-            if ($column_name[0] == '_')
+            if ($column_name[0] == '_' || $column_name == "index_groups")
                 continue;
             // Ignore reset columns
             if (is_null($column_args))
@@ -222,6 +224,62 @@ abstract class Model implements \IteratorAggregate, \Countable {
         }
         $parsed_model_cache[$model_name] = $parsed_col_array;
         return $parsed_col_array;
+    }
+
+    /**
+     * Returns all indexes declared by this model with their respective
+     * generated key mapped to their index data.
+     * @return array(key1 => array(array(column_name1, ...), is_unique), ... )
+     */
+    public static function getIndexes() {
+        $model_name = get_called_class();
+        static $index_cache = array();
+        if (isset($index_cache[$model_name]))
+            return $index_cache[$model_name];
+        // Define the constant PRIMARY index.
+        $indexes = array("PRIMARY" => array("columns" => array("id"), "is_unique" => true));
+        // Get all single column indexes.
+        $parsed_columns = static::getParsedColumnArray();
+        foreach ($parsed_columns as $column_name => $column) {
+            $storage_type = $column->storage_type;
+            $key_set = array($column_name);
+            if ($storage_type == INDEXED
+            || $storage_type == INDEXED_UNIQUE) {
+                $indexes[db\key_set_to_index_id($key_set)]
+                = array("columns" => $key_set, "is_unique" => ($storage_type == INDEXED_UNIQUE));
+            }
+        }
+        // Read all multi column indexes.
+        $class_vars = \get_class_vars($model_name);
+        $index_groups = $class_vars["index_groups"];
+        if (!\is_array($index_groups))
+            \trigger_error("Error in $model_name declaration index_groups declaration! \$index_groups must be array!", \E_USER_ERROR);
+        $current_columns = array();
+        $scan_index_group_fn = function($index_groups) use (&$current_columns, &$indexes, &$scan_index_group_fn, $parsed_columns, $model_name) {
+            foreach ($index_groups as $column => $value) {
+                if (!\array_key_exists($column, $parsed_columns))
+                    \trigger_error("Error in $model_name index_groups declaration! Column sets contains unknown column '$column'.", \E_USER_ERROR);
+                if (\array_key_exists($column, $current_columns))
+                    \trigger_error("Error in $model_name index_groups declaration! Column declared twice in group.", \E_USER_ERROR);
+                $current_columns[$column] = 1;
+                if (\is_array($value)) {
+                    $scan_index_group_fn($value);
+                } else {
+                    $storage_type = $value;
+                    if (\count($current_columns) < 2)
+                        \trigger_error("Error in $model_name index_groups declaration! Column sets must contain two or more columns.", \E_USER_ERROR);
+                    if ($storage_type !== INDEXED && $storage_type !== INDEXED_UNIQUE)
+                        \trigger_error("Error in $model_name index_groups declaration! One or more storage types are unknown.", \E_USER_ERROR);
+                    $columns = \array_keys($current_columns);
+                    $index_id = db\key_set_to_index_id($columns);
+                    $indexes[$index_id] = array("columns" => $columns, "is_unique" => ($storage_type == INDEXED_UNIQUE));
+                }
+                unset($current_columns[$column]);
+            }
+        };
+        $scan_index_group_fn($index_groups);
+        $index_cache[$model_name] = $indexes;
+        return $indexes;
     }
 
     /**
@@ -1176,15 +1234,25 @@ abstract class Model implements \IteratorAggregate, \Countable {
         // Process select tokens.
         $select_tokens = $select_query->getTokens($partition_condition);
         $sql_select_expr = "";
+        /*$nonindexed_notice_triggered = false;*/
         if (\count($select_tokens) > 0) {
+            $current_model = null;
             $current_field_prototype_type = null;
             foreach ($select_tokens as $token) {
                 if (\is_string($token)) {
                     $sql_select_expr .= " " . $token;
+                } else if ($token instanceof db\IndexRequirement) {
+                    $subresolve = $token->getSubresolve();
+                    // No subresolve -> index model can only be selection from model
+                    // Subresolve -> index model must be $current_model since
+                    // at least one constant constraint has been used.
+                    $index_model = $subresolve === null? $from_model: $current_model;
+                    $token->verify($index_model);
                 } else if ($token instanceof db\ModelField) {
                     $column_data = $from_model::registerSemanticColumn($token->getName(), $columns_data, $alias_offset, $base_model_alias, $query_stack);
                     $sql_select_expr .= " " . $column_data[0];
                     $current_field_prototype_type = $column_data[4];
+                    $current_model = $column_data[1] !== null? $column_data[1]: $from_model;
                 } else if ($token instanceof db\ModelFieldValue) {
                     $sqlize_value_fn = function($value) use ($current_field_prototype_type) {
                         if ($current_field_prototype_type !== null && !($current_field_prototype_type instanceof core\PointerType)) {
@@ -1532,6 +1600,56 @@ abstract class Model implements \IteratorAggregate, \Countable {
             $callback[0]->disconnectCallback($callback[1]);
     }
 
+    /**
+     * Go trough all unique indexes, select duplicates and delete them.
+     */
+    public static function cullAllModels() {
+        // This maintenance script can run forever.
+        ignore_user_abort(true);
+        set_time_limit(0);
+        $cascade_callbacks = array();
+        $disconnect_callbacks = array();
+        $model_classes = self::findAllModels();
+        $family_tree = self::getMetaData("family_tree");
+        // Find intersecting ID's.
+        echo "\nCulling all duplicates that prevents unique indexes from being added...\n\n";
+        $found = false;
+        foreach ($model_classes as $table_name => $model_class) {
+            foreach ($model_class::getIndexes() as $index) {
+                if (!$index["is_unique"])
+                    continue;
+                $columns = \implode(",", $index["columns"]);
+                $table = db\table($table_name);
+                $duplicates = db\query("SELECT id FROM $table WHERE
+                ($columns) IN (
+                    SELECT $columns
+                    FROM $table
+                    GROUP BY $columns HAVING COUNT(*) > 1
+                ) AND id NOT IN (
+                    SELECT id
+                    FROM $table
+                    GROUP BY $columns HAVING COUNT(*) > 1
+                );");
+                $ids = array();
+                while (false !== ($row = db\next_array($duplicates)))
+                    $ids[] = \intval($row[0]);
+                if (\count($ids) == 0)
+                    continue;
+                // Unlink all duplicates.
+                $ids = \implode(",", $ids);
+                db\query("DELETE FROM $table WHERE id IN ($ids)");
+                $found = true;
+            }
+        }
+        if ($found) {
+            echo "\nOne or more duplicates was FORCEFULLY removed, you should "
+            . " now run a syncronization followed by a repair to repair any"
+            . " damage this could have caused...\n\n";
+        } else {
+            echo "\nNo duplicates for no indexes found.\n\n";
+        }
+    }
+
     private static function validateCoreSeq() {
         // Validate that seq has correct structure.
         $core_seq = db\query("DESCRIBE " . db\table('core__seq'));
@@ -1579,7 +1697,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         foreach ($model_classes as $table_name => $model_class) {
             // Syncronize this model.
             $parsed_col_array = $model_class::getParsedColumnArray();
-            db\sync_table_layout_with_model($table_name, $parsed_col_array);
+            db\sync_table_layout_with_model($table_name, $parsed_col_array, $model_class::getIndexes());
             // If creating sequence, record max.
             if ($creating_sequence) {
                 $max_result = db\next_array(db\query("SELECT MAX(id) FROM " . db\table($table_name)));

@@ -6,5 +6,5 @@
  */
 abstract class UserIdentityModel_app_overrideable extends \nmvc\AppModel {
     public $user_id = array('core\PointerType', 'userx\UserModel', 'CASCADE');
-    public $username = array('core\TextType', 128);
+    public $username = array(INDEXED_UNIQUE, 'core\TextType', 128);
 }

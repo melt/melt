@@ -11,14 +11,16 @@ call_user_func(function() {
             return \serialize(array());
         // Read snapshot.
         $session_data = \nmvc\Model::getDataForSelection(
-        \nmvc\core\SessionDataModel::select("session_data")
-        ->where("session_key")->is($id)->limit(1));
+            \nmvc\core\SessionDataModel::select("session_data")
+            ->byKey(array("session_key" => $id))
+        );
         return isset($session_data[0][0])? $session_data[0][0]: null;
     }, function($session_key, $binary_session_data) {
         if (REQ_IS_CORE_DEV_ACTION || defined("NMVC_REQUEST_COMPLETE"))
             return;
         // Write.
-        $session_data = \nmvc\core\SessionDataModel::select()->where("session_key")->is($session_key)->forUpdate()->first();
+        $session_data = \nmvc\core\SessionDataModel::select()
+        ->byKey(array("session_key" => $session_key))->forUpdate()->first();
         if ($session_data === null) {
             $session_data = new \nmvc\core\SessionDataModel();
             $session_data->session_key = $session_key;
@@ -29,14 +31,16 @@ call_user_func(function() {
         if (REQ_IS_CORE_DEV_ACTION || defined("NMVC_REQUEST_COMPLETE"))
             return;
         // Destroy.
-        \nmvc\core\SessionDataModel::select()->where("session_key")->is($id)->forUpdate()->unlink();
+        \nmvc\core\SessionDataModel::select()
+        ->byKey(array("session_key" => $id))->forUpdate()->unlink();
     }, function($maxlifetime) {
         if (REQ_IS_CORE_DEV_ACTION || defined("NMVC_REQUEST_COMPLETE"))
             return;
         // GC.
         $maxlifetime = intval($maxlifetime);
         $time = time();
-        \nmvc\core\SessionDataModel::select()->where("last_store_attempt")->isLessThan($time - $maxlifetime)->forUpdate()->unlink();
+        \nmvc\core\SessionDataModel::select()->where("last_store_attempt")
+        ->isLessThan($time - $maxlifetime)->forUpdate()->unlink();
     });
     // Set session ID by get parameter if set. This enables perserving
     // sessions when doing cross domain redirection.

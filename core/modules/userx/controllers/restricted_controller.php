@@ -7,7 +7,10 @@ abstract class RestrictedController extends \nmvc\AppController {
         if ($group !== null && $group->root)
             return true;
         // Get permission and evaluate it (and set to default if not specified).
-        $permission = GroupPermissionModel::select()->where("controller")->is($controller_class_name)->and("group_id")->is(isset($group)? $group->id: 0)->first();
+        $permission = GroupPermissionModel::select()->byKey(array(
+            "controller" => $controller_class_name,
+            "group_id" => isset($group)? $group->id: 0
+        ))->first();
         if ($permission === null)
             $permission = $controller_class_name::getDefaultPermission($group);
         else

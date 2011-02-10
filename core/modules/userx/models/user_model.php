@@ -4,12 +4,12 @@ abstract class UserModel_app_overrideable extends \nmvc\AppModel implements \nmv
     /* This field is only used when config\MULTIPLE_GROUPS == false */
     public $group_id = array('core\SelectModelType', 'userx\GroupModel');
     /* This field is only used when config\MULTIPLE_IDENTITIES == false */
-    public $username = array('core\TextType', 128);
+    public $username = array(INDEXED, 'core\TextType', 128);
 
     public $password = 'userx\PasswordType';
     public $last_login_time = 'core\TimestampType';
     public $last_login_ip = 'core\IpAddressType';
-    public $user_remember_key = 'core\PasswordType';
+    public $user_remember_key = array(INDEXED, 'core\PasswordType', 16);
     public $user_remember_key_expires = 'core\TimestampType';
     public $disabled = 'core\YesNoType';
 

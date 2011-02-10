@@ -12,19 +12,25 @@ class ActionController extends DeveloperController {
     }
 
     public function repair() {
-        // Display all SQL queries made during repair.
+        // Display all SQL queries made during action.
         \nmvc\db\enable_display();
         \nmvc\Model::repairAllModels();
         die("\n\n\n>>> Model repairation complete!\n\n");
     }
     
     public function purify() {
-        // Display all SQL queries made during repair.
+        // Display all SQL queries made during action.
         \nmvc\db\enable_display();
         \nmvc\Model::purifyAllModels();
         die("\n\n\n>>> Model purification complete!\n\n");
     }
 
+    public function cull() {
+        // Display all SQL queries made during action.
+        \nmvc\db\enable_display();
+        \nmvc\Model::cullAllModels();
+        die("\n\n\n>>> Model culling complete!\n\n");
+    }
 
     public function export() {
         \nmvc\translate\TranslateModule::export();

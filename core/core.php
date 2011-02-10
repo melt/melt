@@ -1,4 +1,4 @@
-<?php namespace nmvc\internal;
+<?php
 
 // Core design
 require "nmvc.controller.php";

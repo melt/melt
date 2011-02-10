@@ -288,7 +288,7 @@ function get_all_tables() {
 * @paam string $table_name The raw table name, the identifier without prefixing.
 * @param $parsed_col_array array Parsed column array of model.
 */
-function sync_table_layout_with_model($table_name, array $parsed_col_array) {
+function sync_table_layout_with_model($table_name, array $parsed_col_array, array $expected_indexes) {
     // Make an array where [name] => sql_type
     $column_types = array();
     // Check names and fetches types.
@@ -338,37 +338,46 @@ function sync_table_layout_with_model($table_name, array $parsed_col_array) {
         query("CREATE TABLE " . table($table_name) . " ( $adds )");
     }
     // Scan and update indexes.
-    $expected_indexes = array();
-    foreach ($parsed_col_array as $name => $type) {
-        if ($type->storage_type === INDEXED)
-            $expected_indexes["_nmvc_" . $name] = array("unique" => false, "column_name" => $name);
-        else if ($type->storage_type === INDEXED_UNIQUE)
-            $expected_indexes["_nmvc_" . $name] = array("unique" => true, "column_name" => $name);
-    }
-    $current_columns = query("SHOW INDEXES IN " . table($table_name));
-    while (false !== ($index = next_assoc($current_columns))) {
+    $show_indexes = query("SHOW INDEXES IN " . table($table_name));
+    $current_indexes = array();
+    while (false !== ($index = next_assoc($show_indexes))) {
         $key_name = $index["Key_name"];
-        if ($key_name === "PRIMARY")
-            continue;
-        $user_index = !\nmvc\string\starts_with($key_name, '_nmvc_');
-        if ($user_index)
+        if (!isset($current_indexes[$key_name])) {
+            $current_indexes[$key_name] = array(
+                "columns" => array($index["Column_name"]),
+                "is_unique" => $index["Non_unique"] == 0,
+            );
+        } else {
+            $current_indexes[$key_name]["columns"][] = $index["Column_name"];
+        }
+    }
+    foreach ($current_indexes as $key_name => $current_index) {
+        $nmvc_index = \nmvc\string\starts_with($key_name, '_nmvc_');
+        if (!$nmvc_index)
             continue;
         $unique = $index["Non_unique"] == 0;
-        $column_name = $index["Column_name"];
-        if (!isset($expected_indexes[$key_name])
-        || $unique != $expected_indexes[$key_name]["unique"]
-        || $column_name != $expected_indexes[$key_name]["column_name"]) {
-            // Index found but incorrect.
-            query("DROP INDEX $key_name ON " . table($table_name));
-        } else {
-            // Index found and was correct.
-            unset($expected_indexes[$key_name]);
+        // Compare index and see if it's still valid.
+        if (isset($expected_indexes[$key_name])
+        && $current_index["is_unique"] == $expected_indexes[$key_name]["is_unique"]) {
+            $expected_index =& $expected_indexes[$key_name];
+            \sort($expected_index["columns"]);
+            \sort($current_index["columns"]);
+            if ($expected_index["columns"] == $current_index["columns"]) {
+                // Index is correct.
+                unset($expected_indexes[$key_name]);
+                continue;
+            }
         }
+        // Index is wrong, drop it.
+        query("DROP INDEX $key_name ON " . table($table_name));
     }
     // Add all expected indexes that wasn't added.
     foreach ($expected_indexes as $key_name => $index) {
-        $unique = $index["unique"]? " UNIQUE": "";
-        query("CREATE$unique INDEX $key_name ON " . table($table_name) . "(" . $index["column_name"] . ")");
+        if ($key_name === "PRIMARY")
+            continue;
+        $unique = $index["is_unique"]? " UNIQUE": "";
+        $columns = \implode(",", $index["columns"]);
+        query("CREATE$unique INDEX $key_name ON " . table($table_name) . "(" . $columns . ")");
     }
     // Finally reset the auto id trigger.
     $trigger = table("aid_trigger_" . $table_name);
@@ -482,4 +491,31 @@ function expr($first_field = null) {
  */
 function field($field_name) {
     return new \nmvc\db\ModelField($field_name);
+}
+
+/**
+ * Trims away any _id from the end of a column name.
+ * @param string $column_name
+ * @return string
+ */
+function trim_id($column_name) {
+    return \nmvc\string\ends_with($column_name, "_id")? \substr($column_name, 0, -3): $column_name;
+}
+
+
+/**
+ * Converts an ordered key set (array of columns) to an index identifier.
+ * @param string $key_set
+ * @return \nmvc\db\FieldSet
+ */
+function key_set_to_index_id(array $key_set) {
+    $key_set_size = \count($key_set);
+    if ($key_set_size == 1) {
+        $key_set = trim_id(\reset($key_set));
+    } else {
+        foreach ($key_set as &$key)
+            $key = trim_id($key);
+        $key_set = \implode(",", $key_set);
+    }
+    return "_nmvc_" . \substr(\sha1($key_set), 1, 12);
 }

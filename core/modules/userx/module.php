@@ -8,7 +8,9 @@ class UserxModule extends \nmvc\CoreModule {
         // Check if the user has a remembered login key.
         if (get_user() === null && isset($_COOKIE['REMBR_USR_KEY'])) {
             $time = time();
-            $auth_user = UserModel::select()->where("user_remember_key")->is($_COOKIE['REMBR_USR_KEY'])->and("user_remember_key_expires")->isMoreThan($time)->first();
+            $auth_user = UserModel::select()
+            ->byKey(array("user_remember_key" => $_COOKIE['REMBR_USR_KEY']))
+            ->and("user_remember_key_expires")->isMoreThan($time)->first();
             if ($auth_user === null) {
                 unset_host_aware_cookie("REMBR_USR_KEY");
             } else {

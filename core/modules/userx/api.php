@@ -113,10 +113,10 @@ function unset_cookie($name) {
  */
 function login_challenge($username, $cleartext_password, $remember_session = false) {
     if (config\MULTIPLE_IDENTITIES) {
-        $user_identity = UserIdentityModel::select()->where("username")->is($username)->first();
+        $user_identity = UserIdentityModel::select()->byKey(array("username" => $username))->first();
         $user = ($user_identity !== null)? $user_identity->user: null;
     } else
-        $user = UserModel::select()->where("username")->is($username)->first();
+        $user = UserModel::select()->byKey(array("username" => $username))->first();
     if ($user !== null) {
         $hashed_password = $user->type("password")->getStoredHashedValue();
         if (validate_password($hashed_password, $cleartext_password)) {
@@ -153,7 +153,7 @@ function logout() {
         if (isset($_COOKIE["REMBR_USR_KEY"])) {
             // Unset this key, whomever it belongs too.
             if (strlen($_COOKIE["REMBR_USR_KEY"]) == 16) {
-                $user = UserModel::select()->where("user_remember_key")->is($_COOKIE['REMBR_USR_KEY'])->first();
+                $user = UserModel::select()->byKey(array("user_remember_key" => $_COOKIE['REMBR_USR_KEY']))->first();
                 if ($user !== null) {
                     $user->user_remember_key = "";
                     $user->store();
