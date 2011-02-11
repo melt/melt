@@ -44,7 +44,7 @@ function get_action_link($model = null, $action = "delete", $url = null, $argume
     }
     if ($url == null)
         $url = url(REQ_URL);
-    $uid = $secure? 0: id(\nmvc\userx\get_user());
+    $uid = $secure? id(\nmvc\userx\get_user()): 0;
     $qmi_data = \nmvc\string\simple_crypt(gzcompress(serialize(array($id, $model_name, $action, $url, array_values($arguments), $uid)), 9));
     return url("/qmi/actions/set/$qmi_data");
 }
