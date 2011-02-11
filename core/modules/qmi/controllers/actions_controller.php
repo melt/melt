@@ -10,7 +10,7 @@ class ActionsController extends \nmvc\AppController {
         if ($data === false)
             \nmvc\request\show_404();
         list($id, $model_name, $action, $url, $arguments, $uid) = unserialize(gzuncompress($data));
-        if ($uid > 0 && $uid != \nmvc\userx\get_user())
+        if ($uid > 0 && $uid !== id(\nmvc\userx\get_user()))
             \nmvc\request\show_xyz(403);
         if ($id > 0) {
             $instance = call_user_func(array($model_name, "selectByID"), $id);
