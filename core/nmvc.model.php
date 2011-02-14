@@ -1055,7 +1055,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $called_class = \get_called_class();
         if (\strcasecmp($called_class, $new_model_class) === 0)
             return $this;
-        if (!\is($new_model_class, __CLASS__))
+        if (!core\is($new_model_class, __CLASS__))
             \trigger_error("The new model class is not a model class.", \E_USER_ERROR);
         if (core\is_abstract($called_class))
             \trigger_error("The new model class is abstract.", \E_USER_ERROR);
