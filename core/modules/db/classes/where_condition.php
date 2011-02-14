@@ -154,8 +154,10 @@ class WhereCondition {
                 $this->pending_field_operation = true;
                 $this->where_tokens[] = $this->argToField($arg);
             }
-        } else if ($add_where_token)
+        } else if ($add_where_token) {
             $this->where_tokens[] = $op;
+            $this->pending_field_operation = true;
+        }
         return true;
     }
 }
