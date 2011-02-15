@@ -9,7 +9,7 @@ class DateType extends \nmvc\AppType {
 
     public function __construct() {
         parent::__construct();
-        $this->value = null;
+        $this->value = new \DateTime();
     }
 
     public function getSQLType() {
@@ -17,26 +17,43 @@ class DateType extends \nmvc\AppType {
     }
 
     public function get() {
-        if (is_string($this->value))
-            return $this->value;
-        else
-            return date("Y-m-d");
+        return $this->value;
     }
 
     public function set($value) {
-        $value = \preg_replace('#[^\d]#', '', $value);
-        if (\strlen($value) == 8)
-            $this->value = date('Y-m-d', mktime(null, null, null, substr($value, 4, 2), substr($value, 6, 2), substr($value, 0, 4)));
-        else
-            $this->value = null;
+        if (\is_string($value) || \is_integer($value)) {
+            if (\is_string($value)) {
+                $value = \preg_replace('#[^\d]#', '', $value);
+                if (\strlen($value) != 8)
+                    \trigger_error(__CLASS__ . " did not understand the given Date!", \E_USER_ERROR);
+                $time = @\mktime(null, null, null, \substr($value, 4, 2), \substr($value, 6, 2), \substr($value, 0, 4));
+                if ($time === false)
+                    \trigger_error(__CLASS__ . " did not understand the given Date!", \E_USER_ERROR);
+            } else {
+                $time = $value;
+            }
+            $this->value = @\DateTime::createFromFormat("U", $time);
+            if ($this->value === false)
+                \trigger_error(__CLASS__ . " did not understand the given Date!", \E_USER_ERROR);
+        } else if ($value instanceof \DateTime) {
+            $this->value = $value;
+        } else {
+            \trigger_error(__CLASS__ . " did not understand the given Date!", \E_USER_ERROR);
+        }
+    }
+
+    public function setSQLValue($value) {
+        $this->value = @\DateTime::createFromFormat('Y-m-d', $value);
+        if ($this->value === false)
+            $this->value = new \DateTime();
     }
 
     public function getSQLValue() {
-        return \nmvc\db\strfy($this->get());
+        return \nmvc\db\strfy($this->value->format("Y-m-d"));
     }
 
     public function getInterface($name) {
-        $value = escape($this->get());
+        $value = escape($this->value->format("Y-m-d"));
         $maxlength = null;
         if ($this->varchar_size !== null)
             $maxlength = "maxlength=\"" . $this->varchar_size . "\"";
@@ -49,6 +66,6 @@ class DateType extends \nmvc\AppType {
     }
 
     public function __toString() {
-        return escape(strval($this->get()));
+        return escape($this->value->format("Y-m-d"));
     }
 }
