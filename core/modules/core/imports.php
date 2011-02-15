@@ -6,4 +6,5 @@
     "__" => 'gettext',
     "ngettext",
     "pgettext",
+    "now",
 );

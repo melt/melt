@@ -569,3 +569,11 @@ function pgettext($context, $msgid) {
     $sprintf_args = array_slice(func_get_args(), 2);
     return LocalizationEngine::translate($msgid, "", $context, 1, $sprintf_args);
 }
+
+/**
+ * Returns the current date/time.
+ * @return \DateTime
+ */
+function now() {
+    return new \DateTime();
+}
