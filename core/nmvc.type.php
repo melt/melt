@@ -9,28 +9,11 @@ abstract class Type {
     /** @var The type of storage used for the field data.
      * One of: NON_INDEXED, VOLATILE, INDEXED, INDEXED_UNIQUE. */
     private $storage_type = null;
-    /** @var boolean True if the type has been prepared. */
-    private $prepared = false;
     
-    /**
-     * Prepares this type.*
-     */
-    public function prepare($key = null, Model $parent = null, $storage_type = null) {
-        if ($this->prepared)
-            \trigger_error("Prepare can only be called one after instance initialization.", \E_USER_ERROR);
-        if ($key !== null)
-            $this->key = $key;
-        if ($parent !== null)
-            $this->parent = $parent;
-        if ($storage_type !== null)
-            $this->storage_type = $storage_type;
-        $this->prepared = true;
-    }
-
     public function __construct() {}
 
     public function __clone() {
-        $this->prepared = false;
+        $this->parent = null;
     }
 
     public final function __get($name) {
@@ -38,16 +21,11 @@ abstract class Type {
     }
 
     public final function __set($name, $value) {
-        switch ($name) {
-        case "key":
-        case "parent":
-        case "storage_type":
-        case "prepared":
-            \trigger_error("Trying to write read-only property '$name'.", \E_USER_ERROR);
-            break;
-        default:
-            $this->$name = $value;
+        if (\array_key_exists($name, array("key" => 1, "parent" => 1, "storage_type" => 1))) {
+            if ($this->$name !== null)
+                \trigger_error("Trying to write read-only property '$name'.", \E_USER_ERROR);
         }
+        $this->$name = $value;
     }
     
     /** @var mixed The value of this type instance. */

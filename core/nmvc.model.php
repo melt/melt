@@ -216,13 +216,18 @@ abstract class Model implements \IteratorAggregate, \Countable {
             }
             // Call the constructor and prepare arguments.
             $type_handler = $type_reflector->newInstanceArgs($column_construct_args);
-            $type_handler->prepare($column_name, null, $storage_type);
+            $type_handler->key = $column_name;
+            $type_handler->storage_type = $storage_type;
             foreach ($column_attributes as $key => $attribute)
                 $type_handler->$key = $attribute;
             // Cache this untouched type instance and clone it to other new instances.
             $parsed_col_array[$column_name] = $type_handler;
         }
         $parsed_model_cache[$model_name] = $parsed_col_array;
+        // Create prototype model instance as a dummy parent for the prototype
+        // type instances. See __construct for more information.
+        $prototype_model_instance = new $model_name(true);
+        // Return the parsed column array.
         return $parsed_col_array;
     }
 
@@ -345,9 +350,11 @@ abstract class Model implements \IteratorAggregate, \Countable {
         foreach ($this->_cols as $column_name => &$type_instance) {
             // Assignment overload.
             unset($this->$column_name);
-            // Cloning parsed type instance and link myself.
-            $type_instance = clone $type_instance;
-            $type_instance->prepare(null, $this, null);
+            // Clone prototype type instance and link myself unless
+            // this is a prototype type instance in which case only link.
+            if ($type_instance->parent !== null)
+                $type_instance = clone $type_instance;
+            $type_instance->parent = $this;
         }
         // Enter default values.
         if (!self::$_skip_initialize)
