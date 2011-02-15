@@ -38,7 +38,7 @@ abstract class SingletonModel extends \nmvc\AppModel {
 
     protected function initialize() {
         parent::initialize();
-        if (!self::$is_getting)
+        if (!self::$is_getting && !$this->isVolatile())
             \trigger_error("Only SingletonModel may create new instance of itself. Access the instance trough the ::get() function.", \E_USER_ERROR);
     }
 }
