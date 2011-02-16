@@ -79,8 +79,9 @@ class SelectType extends \nmvc\AppType {
     public function set($value) {
         $this->prepareOptions();
         if (!\is_scalar($value) || !isset($this->key_to_hash_map[$value]))
-            trigger_error("Value '$value' is not a valid key for " . __CLASS__ . ".", \E_USER_ERROR);
-        $this->value = $value;
+            $this->value = \reset($this->hash_to_key_map);
+        else
+            $this->value = $value;
     }
 
     public function readInterface($name) {
