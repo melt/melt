@@ -15,8 +15,11 @@ abstract class SingletonModel extends \nmvc\AppModel {
     public static function get($for_update = false) {
         static $singleton_model_cache = array();
         $class_name = get_called_class();
-        if (isset($singleton_model_cache[$class_name]))
-            return $singleton_model_cache[$class_name];
+        if (isset($singleton_model_cache[$class_name])) {
+            $instance = $singleton_model_cache[$class_name];
+            if ($instance->isLegacy())
+                return $instance;
+        }
         $selection = static::select();
         if ($for_update)
             $selection->forUpdate();
@@ -33,7 +36,8 @@ abstract class SingletonModel extends \nmvc\AppModel {
             while (false !== ($instance = \next($result)))
                 $instance->unlink();
         }
-        return $singleton_model_cache[$class_name] = $singleton_model;
+        $singleton_model_cache[$class_name] = $singleton_model;
+        return $singleton_model;
     }
 
     protected function initialize() {
