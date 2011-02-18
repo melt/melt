@@ -1110,6 +1110,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * @return Model The cached model.
      */
     private static function instanceFromData($id, $data_row) {
+        if ($id <= 0)
+            \trigger_error("Creating instance from data with invalid ID ($id). Possible database corruption.", \E_USER_ERROR);
         if (isset(self::$_instance_cache[$id]))
             return self::$_instance_cache[$id];
         $model_class_name = \get_called_class();
