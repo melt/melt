@@ -17,7 +17,7 @@ abstract class SingletonModel extends \nmvc\AppModel {
         $class_name = get_called_class();
         if (isset($singleton_model_cache[$class_name])) {
             $instance = $singleton_model_cache[$class_name];
-            if ($instance->isLegacy())
+            if (!$instance->isLegacy())
                 return $instance;
         }
         $selection = static::select();
