@@ -75,6 +75,14 @@ abstract class Model implements \IteratorAggregate, \Countable {
     }
 
     /**
+     * Returns true if this model instance is legacy.
+     * @return boolean.
+     */
+    public final function isLegacy() {
+        return !\property_exists($this, "_id");
+    }
+
+    /**
      * Overidable event. Called on model instances after they have
      * been inserted and are ready to be populated with default data.
      * @return void
@@ -492,8 +500,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
 
     /** Assignment overloading. Returns value. */
     public function __get($name) {
-        if (!\property_exists($this, "_id"))
-            \trigger_error("Trying to access deprecated model instance. Accessing instances saved and selected before chainedTransactionCommit is unsafe and not allowed!", \E_USER_ERROR);
+        if ($this->isLegacy())
+            \trigger_error("Trying to access legacy model instance. Accessing instances saved and selected before chainedTransactionCommit is unsafe and not allowed!", \E_USER_ERROR);
         $get_closure = $this->resolveGetClosure($name);
         if (is_string($get_closure))
             \trigger_error($get_closure, \E_USER_NOTICE);
