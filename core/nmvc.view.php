@@ -17,6 +17,13 @@ final class View {
     // Transparent access to invoking controller.
     public function __call($name,  $arguments) {
         if (!method_exists($this->_controller, $name)) {
+            // Check if name is a variable that contains a closure.
+            if (isset($this->_controller->$name)) {
+                $value = $this->_controller->$name;
+                if ($value instanceof \Closure) {
+                    return call_user_func_array($value, $arguments);
+                }
+            }
             trigger_error("The function " . get_class($this->_controller) . "->$name() does not exist!", \E_USER_WARNING);
             return null;
         }
