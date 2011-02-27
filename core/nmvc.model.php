@@ -326,7 +326,9 @@ abstract class Model implements \IteratorAggregate, \Countable {
             foreach (\get_object_vars($instance) as $var => $data)
                 unset($instance->$var);
         }
+        // Clear all core instance caches.
         self::$_instance_cache = array();
+        core\PointerType::_clearIncommingMemoryObjectPointers();
         // Restart transaction.
         db\query("COMMIT AND CHAIN");
     }

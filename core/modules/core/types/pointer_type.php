@@ -136,6 +136,15 @@ class PointerType extends \nmvc\AppType {
     }
 
     /**
+     * Internal function. Called to clear incomming memory object pointers
+     * when flushing instance cache. DO NOT CALL.
+     * @internal
+     */
+    public static function _clearIncommingMemoryObjectPointers() {
+        self::$memory_object_pointer_backlinks = array();
+    }
+
+    /**
      * For some instance, returns its incomming memory object pointers.
      * These are represented as arrays where the first index is the
      * instance that has the in memory object pointer and where the
