@@ -10,6 +10,7 @@ class DateType extends \nmvc\AppType {
     public function __construct() {
         parent::__construct();
         $this->value = new \DateTime();
+        $this->value->setTime(0, 0, 0);
     }
 
     public function getSQLType() {
@@ -33,10 +34,12 @@ class DateType extends \nmvc\AppType {
                 $time = $value;
             }
             $this->value = @\DateTime::createFromFormat("U", $time);
+            $this->value->setTime(0, 0, 0);
             if ($this->value === false)
                 \trigger_error(__CLASS__ . " did not understand the given Date!", \E_USER_ERROR);
         } else if ($value instanceof \DateTime) {
             $this->value = $value;
+            $this->value->setTime(0, 0, 0);
         } else {
             \trigger_error(__CLASS__ . " did not understand the given Date!", \E_USER_ERROR);
         }
@@ -44,6 +47,7 @@ class DateType extends \nmvc\AppType {
 
     public function setSQLValue($value) {
         $this->value = @\DateTime::createFromFormat('Y-m-d', $value);
+        $this->value->setTime(0, 0, 0);
         if ($this->value === false)
             $this->value = new \DateTime();
     }
