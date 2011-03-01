@@ -469,7 +469,7 @@ function table($table_name) {
     static $cache = array();
     if (isset($cache[$table_name]))
         return $cache[$table_name];
-    return $cache[$table_name] = '`' . config\PREFIX . $table_name . '`';
+    return $cache[$table_name] = '`' . \strtolower(config\PREFIX . $table_name) . '`';
 }
 
 /**
