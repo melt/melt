@@ -1,6 +1,17 @@
 <?php namespace nmvc\core;
 
 class BytesType extends \nmvc\AppType {
+    /** @var boolean Displaying with SI units by default. Set to
+     * false to display with IEC units instead. */
+    public $display_si = true;
+    /** @var boolean If this is false, a larger unit will not be used
+     * if using it results in less precision. */
+    public $display_rounding = false;
+    /** @var integer Maximum number of decimals or decimals to round
+     * to when using display rounding. */
+    public $display_max_decimals = 2;
+
+
     public function getSQLType() {
         return "bigint";
     }
@@ -50,7 +61,7 @@ class BytesType extends \nmvc\AppType {
     }
 
     public function __toString() {
-        return self::byteUnit(\intval($this->value));
+        return self::byteUnit(\intval($this->value), $this->display_si, $this->display_rounding, $this->display_max_decimals);
     }
 
     /**
@@ -60,7 +71,7 @@ class BytesType extends \nmvc\AppType {
      * @param integer $max_decimals Maximum number of decimals in result.
      * @return string The number of bytes in a readable unit representation.
      */
-    public static function byteUnit($byte_count, $si = true, $max_decimals = 2) {
+    public static function byteUnit($byte_count, $si = true, $rounding = false, $max_decimals = 2) {
         $byte_count = \intval($byte_count);
         if ($si) {
             $base_unit = 1000;
@@ -69,19 +80,24 @@ class BytesType extends \nmvc\AppType {
             $base_unit = 1024;
             $unit_array = array("B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB");
         }
-        $ret_fn = function($byte_count, $unit) {
-            return \strval(\round($byte_count, 2)) . " " . $unit;
+        $ret_fn = function($byte_count, $unit) use ($rounding, $max_decimals) {
+            if ($rounding)
+                $byte_count = \round($byte_count, $max_decimals);
+            return \strval($byte_count) . " " . $unit;
         };
         foreach ($unit_array as $unit) {
-            $point_pos = \strpos($byte_count, ".");
-            if ($point_pos !== false) {
-                $decimals = \strlen(\substr($byte_count, $point_pos + 1));
-                if ($decimals >= $max_decimals)
-                    return $ret_fn($byte_count, $unit);
-            }
             if ($byte_count < $base_unit)
                 return $ret_fn($byte_count, $unit);
             $byte_count /= $base_unit;
+            if (!$rounding) {
+                // Verify that not too many decimals are used now.
+                $point_pos = \strpos($byte_count, ".");
+                if ($point_pos !== false) {
+                    $decimals = \strlen(\substr($byte_count, $point_pos + 1));
+                    if ($decimals > $max_decimals)
+                        return $ret_fn($byte_count * $base_unit, $unit);
+                }
+            }
         }
         $byte_count *= $base_unit;
         return $ret_fn($byte_count, $unit);
