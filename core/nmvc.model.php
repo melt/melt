@@ -1156,9 +1156,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $out_array = array();
         $is_counting = $select_query->getIsCounting();
         $sum = 0;
-        $child_models = static::getChildModels();
-        if ($select_query->getIsIgnoringChildren())
-            $child_models = \array_intersect($child_models, \get_called_class());
+        $child_models = $select_query->getIsIgnoringChildren()
+        ? array(\get_called_class()): static::getChildModels();
         foreach ($child_models as $model_class_name) {
             $columns = $model_class_name::getColumnNames(false);
             $columns[] = "id";
