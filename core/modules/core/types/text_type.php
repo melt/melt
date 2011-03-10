@@ -2,6 +2,7 @@
 
 class TextType extends \nmvc\AppType {
     private $varchar_size = null;
+    public $auto_trim = true;
 
     public function __construct($varchar_size = null) {
         if ($varchar_size !== null && (!is_integer($varchar_size) || $varchar_size < 0 || $varchar_size > 65535))
@@ -32,6 +33,8 @@ class TextType extends \nmvc\AppType {
 
     public function readInterface($name) {
         $this->value = @$_POST[$name];
+        if ($this->auto_trim)
+            $this->value = \trim($this->value);
         if ($this->varchar_size !== null)
             $this->value = iconv_substr($this->value, 0, $this->varchar_size);
     }
