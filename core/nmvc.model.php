@@ -937,6 +937,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
     /**
      * Returns the model instance of the class called as
      * and linked with the specified id.
+     * @param integer $id ID to select.
      * @param boolean $is_for_update Select to true to select for update.
      * This
      * @return Model The model with the ID specified or NULL.
