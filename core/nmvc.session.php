@@ -44,8 +44,12 @@ call_user_func(function() {
     });
     // Set session ID by get parameter if set. This enables perserving
     // sessions when doing cross domain redirection.
-    if (isset($_GET["_SESSION_ID"]) && \nmvc\string\in_range($_GET["_SESSION_ID"], 8, 32))
+    if (isset($_GET["_SESSION_ID"]) && \nmvc\string\in_range($_GET["_SESSION_ID"], 8, 32)) {
         \session_id($_GET["_SESSION_ID"]);
+        // Redirect-remove the session ID immidiatly to prevent session hijacking from URL sharing.
+        unset($_GET["_SESSION_ID"]);
+        \nmvc\request\redirect(\nmvc\request\url(REQ_URL, $_GET));
+    }
     // Forward session cookie parameters from configuration.
     $session_domain = \nmvc\core\config\SESSION_DOMAIN;
     if (!\is_string($session_domain) || $session_domain === "")
