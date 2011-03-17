@@ -151,8 +151,12 @@ class WhereCondition {
             } else {
                 if ($add_where_token)
                     $this->where_tokens[] = $op;
-                $this->pending_field_operation = true;
-                $this->where_tokens[] = $this->argToField($arg);
+                if (\is_bool($op)) {
+                    $this->where_tokens[] = $op? "1": "0";
+                } else {
+                    $this->pending_field_operation = true;
+                    $this->where_tokens[] = $this->argToField($arg);
+                }
             }
         } else if ($add_where_token) {
             $this->where_tokens[] = $op;
