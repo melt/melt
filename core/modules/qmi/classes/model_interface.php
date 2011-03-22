@@ -261,6 +261,14 @@ class ModelInterface {
                 register_shutdown_function(array(__CLASS__, "_clearInvalidData"));
             }
         }
+        // Using index of instance as a basis for consistant, multi-request
+        // spanning component id/name.
+        $instance_index = 0;
+        foreach ($this->instances as $instance_in) {
+            if ($instance_in === $instance)
+                break;
+            $instance_index++;
+        }
         // Loop trough fields in interface.
         $ui_fields = $instance->uiGetInterface($this->interface_name, $field_set_name);
         if (!is_array($ui_fields))
@@ -273,7 +281,7 @@ class ModelInterface {
             if (substr($field_name, -3) == "_id")
                 \trigger_error("Error in interface '" . $this->interface_name . "' for " . \get_class($instance) . ": Field syntax '$field_name' is reserved for id access. Pointer fields must be passed without '_id' suffix.", \E_USER_ERROR);
             // Generate the html key/id.
-            $component_id = "n" . \nmvc\string\random_alphanum_str(7);
+            $component_id = "qmiid" . \substr(\sha1($field_name . "," . $instance_index . "," . $this->interface_name), 0, 12);
             // Generate the component interface.
             if (isset($invalidation_data['values'][$field_name]))
                 $instance->$field_name = $invalidation_data['values'][$field_name];
