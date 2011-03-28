@@ -5,18 +5,10 @@ abstract class SpooledMailModel_app_overrideable extends \nmvc\AppModel {
     public $rcpt_list = array('core\SerializedType');
 
     public $mail_data = array('core\TextType');
-    
-    public $smtp_host = array('core\TextType', 128);
-    public $smtp_auth_enable = array('core\BooleanType');
-    public $smtp_auth_user = array('core\TextType', 128);
-    public $smtp_auth_password = array('core\TextType', 128);
-    public $smtp_port = array('core\IntegerType');
-    public $smtp_timeout = array('core\IntegerType');
-    public $smtp_from_host = array('core\TextType', 128);
 
     public $last_attempt = array('core\TimestampType');
     public $next_attempt = array('core\TimestampType');
-    public $last_failure = array('core\TextType', 128);
+    public $last_failure = array('core\TextType', 256);
 
     protected function beforeStore($is_linked) {
         parent::beforeStore($is_linked);
@@ -55,25 +47,19 @@ abstract class SpooledMailModel_app_overrideable extends \nmvc\AppModel {
 
     public function sendMail() {
         try {
-            // Evaluate all SMTP settings.
-            $smtp_from_host = $this->smtp_from_host != null? $this->smtp_from_host: config\SMTP_FROM_HOST;
-            if ($smtp_from_host == null)
-                $smtp_from_host = \gethostname();
-            $smtp_host = $this->smtp_host != null? $this->smtp_host: config\SMTP_HOST;
-            $smtp_port = $this->smtp_port != 0? $this->smtp_port: config\SMTP_PORT;
-            $smtp_timeout = $this->smtp_timeout != 0? $this->smtp_timeout: config\SMTP_TIMEOUT;
-            $smtp_auth_enable = $this->smtp_auth_enable != null? $this->smtp_auth_enable: config\SMTP_AUTH_ENABLE;
-            $smtp_auth_user = $this->smtp_auth_user != null? $this->smtp_auth_user: config\SMTP_AUTH_USER;
-            $smtp_auth_password = $this->smtp_auth_password != null? $this->smtp_auth_password: config\SMTP_AUTH_PASSWORD;
             // Connect to SMTP server and send the mail.
             $smtp = new Smtp();
-            @$smtp->Connect($smtp_host, $smtp_port, $smtp_timeout);
+            @$smtp->Connect(config\SMTP_HOST, config\SMTP_PORT, config\SMTP_TIMEOUT);
             if (!@$smtp->Connected())
-                throw new \Exception(__CLASS__ . " failed, could not connect to SMTP host $smtp_host:$smtp_port! (Timeout is $smtp_timeout seconds). Message: " . var_export($smtp->error, true));
-            if (!@$smtp->Hello($smtp_from_host))
+                throw new \Exception(__CLASS__ . " failed, could not connect to SMTP host " . config\SMTP_HOST . ":" . config\SMTP_PORT . "! (Timeout is " . config\SMTP_TIMEOUT . " seconds). Message: " . var_export($smtp->error, true));
+            if (!@$smtp->Hello(config\SMTP_FROM_HOST != null? config\SMTP_FROM_HOST: \gethostname()))
                 throw new \Exception(__CLASS__ . " failed, HELO/EHLO command error. Message: " . var_export($smtp->error, true));
-            if ($smtp_auth_enable) {
-                if (!@$smtp->Authenticate($smtp_auth_user, $smtp_auth_password))
+            if (config\SMTP_TLS_ENABLE) {
+                if (!@$smtp->StartTLS())
+                    throw new \Exception(__CLASS__ . " failed, TLS startup error. Message: " . var_export($smtp->error, true));
+            }
+            if (config\SMTP_AUTH_ENABLE) {
+                if (!@$smtp->Authenticate(config\SMTP_AUTH_USER, config\SMTP_AUTH_PASSWORD))
                     throw new \Exception(__CLASS__ . " failed, authentication error. Message: " . var_export($smtp->error, true));
             }
             if (!@$smtp->Mail($this->from_email))

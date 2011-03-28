@@ -137,6 +137,30 @@ class Smtp
         return true;
     }
 
+    function StartTLS() {
+        fputs($this->smtp_conn, "STARTTLS" . self::CRLF);
+        $rply = $this->get_lines();
+        $code = substr($rply, 0, 3);
+        if ($code != 220) {
+            $this->error = array(
+                "error" => "STARTTLS not accepted from server",
+                "smtp_code" => $code,
+                "smtp_msg" => substr($rply, 4)
+            );
+            return false;
+        }
+        if (!@\stream_socket_enable_crypto($this->smtp_conn, 1, \STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
+            $err = \error_get_last();
+            $this->error = array(
+                "error" => "TLS startup failed",
+                "smtp_code" => "",
+                "smtp_msg" => \nmvc\string\starts_with(@$err["message"], "stream_socket_enable_crypto")? @$err["message"]: "",
+            );
+            return false;
+        }
+        return true;
+    }
+
     /**
      * Performs SMTP authentication.  Must be run after running the
      * Hello() method.  Returns true if successfully authenticated.

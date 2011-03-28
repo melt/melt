@@ -30,20 +30,6 @@ class Mailer {
         $this->bcc = new AddressList();
     }
 
-    public $smtp_from_host = null;
-    /** @var string Host name to send mail to. Default is config value. */
-    public $smtp_host = null;
-    /** @var integer Host port to send mail to. Default is config value. */
-    public $smtp_port = 0;
-    /** @var integer Timeout when connecting to SMTP host. Default is config value. */
-    public $smtp_timeout = 0;
-    /** @var boolean True to enable SMTP authentication. Default is config value. */
-    public $smtp_auth_enable = null;
-    /** @var string Username to use with SMTP authentication. Default is config value. */
-    public $smtp_auth_user = null;
-    /** @var string Password to use with SMTP authentication. Default is config value. */
-    public $smtp_auth_password = null;
-
     private function addressEmail() {
         // If from is not set directly then use config.
         if ($this->from->email == null) {
@@ -167,13 +153,6 @@ class Mailer {
         $spooled_mail->from_email = $from_email;
         $spooled_mail->rcpt_list = $rcpt_array;
         $spooled_mail->mail_data = $data;
-        $spooled_mail->smtp_host = $this->smtp_host;
-        $spooled_mail->smtp_port = $this->smtp_port;
-        $spooled_mail->smtp_timeout = $this->smtp_timeout;
-        $spooled_mail->smtp_auth_enable = $this->smtp_auth_enable;
-        $spooled_mail->smtp_auth_user = $this->smtp_auth_user;
-        $spooled_mail->smtp_auth_password = $this->smtp_auth_password;
-        $spooled_mail->smtp_from_host = $this->smtp_from_host;
         $spooled_mail->store();
     }
 
