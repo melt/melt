@@ -232,9 +232,11 @@ abstract class Model implements \IteratorAggregate, \Countable {
             $parsed_col_array[$column_name] = $type_handler;
         }
         $parsed_model_cache[$model_name] = $parsed_col_array;
-        // Create prototype model instance as a dummy parent for the prototype
-        // type instances. See __construct for more information.
-        $prototype_model_instance = new $model_name(true);
+        if (!core\is_abstract($model_name)) {
+            // Create prototype model instance as a dummy parent for the prototype
+            // type instances. See __construct for more information.
+            $prototype_model_instance = new $model_name(true);
+        }
         // Return the parsed column array.
         return $parsed_col_array;
     }
