@@ -236,12 +236,11 @@ abstract class Controller {
      * This kind of invoke differs from "normal" invokes as it has
      * less privligies.
      * @param mixed $path Path as a string or array.
-     * @param string $require_controller Set to a controller class name
-     * to require the request to be of a controller type or otherwise return
-     * false.
+     * @param callback $controller_filter_fn Set to a callback
+     * to filter request on controller name before processing it.
      * @return void
      */
-    public static final function invokeFromExternalRequest($path, $require_controller = null) {
+    public static final function invokeFromExternalRequest($path, \Closure $controller_filter_fn = null) {
         // Make sure this function is only called once.
         static $called = false;
         if ($called)
@@ -269,7 +268,7 @@ abstract class Controller {
         if ($action_name[0] == "_")
             return false;
         // Require controller.
-        if ($require_controller !== null && !is($invoke_data->getControllerClass(), $require_controller))
+        if ($controller_filter_fn !== null && !$controller_filter_fn($invoke_data->getControllerClass()))
             return false;
         // Invoke action on controller.
         self::internalInvoke($invoke_data, false, true);

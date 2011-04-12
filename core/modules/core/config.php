@@ -7,4 +7,5 @@
     "SESSION_DOMAIN" => null,
     "SESSION_ENFORCE_HTTPS" => false,
     "PHP_BINARY" => "php",
+    "NO_MAINTENANCE_CONTROLLERS" => "",
 );

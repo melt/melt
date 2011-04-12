@@ -141,20 +141,37 @@
     $redir_status = isset($_SERVER["REDIRECT_STATUS"])? $_SERVER["REDIRECT_STATUS"]: null;
     if ($redir_status != "200" && $redir_status != null)
         \nmvc\request\show_xyz($redir_status);
-    // Stop request here if in developer mode and not developer controller.
-    if (\nmvc\core\config\MAINTENANCE_MODE && !APP_IN_DEVELOPER_MODE) {
-        if (\nmvc\Controller::invokeFromExternalRequest($url_tokens, 'nmvc\core\InternalController'))
-            exit;
-        \nmvc\core\DeveloperController::invoke("_maintenance_info", array(), true);
-        exit;
-    }
-    // Invoke all modules before request processors.
-    foreach (get_all_modules() as $module_name => $module_parameters) {
-        $class_name = $module_parameters[0];
-        \call_user_func(array($class_name, "beforeRequestProcess"));
-    }
     // Inject request into standard MVC handling.
-    if (\nmvc\Controller::invokeFromExternalRequest($url_tokens))
+    $process_complete = \nmvc\Controller::invokeFromExternalRequest($url_tokens, function($current_controller) {
+        // The internal controller is special and always allowed.
+        if (\nmvc\core\is($current_controller, 'nmvc\core\InternalController'))
+            return true;
+        if (\nmvc\core\config\MAINTENANCE_MODE && !APP_IN_DEVELOPER_MODE) {
+            // Allow other controllers to be configured to bypass maintenance mode if configured to do.
+            $request_allowed = false;
+            if (\nmvc\core\config\NO_MAINTENANCE_CONTROLLERS != null) {
+                $allowed_controllers = \explode(",", \nmvc\core\config\NO_MAINTENANCE_CONTROLLERS);
+                foreach ($allowed_controllers as $allowed_controller) {
+                    if (\nmvc\core\is(\trim($allowed_controller), $current_controller)) {
+                        $request_allowed = true;
+                        break;
+                    }
+                }
+            }
+            if (!$request_allowed) {
+                \nmvc\core\DeveloperController::invoke("_maintenance_info", array(), true);
+                exit;
+            }
+        }
+        // Invoke all modules before request processors.
+        foreach (get_all_modules() as $module_parameters) {
+            $class_name = $module_parameters[0];
+            \call_user_func(array($class_name, "beforeRequestProcess"));
+        }
+        return true;
+    });
+    // Did the application catch the request?
+    if ($process_complete)
         exit;
     // See if any module is interested in catching the request instead.
     foreach (get_all_modules() as $module_name => $module_parameters) {
