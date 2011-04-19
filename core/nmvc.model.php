@@ -1140,8 +1140,9 @@ abstract class Model implements \IteratorAggregate, \Countable {
             $column->setSyncPoint();
             $value = next($data_row);
         }
+        self::$_instance_cache[$id] = $instance;
         $instance->afterLoad();
-        return self::$_instance_cache[$id] = $instance;
+        return $instance;
     }
 
     /**
