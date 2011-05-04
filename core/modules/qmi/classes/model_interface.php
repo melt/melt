@@ -210,7 +210,7 @@ class ModelInterface {
         foreach ($instance->getColumns() as $column_name => $column) {
             if (is($column, 'nmvc\core\PointerType')) {
                 $target = $column->get();
-                if ($column->hasChanged() || (is_object($target) && is($target, 'nmvc\Model') && !$target->isLinked())) {
+                if ($column->hasChanged() || (($target instanceof \nmvc\Model) && !$target->isLinked())) {
                     $column_name = substr($column_name, 0, -3);
                     $this->attachRelation($instance, $target, $column_name);
                 }
