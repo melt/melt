@@ -759,6 +759,10 @@ abstract class Model implements \IteratorAggregate, \Countable {
         db\query("DELETE FROM " . db\table($table_name) . " WHERE id = " . $old_id);
         // Remove from instance cache.
         unset(self::$_instance_cache[$old_id]);
+        // Resycronize all fields to default original value
+        // for correct has changed check after unlink.
+        foreach (static::getParsedColumnArray() as $name => $column)
+            $this->_cols[$name]->setSyncPointReference($column->get());
         // Remove pointers that gets broken by this unlink
         //  and handle this disconnect according to it's configuration.
         // Nullifying pointers before doing *anything* else to prevent

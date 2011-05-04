@@ -44,10 +44,21 @@ abstract class Type {
     /**
      * Called to indicate that the type was synced so
      * that it can measure changes made from this point.
+     * @internal
      * @return void
      */
     public function setSyncPoint() {
         $this->original_value = $this->value;
+    }
+
+    /**
+     * Called to indicate a specific value to use as
+     * syncronization point reference.
+     * @internal
+     * @return void
+     */
+    public function setSyncPointReference($original_value) {
+        $this->original_value = $original_value;
     }
 
     /**
