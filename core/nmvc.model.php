@@ -569,10 +569,12 @@ abstract class Model implements \IteratorAggregate, \Countable {
     public function __clone() {
         // Copies must (naturally) be stored to be linked.
         $this->_id = -1;
-        // Clone and relink all type handlers.
-        foreach ($this->_cols as &$type_instance) {
+        // Clone, relink and resync all type handlers.
+        $original_columns = static::getParsedColumnArray();
+        foreach ($this->_cols as $name => &$type_instance) {
             $type_instance = clone $type_instance;
             $type_instance->parent = $this;
+            $type_instance->setSyncPointReference($original_columns[$name]->get());
         }
     }
 
