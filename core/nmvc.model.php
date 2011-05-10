@@ -570,9 +570,9 @@ abstract class Model implements \IteratorAggregate, \Countable {
         // Copies must (naturally) be stored to be linked.
         $this->_id = -1;
         // Clone and relink all type handlers.
-        foreach ($this->_cols as $column_name => &$type_instance) {
+        foreach ($this->_cols as &$type_instance) {
             $type_instance = clone $type_instance;
-            $type_instance->prepare(null, $this, null);
+            $type_instance->parent = $this;
         }
     }
 
