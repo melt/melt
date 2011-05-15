@@ -156,7 +156,7 @@ class PictureType extends \nmvc\cache\BlobPointerType {
             if ($blob_model === null)
                 return null;
             $data = $blob_model->dta;
-            $img = imagecreatefromstring($data);
+            $img = @imagecreatefromstring($data);
             if (!$img)
                 return null;
             // Calculate sizing.
