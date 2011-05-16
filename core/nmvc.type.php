@@ -48,7 +48,7 @@ abstract class Type {
      * @return void
      */
     public function setSyncPoint() {
-        $this->original_value = $this->value;
+        $this->original_value = \is_object($this->value)? clone $this->value: $this->value;
     }
 
     /**
@@ -58,9 +58,9 @@ abstract class Type {
      * @return void
      */
     public function setSyncPointReference($original_value) {
-        $this->original_value = $original_value;
+        $this->original_value = \is_object($original_value)? clone $original_value: $original_value;
     }
-
+    
     /**
      * Returns TRUE if this type has changed since the last syncronization.
      * @return boolean
