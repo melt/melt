@@ -12,7 +12,7 @@ class UserxModule extends \nmvc\CoreModule {
             ->byKey(array("user_remember_key" => $_COOKIE['REMBR_USR_KEY']))
             ->and("user_remember_key_expires")->isMoreThan($time)->first();
             if ($auth_user === null) {
-                unset_host_aware_cookie("REMBR_USR_KEY");
+                unset_cookie("REMBR_USR_KEY");
             } else {
                 // Automatically log in.
                 login($auth_user);
