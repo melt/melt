@@ -1,6 +1,6 @@
 <?php namespace nmvc\core;
 
-class EnumType extends AppType {
+class EnumType extends \nmvc\AppType {
     private $enumeration = null;
 
     public function __construct(array $enumeration) {
