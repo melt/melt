@@ -41,7 +41,6 @@ class EnumType extends \nmvc\AppType {
     }
 
     public function getInterface($name) {
-        $this->prepareOptions();
         $html = "<select name=\"$name\" id=\"$name\">";
         $selected = ' selected="selected"';
         foreach ($this->enumeration as $enum_token) {
