@@ -38,7 +38,7 @@ class CountryType extends \nmvc\AppType {
     }
     
     public function __toString() {
-        return $this->getCountryFlag() . " " . $this->getCountryName();
+        return $this->getCountryName();
     }
 
     public function getCountryName() {
