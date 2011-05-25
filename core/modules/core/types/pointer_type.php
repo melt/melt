@@ -225,13 +225,13 @@ class PointerType extends \nmvc\AppType {
         // store before returning if memory-only pointer,
         // otherwise trigger error.
         if ($this->disconnect_reaction == "CASCADE" && $this->getID() == 0) {
-            if (!is_object($this->value))
-                trigger_error("Trying to store CASCADE pointer (" . get_class($this->parent) . "->\$" . $this->key . ") in database as NULL (illegal value for CASCADE pointer)", \E_USER_ERROR);
+            if (!\is_object($this->value))
+                \trigger_error("Trying to store CASCADE pointer (" . \get_class($this->parent) . "->\$" . $this->key . ") in database as NULL (illegal value for CASCADE pointer)", \E_USER_ERROR);
             // Tracking cascade store track to prevent circularity.
             static $cascade_store_stack = array();
-            $target_hash = spl_object_hash($this->value);
+            $target_hash = \spl_object_hash($this->value);
             if (isset($cascade_store_stack[$target_hash]))
-                trigger_errror("CASCADE storing has reached a circular loop. Circular CASCADE pointer object model graphs are illegal. Your models are broken.", \E_USER_ERROR);
+                \trigger_error("CASCADE storing has reached a circular loop. Circular CASCADE pointer object model graphs are illegal. Your models are broken.", \E_USER_ERROR);
             $cascade_store_stack[$target_hash] = $this->value;
             $this->value->store();
             unset($cascade_store_stack[$target_hash]);
