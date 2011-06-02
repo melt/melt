@@ -5,6 +5,8 @@ final class View {
     private $_controller;
     /** @var string Module this View uses or NULL. */
     private $_module_context = null;
+    /** @var array Stack of layouts to enter layouts as sections. */
+    private $layout_stack = array();
 
     private function __construct(Controller $controller, $path, $module_context) {
         $this->_controller = $controller;
@@ -40,8 +42,8 @@ final class View {
     }
 
     public function __set($name,  $value) {
-        if (strtolower($name) == "layout")
-            trigger_error("May not overwrite layout!", \E_USER_ERROR);
+        if (\strtolower($name) == "layout")
+            \trigger_error("May not overwrite layout!", \E_USER_ERROR);
         $this->_controller->$name = $value;
     }
 
@@ -73,40 +75,109 @@ final class View {
      * module, if it doesn't start with a "/".
      * @param array $data Additional data to temporarily set when
      * rendering view.
-     * @param boolean $return Set to true to return render result instead.
+     * @param boolean $is_returning Set to true to return render result instead.
      * @return string
      */
-    function display($view_path, $data = array(), $return = false) {
-        $stack = array();
+    public function display($view_path, array $data = array(), $is_returning = false) {
+        return $this->internalDisplay(null, $view_path, $data, $is_returning);
+    }
+
+    /**
+     * Displays an element rendered with the specified layout and content.
+     * The content can either be a view or a rendering closure.
+     * @param string $layout_view_path Layout to render view in.
+     * This path is relative to the elements folder of the current
+     * module, if it doesn't start with a "/".
+     * @param string $view_path Path to the view to render.
+     * This path is relative to the elements folder of the current
+     * module, if it doesn't start with a "/".
+     * @param array $data Additional data to temporarily set when
+     * rendering view.
+     * @param boolean $is_returning Set to true to return render result instead.
+     * @return string
+     */
+    public function layout($layout_view_path, $view_path, array $data = array(), $is_returning = false) {
+        return $this->internalDisplay($layout_view_path, $view_path, $data, $is_returning);
+    }
+
+    public function enterLayout($layout_view_path, array $data = array()) {
         $controller = $this->_controller;
-        // Save to stack and set params.
+        \array_push($this->layout_stack, $controller->layout);
+        $controller_restore_stack = $this->setReversableControllerData($data);
+        \array_push($this->layout_stack, $controller_restore_stack);
+        \array_push($this->layout_stack, $layout_view_path);
+        $controller->layout = new Layout();
+        $controller->layout->enterSection("content");
+    }
+
+    public function exitLayout() {
+        if (\count($this->layout_stack) < 3)
+            \trigger_error("Cannot exit inline layout. Currently not in layout.", \E_USER_ERROR);
+        $controller = $this->_controller;
+        $controller->layout->exitSection();
+        $layout_view_path = \array_pop($this->layout_stack);
+        echo $controller->layout->render($layout_view_path, $controller);
+        $controller_restore_stack = \array_pop($this->layout_stack);
+        foreach ($controller_restore_stack as $key => $old_value)
+            $controller->$key = $old_value;
+        $controller->layout = \array_pop($this->layout_stack);
+    }
+
+    private function internalDisplay($layout_view_path = null, $view_path = null, array $data = array(), $is_returning = false) {
+        $stack = array();
+        if ($layout_view_path === null) {
+            $controller = $this->_controller;
+            // Save to stack and set params.
+            $stack = $this->setReversableControllerData($data);
+        } else {
+            list($layout_view_path) = $this->rootViewPath($layout_view_path);
+            $controller = \array_merge($data, array("layout" => $layout_view_path));
+        }
+        list($view_path, $foregin_module_context) = $this->rootViewPath($view_path);
+        // Set new module context.
+        if ($foregin_module_context !== null) {
+            $module_context = $this->_module_context;
+            $this->_module_context = $foregin_module_context;
+        }
+        // Render.
+        $render_result = self::render($view_path, $controller, $is_returning, false, false);
+        // Restore module context.
+        if ($foregin_module_context !== null) {
+            $this->_module_context = $module_context;
+        }
+        if ($layout_view_path === null) {
+            // Restore from stack.
+            foreach ($stack as $key => $val)
+                $controller->$key = $val;
+        }
+        if ($is_returning)
+            return $render_result;
+    }
+
+    private function setReversableControllerData($data) {
+        $previous_values = array();
+        $controller = $this->_controller;
         foreach ($data as $key => $val) {
-            $stack[$key] = isset($controller->$key)? $controller->$key: null;
+            $previous_values[$key] = isset($controller->$key)? $controller->$key: null;
             $controller->$key = $val;
         }
-        if (strlen($view_path) == 0)
-            trigger_error("View path not specified!", \E_USER_ERROR);
+        return $previous_values;
+    }
+
+    private function rootViewPath($view_path) {
+        if (\strlen($view_path) == 0)
+            \trigger_error("View path not specified!", \E_USER_ERROR);
         $fqn_call = $view_path[0] == "/";
         if ($fqn_call) {
             $view = self::findView($view_path);
             if ($view === false)
-                trigger_error("View path '$view_path' not found!", \E_USER_ERROR);
-            // Set new module context.
+                \trigger_error("View path '$view_path' not found!", \E_USER_ERROR);
             $foregin_module_context = $view[1];
-            $module_context = $this->_module_context;
-            $this->_module_context = $foregin_module_context;
         } else {
             $view_path = $this->_module_context . "/elements/$view_path";
+            $foregin_module_context = null;
         }
-        $ret = self::render($view_path, $this->_controller, $return, false, false);
-        // Restore module context.
-        if ($fqn_call)
-            $this->_module_context = $module_context;
-        // Restore from stack.
-        foreach ($stack as $key => $val)
-            $controller->$key = $val;
-        if ($return)
-            return $ret;
+        return array($view_path, $foregin_module_context);
     }
 
     /**
@@ -279,13 +350,14 @@ class Layout {
     }
 
     /** Displays the layout with it's buffered sections. */
-    public function render($path, $layout_controller) {
+    public function render($path, Controller $layout_controller) {
         if (count($this->buffer_stack) > 0)
             trigger_error("Rendering layout without exiting all sections! (Bottom of stack: " . $this->buffer_stack[0]->getName() . ")", \E_USER_ERROR);
         // If just a layout render, it should return content.
         if ($path == self::LAYOUT_RENDER)
             return $this->readSection("content");
         // Render layout just like a view, but without specified layout.
+        $layout_controller = clone $layout_controller;
         foreach ($this->section_buffers as $name => $section)
             $layout_controller->$name = $this->readSection($name);
         $layout_controller->layout = self::LAYOUT_RENDER;
@@ -301,22 +373,23 @@ class Layout {
      * @param string $name Identifier of the section.
      */
     public function enterSection($name) {
-        if (!array_key_exists($name, $this->section_buffers)) {
-            $foot_section = substr($name, -5) == '_foot';
-            $this->section_buffers[$name] = $section = new SectionBuffer($name, $foot_section);
+        if (!\array_key_exists($name, $this->section_buffers)) {
+            $foot_section = \substr($name, -5) == '_foot';
+            $section = new SectionBuffer($name, $foot_section);
+            $this->section_buffers[$name] = $section;
         } else
             $section = $this->section_buffers[$name];
         $section->enter();
-        array_push($this->buffer_stack, $section);
+        \array_push($this->buffer_stack, $section);
     }
 
     /**
      * Exits the section in the layout.
      */
     public function exitSection() {
-        $section = array_pop($this->buffer_stack);
-        if (!is_a($section, "nmvc\\SectionBuffer"))
-              trigger_error("Cannot exit section. No section to exit from!", \E_USER_ERROR);
+        $section = \array_pop($this->buffer_stack);
+        if (!($section instanceof SectionBuffer))
+            \trigger_error("Cannot exit section. No section to exit from!", \E_USER_ERROR);
         $section->leave();
     }
 
