@@ -48,7 +48,8 @@ class RecaptchaType extends \nmvc\AppType {
     }
 
     public function readInterface($name) {
-	if (config\RECAPTCHA_PUBLIC_KEY == "")
+        \trigger_error("TODO: Not yet done refactoring this type to use built-in http querying instead of http module.", \E_USER_ERROR);
+        if (config\RECAPTCHA_PUBLIC_KEY == "")
             trigger_error("To use reCAPTCHA you must get an API key from <a href='https://www.google.com/recaptcha/admin/create'>https://www.google.com/recaptcha/admin/create</a>", \E_USER_ERROR);
         $remote_ip = @$_SERVER['REMOTE_ADDR'];
         $challenge = @$_POST['recaptcha_challenge_field'];
