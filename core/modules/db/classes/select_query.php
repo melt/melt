@@ -358,6 +358,15 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
     }
 
     /**
+     * Limits the selection to one row
+     * and returns true if the count is non-zero.
+     * @return integer
+     */
+    public function exists() {
+        return $this->limit(1)->count() > 0;
+    }
+
+    /**
      * Returns the first instance of this selection or NULL if
      * selection is empty.
      * @return \nmvc\Model
