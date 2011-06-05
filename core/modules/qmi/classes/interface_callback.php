@@ -7,7 +7,7 @@
 abstract class InterfaceCallback_app_overrideable {
     private $interface_name;
     private $instances;
-    private $instance_fields;
+    private $instance_components;
     private $is_deleting;
     private $success_url;
     private $ajax_submit;
@@ -19,10 +19,10 @@ abstract class InterfaceCallback_app_overrideable {
      */
     protected $validate_failed_message;
 
-    public final function __construct($interface_name, $instances, $instance_fields, $is_deleting, $success_url, $ajax_submit, $time_created) {
+    public final function __construct($interface_name, $instances, $instance_components, $is_deleting, $success_url, $ajax_submit, $time_created) {
         $this->interface_name = $interface_name;
         $this->instances = $instances;
-        $this->instance_fields = $instance_fields;
+        $this->instance_components = $instance_components;
         $this->is_deleting = $is_deleting;
         $this->success_url = $success_url;
         $this->validate_failed_message = __("Validation failed. Please check your input.");
@@ -67,38 +67,42 @@ abstract class InterfaceCallback_app_overrideable {
         return \str_replace("{id}", $this->iid, $this->success_url);
     }
 
-    private $invalidation_data = array();
+    private $invalidation_data = array('errors' => array(), 'values' => array());
 
     protected final function doInvalidRedirect() {
         if ($this->ajax_submit)
-            \nmvc\request\send_json_data(array("success" => false, "unlinked" => false, "errors" => $this->invalidation_data));
+            \nmvc\request\send_json_data(array("success" => false, "unlinked" => false, "errors" => $this->invalidation_data['errors']));
         // Fetch all interface values and return them.
         foreach ($this->instances as $instance_key => $instance) {
-            $instance_db_key = ModelInterface::getDatabaseInstanceKey($instance);
             foreach ($instance as $field_name => $field) {
+                if (!isset($this->instance_components[$instance_key][$field_name]))
+                    continue;
+                $component_key = $this->instance_components[$instance_key][$field_name];
                 $value = $field->get();
                 if ($value instanceof Type)
                     $value = $field->getSQLValue();
-                $this->invalidation_data[$instance_db_key]['values'][$field_name] = $value;
+                $this->invalidation_data['values'][$component_key] = $value;
             }
         }
         // Store invalid and reload this URL.
-        $_SESSION['qmi_invalid']['name'] = $this->interface_name;
-        $_SESSION['qmi_invalid']['data'] = $this->invalidation_data;
+        $_SESSION['qmi_invalid'][$this->interface_name] = $this->invalidation_data;
         \nmvc\messenger\redirect_message(REQ_URL, $this->validate_failed_message);
     }
 
     protected final function pushError(\nmvc\Model $instance, $field_name, $error) {
-        if ($this->ajax_submit) {
-            $instance_key = \array_search($instance, $this->instances, true);
-            if ($instance_key === false)
-                trigger_error("Trying to push error to unknown instance.", \E_USER_ERROR);
-            $component_key = $this->instance_fields[$instance_key][$field_name];
-            $this->invalidation_data[$component_key] = $error;
-        } else {
-            $instance_db_key = ModelInterface::getDatabaseInstanceKey($instance);
-            $this->invalidation_data[$instance_db_key]['errors'][$field_name] = $error;
-        }
+        $instance_key = \array_search($instance, $this->instances, true);
+        if ($instance_key === false)
+            trigger_error("Trying to push error to unknown instance.", \E_USER_ERROR);
+        $component_key = $this->instance_components[$instance_key][$field_name];
+        $this->invalidation_data['errors'][$component_key] = $error;
+    }
+
+    /**
+     * This function returns true if the submit is of ajax flavour.
+     * @return boolean
+     */
+    protected final function isAjaxSubmit() {
+        return $this->ajax_submit;
     }
 
     /**
@@ -107,7 +111,7 @@ abstract class InterfaceCallback_app_overrideable {
      * @return boolean
      */
     protected final function isPushedErrorsPending() {
-        return \count($this->invalidation_data) > 0;
+        return \count($this->invalidation_data['errors']) > 0;
     }
 
     /**
@@ -125,15 +129,15 @@ abstract class InterfaceCallback_app_overrideable {
                 continue;
             $error_fields = $instance->uiValidate($this->interface_name);
             // Validation not returning array = validation success.
-            if (!is_array($error_fields))
+            if (!\is_array($error_fields))
                 continue;
             // No components for instance = validation success.
-            if (!isset($this->instance_fields[$instance_key]))
+            if (!isset($this->instance_components[$instance_key]))
                 continue;
             // Not interested in invalid fields we have not created interfaces for.
-            $error_fields = array_intersect_key($error_fields, $this->instance_fields[$instance_key]);
+            $error_fields = \array_intersect_key($error_fields, $this->instance_components[$instance_key]);
             // Empty array = validation success.
-            if (count($error_fields) == 0)
+            if (\count($error_fields) == 0)
                 continue;
             foreach ($error_fields as $field_name => $error)
                 $this->pushError($instance, $field_name, $error);

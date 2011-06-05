@@ -5,7 +5,7 @@ class ActionsController extends \nmvc\AppController {
      * Callback for qmi actions.
      * @see get_action_link
      */
-    function set($data) {
+    public function set($data) {
         $data = \nmvc\string\simple_decrypt($data);
         if ($data === false)
             \nmvc\request\show_404();
@@ -38,5 +38,34 @@ class ActionsController extends \nmvc\AppController {
             \nmvc\request\send_json_data(true);
         else
             \nmvc\request\redirect($url);
+    }
+
+    /**
+     * Ajax callback that mutates QMI data to a new state.
+     */
+    public function mutate() {
+        $blob = \file_get_contents("php://input");
+        $blobs = \explode(",", $blob);
+        if (\count($blobs) < 2)
+            \nmvc\request\show_invalid();
+        $interface_blob = $blobs[0];
+        $operations = array();
+        for ($i = 1; $i < \count($blobs); $i++) {
+            if ($i > 1 && @$blobs[$i][0] === "@") {
+                // JIT instance ID.
+                $operations[$i - 1][2] = \substr($blobs[$i], 1);
+                continue;
+            }
+            $operation = @\unserialize(\gzuncompress(\nmvc\string\simple_decrypt($blobs[$i])));
+            if (!\is_array($operation))
+                \nmvc\request\show_invalid();
+            $operations[$i] = $operation;
+            $operations[$i][2] = null;
+        }
+        $model_interface = ModelInterface::unserialize($interface_blob);
+        if (!($model_interface instanceof ModelInterface))
+            \nmvc\request\show_invalid();
+        $model_interface->__jsMutate($operations);
+        exit;
     }
 }

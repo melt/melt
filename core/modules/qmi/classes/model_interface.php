@@ -5,17 +5,21 @@
  */
 class ModelInterface {
     private $instances = array();
-    private $components = array();
     private $setters = array();
+    private $components = array();
     private $autolinks = array();
+    private $jit_references = array();
     private $interface_name = null;
     private $success_url;
     private $creating = true;
     private $default_style;
     private $time_created;
+    private $identity;
+
+    const INSTANCE_JIT_REFERENCE = -1;
 
     /**
-     * @param string $interface_name Name of interface (it's identifier).
+     * @param string $interface_name Name of interface (its identifier).
      * Used for selecting validation and components to return for models.
      * Also used for selecting callback.
      * @param string $default_style
@@ -23,12 +27,15 @@ class ModelInterface {
      * interface on success.
      */
     public function __construct($interface_name, $default_style = "default", $success_url = null) {
+        if ($interface_name === null)
+            return;
         if (!\preg_match('#^\w+(\\\\\w+)?$#', $interface_name))
             \trigger_error(__CLASS__ . " error: Unexpected \$interface_name format: $interface_name", \E_USER_ERROR);
         $this->interface_name = $interface_name;
         $this->default_style = (string) $default_style;
         $this->success_url = is_null($success_url)? url(REQ_URL): $success_url;
         $this->time_created = new \DateTime();
+        $this->identity = \nmvc\string\random_alphanum_str(10);
     }
 
     /**
@@ -46,15 +53,7 @@ class ModelInterface {
      * and a closing form tag.
      */
     public function finalizeForm($auto_submit = true, $auto_delete = false) {
-        // Convert instance object references to id|class references.
-        foreach ($this->instances as &$instance)
-            $instance = array($instance->getID(), get_class($instance), $instance->isVolatile());
-        $qmi_data = \nmvc\string\simple_crypt(gzcompress(serialize(array(
-            $this->success_url, $this->instances, $this->components
-            , $this->setters, array_values($this->autolinks)
-            , $this->interface_name, $this->time_created
-        ))));
-        $html = '<div><input type="hidden" name="_qmi" value="' . $qmi_data . '" />';
+        $html = '<div><input type="hidden" id="' . $this->identity . '" name="_qmi" value="' . $this->serialize() . '" />';
         if ($auto_submit) {
             $msg = $this->creating? __("Add New"): __("Save Changes");
             $html .= '<input type="submit" value="' . $msg . '" />';
@@ -68,19 +67,33 @@ class ModelInterface {
         return $html;
     }
 
-    public static function _clearInvalidData() {
-        // Clearing the invalidation data as it was used this request.
-        unset($_SESSION["qmi_invalid"]);
+    /**
+     * Returns a serializeable instance reference.
+     */
+    private static function getInstanceReference(\nmvc\Model $instance, $store_changes = false) {
+        $changed_fields = array();
+        if ($store_changes) {
+            foreach ($instance->getColumns() as $column_name => $column) {
+                if (!$column->hasChanged())
+                    continue;
+                $changed_fields[$column_name] = ($column instanceof \nmvc\core\PointerType)? $column->getID(): $column->get();
+            }
+        }
+        return array($instance->getID(), \get_class($instance), $instance->isVolatile(), $changed_fields);
     }
 
-    /**
-     * Returns an instance key that identifies an instance as it is
-     * stored in the database and not as qmi\getInstanceKey
-     * (as represented in-memory).
-     */
-    public static function getDatabaseInstanceKey(\nmvc\Model $instance) {
-        // This is unique because class names cannot start with numbers.
-        return ($instance->id > 0? $instance->id: "0")  . get_class($instance);
+    private static function getReferencedInstance($reference) {
+        list($id, $name, $is_volatile, $changed_fields) = $reference;
+        if ($id > 0) {
+            $instance = $name::selectByID($id);
+            if ($instance === null)
+                return false;
+        } else {
+            $instance = new $name($is_volatile);
+        }
+        foreach ($changed_fields as $column => $value)
+            $instance->$column = $value;
+        return $instance;
     }
 
     /**
@@ -94,6 +107,21 @@ class ModelInterface {
         if (!\array_key_exists($instance_key, $this->instances))
             $this->instances[$instance_key] = $instance;
         return $instance_key;
+    }
+
+    /**
+     * Returns an instance key offset that can be used to construct
+     * consistant, multi-request spanning component id/name.
+     */
+    private function getInstanceKeyOffset(\nmvc\Model $instance = null) {
+        $this->getMemoryInstanceKey($instance);
+        $instance_index_offset = 0;
+        foreach ($this->instances as $instance_in) {
+            if ($instance_in === $instance)
+                break;
+            $instance_index_offset++;
+        }
+        return $instance_index_offset;
     }
 
     /**
@@ -208,7 +236,7 @@ class ModelInterface {
         $this->getMemoryInstanceKey($instance);
         $changed_fields = array();
         foreach ($instance->getColumns() as $column_name => $column) {
-            if (is($column, 'nmvc\core\PointerType')) {
+            if ($column instanceof \nmvc\core\PointerType) {
                 $target = $column->get();
                 if ($column->hasChanged() || (($target instanceof \nmvc\Model) && !$target->isLinked())) {
                     $column_name = substr($column_name, 0, -3);
@@ -220,60 +248,71 @@ class ModelInterface {
         if (count($changed_fields) > 0)
             $this->attachChangeArray($instance, $changed_fields);
     }
-
+    
     /**
      * This function attaches the fields the given model specifies
      * for the interface name this ModelInterface was constructed with.
      * It then fetches the html components for that model instance and
      * renders them using the specified html style.
      * @param UserInterfaceProvider $instance Model instance to interface.
-     * @param string $field_set_name Identifier of field set to pass
+     * @param mixed $field_set_name Identifier of field set to pass
      * to uiGetInterface.
-     * @param string $style Set to non null to override style used to render
+     * @param mixed $style Set to non null to override style used to render
      * interface. Is used to find the renderering view at the path
      * /qmi2/{$style}
      * @param array $additional_view_data
-     * @return string HTML for interface.
+     * @return mixed HTML for interface.
      */
-    public function getInterface(UserInterfaceProvider $instance, $field_set_name = null, $style = null, $additional_view_data = array()) {
-        if (!($instance instanceof \nmvc\Model))
-            \trigger_error('\$instance must be instance of model!', \E_USER_ERROR);
-        if ($style !== null && !\is_string($style))
-            \trigger_error('\$style must be string or null!', \E_USER_ERROR);
-        if (!\is_array($additional_view_data))
-            \trigger_error('\$additional_view_data must be array!', \E_USER_ERROR);
-        if ($instance->isLinked())
-            $this->creating = false;
+    public function getInterface(UserInterfaceProvider $instance, $field_set_name = null, $style = null, array $additional_view_data = array()) {
+        \assert($instance instanceof \nmvc\Model);
+        \assert($style === null || \is_string($style));
         $html_components = array();
-        $invalidation_data = array();
         // Storing all instance changes on success.
         $this->attachChanges($instance);
-        $instance_key = $this->getMemoryInstanceKey($instance);
-        $db_instance_key = self::getDatabaseInstanceKey($instance);
-        if (isset($_SESSION["qmi_invalid"]['name'])
-        && $_SESSION["qmi_invalid"]['name'] == $this->interface_name
-        && isset($_SESSION["qmi_invalid"]['data'][$db_instance_key])) {
-            $invalidation_data = $_SESSION["qmi_invalid"]['data'][$db_instance_key];
-            // A clear of this invalidation data is now pending.
-            static $pending_data_clear = false;
-            if (!$pending_data_clear) {
-                $pending_data_clear = true;
-                register_shutdown_function(array(__CLASS__, "_clearInvalidData"));
-            }
-        }
-        // Using index of instance as a basis for consistant, multi-request
-        // spanning component id/name.
-        $instance_index = 0;
-        foreach ($this->instances as $instance_in) {
-            if ($instance_in === $instance)
-                break;
-            $instance_index++;
-        }
-        // Loop trough fields in interface.
         $ui_fields = $instance->uiGetInterface($this->interface_name, $field_set_name);
         if (!is_array($ui_fields))
             \trigger_error("No '" . $this->interface_name . "', '$field_set_name' interface returned by " . \get_class($instance) . ". (Undeclared?)", \E_USER_ERROR);
-        foreach (\array_keys($ui_fields) as $field_name) {
+        $html_components = $this->getInterfaceComponents($instance, \array_keys($ui_fields), $ui_fields);
+        // Find the style for the interface.
+        if ($style == null && isset($ui_fields["_style"]))
+            $style = $ui_fields["_style"];
+        if ($style == null)
+            $style = $this->default_style;
+        if (\strlen($style) == 0)
+            \trigger_error("Style is empty!", \E_USER_ERROR);
+        // Render the actual interface.
+        return \nmvc\View::render("/qmi/" . $style . "_interface", \array_merge($additional_view_data, array("components" => $html_components, "interface" => $this)));
+    }
+
+    /**
+     * Returns an array of HtmlComponent objects for the instance and field.
+     * The component is also "attached" and "registred" internaly on
+     * the Model Interface.
+     * @param \nmvc\Model $instance
+     * @param mixed $fields String or array of field names.
+     * @return array[HtmlComponent]
+     */
+    public function getInterfaceComponents(\nmvc\Model $instance, $fields, $field_labels = array()) {
+        if ($instance->isLinked())
+            $this->creating = false;
+        if (!\is_array($fields))
+            $fields = array($fields);
+        $instance_key = $this->getMemoryInstanceKey($instance);
+        $instance_key_offset = $this->getInstanceKeyOffset($instance);
+        // Get the invalidation data.
+        $invalidation_data = array();
+        if (isset($_SESSION["qmi_invalid"][$this->interface_name])) {
+            $invalidation_data = $_SESSION["qmi_invalid"][$this->interface_name];
+            // A clear of the invalidation data is now pending.
+            static $pending_data_clear = false;
+            if (!$pending_data_clear) {
+                $pending_data_clear = true;
+                register_shutdown_function(function() {
+                    unset($_SESSION["qmi_invalid"]);
+                });
+            }
+        }
+        foreach ($fields as $field_name) {
             if (\strlen($field_name) == 0 || $field_name[0] == "_")
                 continue;
             if (!$instance->hasField($field_name))
@@ -281,12 +320,12 @@ class ModelInterface {
             if (substr($field_name, -3) == "_id")
                 \trigger_error("Error in interface '" . $this->interface_name . "' for " . \get_class($instance) . ": Field syntax '$field_name' is reserved for id access. Pointer fields must be passed without '_id' suffix.", \E_USER_ERROR);
             // Generate the html key/id.
-            $component_id = "qmiid" . \substr(\sha1($field_name . "," . $instance_index . "," . $this->interface_name), 0, 12);
-            // Generate the component interface.
-            if (isset($invalidation_data['values'][$field_name]))
-                $instance->$field_name = $invalidation_data['values'][$field_name];
-            $type = $instance->type($field_name);
+            $component_id = "qmiid" . \substr(\sha1($field_name . "," . $instance_key_offset . "," . $this->interface_name), 0, 12);
+            // Pre-fill the field with the previous, possibly errorneous, value.
+            if (isset($invalidation_data['values'][$component_id]))
+                $instance->$field_name = $invalidation_data['values'][$component_id];
             // Make sure sub resolved fields have their parent instances attached.
+            $type = $instance->type($field_name);
             if ($type->parent != $instance)
                 $this->attachChanges($type->parent);
             $component_interface = $type->getInterface($component_id);
@@ -299,86 +338,313 @@ class ModelInterface {
                 $component_interfaces = array();
             foreach ($component_interfaces as $index => $component_interface) {
                 // Append error label if one is specified.
-                $component_error = isset($invalidation_data['errors'][$field_name])? $invalidation_data['errors'][$field_name]: null;
+                $component_error = ($index == 0 && isset($invalidation_data['errors'][$component_id]))? $invalidation_data['errors'][$component_id]: null;
                 // Prefix "_" prevents collision with other fields when using types with multiple interfaces.
                 $html_components_key = ($index == 0)? $field_name:  "_" . $field_name . "_" . ($index + 1);
-                $field_label = isset($ui_fields[$html_components_key])? $ui_fields[$html_components_key]: null;
+                $field_label = isset($field_labels[$html_components_key])? $field_labels[$html_components_key]: null;
                 $html_components[$html_components_key] = new HtmlComponent($component_interface, $field_label, $component_error, $component_id, $type);
             }
             // Registering the component.
             $this->components[$component_id] = array($instance_key, $field_name);
         }
-        // Find the style for the interface.
-        if ($style == null && isset($ui_fields["_style"]))
-            $style = $ui_fields["_style"];
-        if ($style == null)
-            $style = $this->default_style;
-        if (\strlen($style) == 0)
-            \trigger_error("Style is empty!", \E_USER_ERROR);
-        // Render the actual interface.
-        return \nmvc\View::render("/qmi/" . $style . "_interface", \array_merge($additional_view_data, array("components" => $html_components)));
+        // Return the interface components.
+        return $html_components;
+    }
+
+    /**
+     * Completly detaches the instance from the interface. All references
+     * to the instance is removed, including changes and relations from other
+     * instances to this instance. Returns all component id's that where
+     * removed as a result of the operation.
+     * @param \nmvc\Model $instance
+     * @return array
+     */
+    public function detachInstance(\nmvc\Model $instance) {
+        $instance_key = $this->getMemoryInstanceKey($instance);
+        // Remove all references to the instance.
+        $detached_components = array();
+        foreach ($this->components as $component_id => $component) {
+            if ($component[0] !== $instance_key)
+                continue;
+            unset($this->components[$component_id]);
+            $detached_components[$component_id] = $component_id;
+        }
+        unset($this->setters[$instance_key]);
+        foreach ($this->autolinks as $autolink_key => $autolink) {
+            if ($autolink[0] === $instance_key || $autolink[1] === $instance_key)
+                unset($this->autolinks[$autolink_key]);
+        }
+        foreach ($this->jit_references as $jit_reference => $jit_instance_key) {
+            if ($jit_instance_key === $instance_key)
+                unset($this->jit_references[$jit_reference]);
+        }
+        unset($this->instances[$instance_key]);
+        return $detached_components;
+    }
+
+    /**
+     * Detaches the interface and returns the component id's that was detached.
+     * Only detaches the set of components that belong to the interface,
+     * not the actual instance.
+     * @see ModelInterface::detachInstance() to detach the actual instance.
+     * @see ModelInterface::getInterface() for more details.
+     * @param UserInterfaceProvider $instance
+     * @param string $field_set_name
+     * @return array
+     */
+    public function detachInterface(UserInterfaceProvider $instance, $field_set_name = null) {
+        \assert($instance instanceof \nmvc\Model);
+        \assert($style === null || \is_string($style));
+        $ui_fields = $instance->uiGetInterface($this->interface_name, $field_set_name);
+        if (!is_array($ui_fields))
+            \trigger_error("No '" . $this->interface_name . "', '$field_set_name' interface returned by " . \get_class($instance) . ". (Undeclared?)", \E_USER_ERROR);
+        return $this->detachInterfaceComponents($instance, \array_keys($ui_fields));
+    }
+
+    /**
+     * Detaches the components for the specified interface field(s) and
+     * returns their respective id.
+     * Only detaches the given set of components related to the fields,
+     * not the actual instance.
+     * @see ModelInterface::detachInstance() to detach the actual instance.
+     * @see ModelInterface::getInterfaceComponents() for more details.
+     * @param \nmvc\Model $instance
+     * @param mixed $fields
+     * @return array
+     */
+    public function detachInterfaceComponents(\nmvc\Model $instance, $fields) {
+        if (!\is_array($fields))
+            $fields = array($fields);
+        $instance_key = $this->getMemoryInstanceKey($instance);
+        $instance_key_offset = $this->getInstanceKeyOffset($instance);
+        $detached_components = array();
+        foreach ($fields as $field_name) {
+            if (\strlen($field_name) == 0 || $field_name[0] == "_")
+                continue;
+            if (!$instance->hasField($field_name))
+                \trigger_error("Error in interface '" . $this->interface_name . "' for " . \get_class($instance) . ": '$field_name' is not a valid field/column name!", \E_USER_ERROR);
+            if (substr($field_name, -3) == "_id")
+                \trigger_error("Error in interface '" . $this->interface_name . "' for " . \get_class($instance) . ": Field syntax '$field_name' is reserved for id access. Pointer fields must be passed without '_id' suffix.", \E_USER_ERROR);
+            // Generate the html key/id.
+            $component_id = "qmiid" . \substr(\sha1($field_name . "," . $instance_key_offset . "," . $this->interface_name), 0, 12);
+            // Unregister the component.
+            if (isset($this->components[$component_id])) {
+                $detached_components[$component_id] = $component_id;
+                unset($this->components[$component_id]);
+            }
+        }
+        // Return the component ids that was detached.
+        return $detached_components;
+    }
+
+    /**
+     * @internal
+     */
+    public function __jsMutate($operations) {
+        $responses = array();
+        foreach ($operations as $operation) {
+            list($function_name, $arguments, $jit_reference) = $operation;
+            // Dereference/evaluate target instance.
+            $instance = $arguments[0];
+            if ($instance === self::INSTANCE_JIT_REFERENCE) {
+                // Referencing an instance just-in-time.
+                if (!isset($this->jit_references[$jit_reference]))
+                    \nmvc\request\show_invalid();
+                $instance = $this->instances[$this->jit_references[$jit_reference]];
+            } else {
+                // Load the related instance.
+                $instance = ModelInterface::getReferencedInstance($instance);
+                if ($instance === false)
+                    \nmvc\request\show_404();
+                if (!$instance->isLinked()) {
+                    // Adding an instance dynamically, add JIT reference to it.
+                    $jit_reference = \nmvc\string\random_alphanum_str(10);
+                    $this->jit_references[$jit_reference] = $this->getMemoryInstanceKey($instance);
+                    \header("X-Qmi-Instance-Id: $jit_reference");
+                }
+            }
+            $arguments[0] = $instance;
+            // Execute mutation function.
+            $responses[] = \call_user_func_array(array($this, $function_name), $arguments);
+        }
+        $response = \json_encode(\count($responses) > 1? $responses: \reset($responses));
+        $qmi_blob = $this->serialize();
+        \nmvc\request\reset();
+        \header("X-Qmi-Blob-Length: " . \strlen($qmi_blob));
+        \header("Content-Type: application/octet-stream");
+        print $qmi_blob;
+        print $response;
+        exit;
+    }
+
+    private function getJsExpression($function_name, array $arguments) {
+        \assert($arguments[0] instanceof \nmvc\Model || $arguments[0] === self::INSTANCE_JIT_REFERENCE);
+        static $js_lib_included = false;
+        if (!$js_lib_included) {
+            \nmvc\View::render("/qmi/js_lib", null, false, true);
+            $js_lib_included = true;
+        }
+        if ($arguments[0] instanceof \nmvc\Model)
+            $arguments[0] = $this->getInstanceReference($arguments[0], true);
+        $operation = array(\substr($function_name, 2), $arguments);
+        $operation_blob = \nmvc\string\simple_crypt(\gzcompress(\serialize($operation)));
+        $identity = $this->identity;
+        return "$identity,$operation_blob";
+    }
+
+    /**
+     * @see ModelInterface::getInterface() for more details.
+     * @return string Operation blob. Pass to qmi_mutate.
+     */
+    public function jsGetInterface($instance, $field_set_name = null, $style = null, array $additional_view_data = array()) {
+        \assert($style === null || \is_string($style));
+        return self::getJsExpression(__FUNCTION__, \func_get_args());
+    }
+
+    /**
+     * @see ModelInterface::getInterfaceComponents() for more details.
+     * @return string Operation blob. Pass to qmi_mutate.
+     */
+    public function jsGetInterfaceComponents($instance, $fields, $field_labels = array()) {
+        return self::getJsExpression(__FUNCTION__, \func_get_args());
+    }
+
+    /**
+     * @see ModelInterface::detachInstance() for more details.
+     * @return string Operation blob. Pass to qmi_mutate.
+     */
+    public function jsDetachInstance($instance) {
+        return self::getJsExpression(__FUNCTION__, \func_get_args());
+    }
+
+    /**
+     * @see ModelInterface::detachInterface() for more details.
+     * @return string Operation blob. Pass to qmi_mutate.
+     */
+    public function jsDetachInterface($instance, $field_set_name = null) {
+        return self::getJsExpression(__FUNCTION__, \func_get_args());
+    }
+
+    /**
+     * @see ModelInterface::detachInterfaceComponents() for more details.
+     * @return string Operation blob. Pass to qmi_mutate.
+     */
+    public function jsDetachInterfaceComponents(\nmvc\Model $instance, $fields) {
+        return self::getJsExpression(__FUNCTION__, \func_get_args());
+    }
+
+    public function serialize() {
+        // Convert instance object references to id|class references.
+        $instance_references = $this->instances;
+        foreach ($instance_references as &$instance)
+            $instance = self::getInstanceReference($instance, false);
+        // Serialize to encrypted blob.
+        return \nmvc\string\simple_crypt(\gzcompress(\serialize(array(
+            $instance_references,
+            $this->setters,
+            $this->components,
+            $this->autolinks,
+            $this->jit_references,
+            $this->interface_name,       
+            $this->success_url,
+            $this->creating,
+            $this->default_style,
+            $this->time_created,
+            $this->identity,
+        ))));
+    }
+
+    public static function unserialize($qmi_data) {
+        $qmi_data = \nmvc\string\simple_decrypt($qmi_data);
+        if ($qmi_data === false)
+            return false;
+        $qmi_data = @\unserialize(\gzuncompress($qmi_data));
+        if (!\is_array($qmi_data))
+            return false;
+        $model_interface = new ModelInterface(null);
+        list(
+            $instance_references,
+            $setters,
+            $model_interface->components,
+            $model_interface->autolinks,
+            $model_interface->jit_references,
+            $model_interface->interface_name,
+            $model_interface->success_url,
+            $model_interface->creating,
+            $model_interface->default_style,
+            $model_interface->time_created,
+            $model_interface->identity,
+        ) = $qmi_data;
+        // Restore all instances.
+        $new_instance_keys = array();
+        foreach ($instance_references as $old_instance_key => $instance_reference) {
+            $instance = self::getReferencedInstance($instance_reference);
+            if ($instance === false)
+                return false;
+            $new_instance_key = \spl_object_hash($instance);
+            $model_interface->instances[$new_instance_key] = $instance;
+            $new_instance_keys[$old_instance_key] = $new_instance_key;
+        }
+        // Translate all instance keys from old to new.
+        foreach ($model_interface->components as &$component)
+            $component[0] = $new_instance_keys[$component[0]];
+        foreach ($model_interface->jit_references as &$instance_key)
+            $instance_key = $new_instance_keys[$instance_key];
+        foreach ($setters as $old_instance_key => $setter)
+            $model_interface->setters[$new_instance_keys[$old_instance_key]] = $setter;
+        foreach ($model_interface->autolinks as &$autolink) {
+            $autolink[0] = $new_instance_keys[$autolink[0]];
+            $autolink[1] = $new_instance_keys[$autolink[1]];
+        }
+        return $model_interface;
+    }
+    
+    public static function _checkSubmit() {
+        if (!\array_key_exists("_qmi", $_POST))
+            return;
+        $model_interface = self::unserialize($_POST["_qmi"]);
+        if ($model_interface === false)
+            \nmvc\messenger\redirect_message(REQ_URL, _("Saving changes failed."));
+        $model_interface->processSubmit();
     }
     
     /**
      * Handles post data returned from a generated interface.
      * @return array
      */
-    public static function _interface_callback() {
-        if (!\array_key_exists("_qmi", $_POST))
-            return;
-        $ajax_submit = array_key_exists("_qmi_ajax_submit", $_POST) && $_POST["_qmi_ajax_submit"] == true;
-        $qmi_data = \nmvc\string\simple_decrypt($_POST["_qmi"]);
-        if ($qmi_data === false) {
-            \nmvc\messenger\redirect_message(REQ_URL, __("The action failed, your session might have timed out. Please try again."));
-            return;
-        }
-        list($success_url, $instance_keys, $components, $setters, $autolinks, $interface_name, $time_created) = unserialize(gzuncompress($qmi_data));
-        // Fetch all instances and translate all instance keys to their new spl object hashes.
-        $instances = array();
-        foreach ($instance_keys as $old_instance_key => $instance_values) {
-            list($id, $name, $is_volatile) = $instance_values;
-            if ($id > 0) {
-                $instance = $name::selectByID($id);
-                if ($instance === null) {
-                    \nmvc\messenger\redirect_message(REQ_URL, __("Action failed, one or more of the entries you edited has been deleted."));
-                    return;
-                }
-            } else
-                $instance = new $name($is_volatile);
-            $instances[$old_instance_key] = $instance;
-        }
-        $instance_fields = array();
+    public function processSubmit() {
+        $instance_components = array();
         if (isset($_POST['_qmi_auto_delete_button'])) {
             $is_deleting = true;
         } else {
             $is_deleting = false;
             // Process all setters.
-            foreach ($setters as $instance_key => $fields) {
+            foreach ($this->setters as $instance_key => $fields) {
                 foreach ($fields as $field_name => $value)
-                    $instances[$instance_key]->$field_name = $value;
+                    $this->instances[$instance_key]->$field_name = $value;
             }
             // Connect the instances that should be connected.
-            foreach ($autolinks as $autolink) {
+            foreach ($this->autolinks as $autolink) {
                 list($source_model_key, $target_model_key, $pointer_field_name) = $autolink;
-                $pointer_model = $instances[$source_model_key];
-                $target_model = $target_model_key !== null? $instances[$target_model_key]: null;
+                $pointer_model = $this->instances[$source_model_key];
+                $target_model = $target_model_key !== null? $this->instances[$target_model_key]: null;
                 $pointer_model->$pointer_field_name = $target_model;
             }
             // Read all components from post data (overwriting setters).
-            foreach ($components as $component_id => $component) {
+            foreach ($this->components as $component_id => $component) {
                 list($instance_key, $field_name) = $component;
-                $instances[$instance_key]->type($field_name)->readInterface($component_id);
-                $instance_fields[$instance_key][$field_name] = $component_id;
+                $this->instances[$instance_key]->type($field_name)->readInterface($component_id);
+                $instance_components[$instance_key][$field_name] = $component_id;
             }
         }
         // Extract callback from interface name.
-        $pos = \strpos($interface_name, '\\');
+        $pos = \strpos($this->interface_name, '\\');
         if ($pos !== false) {
-            $callback_module = \substr($interface_name, 0, $pos);
-            $callback_method = \substr($interface_name, $pos + 1);
+            $callback_module = \substr($this->interface_name, 0, $pos);
+            $callback_method = \substr($this->interface_name, $pos + 1);
         } else {
             $callback_module = 'qmi';
-            $callback_method = $interface_name;
+            $callback_method = $this->interface_name;
         }
         $callback_method = "ic_$callback_method";
         $callback_class = 'nmvc\\' . $callback_module . '\\InterfaceCallback';
@@ -388,11 +654,12 @@ class ModelInterface {
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' does not extend 'nmvc\qmi\InterfaceCallback'!", \E_USER_ERROR);
         if (!is($callback_class, $callback_class . "_app_overrideable"))
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not declared overridable by the responsible module!", \E_USER_ERROR);
-        $callback_class = new $callback_class($interface_name, $instances, $instance_fields, $is_deleting, $success_url, $ajax_submit, $time_created);
+        $ajax_submit = array_key_exists("_qmi_ajax_submit", $_POST) && $_POST["_qmi_ajax_submit"] == true;
+        $callback_class = new $callback_class($this->interface_name, $this->instances, $instance_components, $is_deleting, $this->success_url, $ajax_submit, $this->time_created);
         $callback_class->$callback_method();
         if ($ajax_submit) {
             $data = array("success" => true, "unlinked" => false, "errors" => array());
-            foreach ($instances as $instance) {
+            foreach ($this->instances as $instance) {
                 if (!$instance->isLinked()) {
                     $data["unlinked"] = true;
                     break;
