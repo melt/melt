@@ -1028,6 +1028,20 @@ abstract class Model implements \IteratorAggregate, \Countable {
     }
 
     /**
+     * Selects all instances that matches this instances given fields.
+     * Takes N arguments (field names) and returns selection.
+     * Indexing the fields will make this selection much faster.
+     * @param String $field1 First field of N fields.
+     * @return db\SelectQuery
+     */
+    public function selectMatch($field1) {
+        $selection = static::select();
+        foreach (\func_get_args() as $field)
+            $selection->and($field)->is($this->$field);
+        return $selection;
+    }
+
+    /**
      * Returns an array of model instances of this type that refer to this
      * instance and the name of the refering pointers. The returned instances
      * is not neccessarly linked. The memory relation graph state is
