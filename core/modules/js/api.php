@@ -1,6 +1,6 @@
-<?php namespace nmvc\jquery;
+<?php namespace nmvc\js;
 
-const JSTREE_DEFAULT_ICON = "/static/cmod/jquery/jquery-jstree/folder.png";
+const JSTREE_DEFAULT_ICON = "/static/cmod/js/jquery-jstree/folder.png";
 
 /**
  * Outputs a linked tree from the given iterator.

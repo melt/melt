@@ -1,4 +1,4 @@
-<?php namespace nmvc\jquery; ?>
+<?php namespace nmvc\js; ?>
 <?php $this->layout->enterSection("head"); ?>
-<script type="text/javascript" src="<?php echo url("/static/cmod/jquery/jquery-cookie.js"); ?>"></script>
+    <script type="text/javascript" src="<?php echo url("/static/cmod/js/jquery-cookie.js"); ?>"></script>
 <?php $this->layout->exitSection(); ?>
