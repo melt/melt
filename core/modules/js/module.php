@@ -2,8 +2,10 @@
 
 class JsModule extends \nmvc\CoreModule {
     public static function beforeRequestProcess() {
-        // Auto include scripts.
+        // Auto include required scripts that core needs.
         \nmvc\View::render("/js/include_jquery", null, false, true);
+        \nmvc\View::render("/js/include_sprintf", null, false, true);
+        // Auto include optional/configurable scripts.
         $ui_theme = config\JQUERY_UI_THEME;
         if (is_string($ui_theme) && strlen($ui_theme) > 0)
             \nmvc\View::render("/js/include_ui", array("theme" => $ui_theme), false, true);
@@ -54,6 +56,7 @@ class JsModule extends \nmvc\CoreModule {
         . "<li>jquery-autocomplete 1.1 - http://bassistance.de/jquery-plugins/jquery-plugin-autocomplete/</li>"
         . "<li>jquery-hotkeys 0.7.9 - http://code.google.com/p/js-hotkeys/</li>"
         . "<li>less css 1.1.3 - http://lesscss.org/</li>"
+        . "<li>sprintf() for JavaScript 0.7-beta1 - http://www.diveintojavascript.com/projects/javascript-sprintf</li>"
         . "</ul>";
     }
 }
