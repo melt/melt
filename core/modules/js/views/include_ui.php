@@ -1,5 +1,5 @@
 <?php namespace nmvc\js; ?>
-<?php $this->layout->enterSection("head"); ?>
+<?php $this->layout->enterSection("head_head"); ?>
     <?php if ($this->theme[0] == "/"): ?>
         <link type="text/css" href="<?php echo url($this->theme); ?>" rel="stylesheet" />
     <?php else: ?>
