@@ -33,7 +33,7 @@ class JsModule extends \nmvc\CoreModule {
                 trigger_error("Dependancy error in jquery configuration: JsTree plugin requires cookie and hotkeys to be enabled.", \E_USER_ERROR);
         }
         if (config\INCLUDE_LESS_CSS)
-            \nmvc\View::render("/less/include_less", null, false, true);
+            \nmvc\View::render("/js/include_less", null, false, true);
     }
 
     public static function getAuthor() {
