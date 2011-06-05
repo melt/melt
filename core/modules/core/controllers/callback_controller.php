@@ -50,7 +50,7 @@ class CallbackController extends \nmvc\core\InternalController {
         // Fork accepted, unhook from the current request to prevent
         // the parent from waiting for this request to finish, allowing
         // parallell execution.
-        \nmvc\http\unhook_current_request();
+        req_unhook();
         \define("REQ_IS_FORK", true);
         // Commence execution.
         \call_user_func_array($callback, $parameters);

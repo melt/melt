@@ -122,6 +122,24 @@ function req_is_ipv4() {
 }
 
 /**
+ * Unhooks the current request from the client by forcing the client
+ * to close the connection and setting PHP to ignore souch an abort.
+ * Note: Relies on a hack that might stop working in future versions.
+ */
+function req_unhook() {
+    \nmvc\request\reset();
+    ignore_user_abort(true);
+    header("Connection: close");
+    header("Content-Encoding: none");
+    header("Content-Length: 0");
+    ob_start();
+    echo " ";
+    ob_end_flush();
+    flush();
+    ob_end_clean();
+}
+
+/**
 * @param Integer $byte Number of bytes.
 * @param Boolean $si Set this to false to use IEC standard size notation instead of the SI notation. (SI: 1000 b/Kb, IEC: 1024 b/KiB)
 * @return String The number of bytes in a readable unit representation.
