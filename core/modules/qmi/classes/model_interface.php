@@ -479,11 +479,6 @@ class ModelInterface {
 
     private function getJsExpression($function_name, array $arguments) {
         \assert($arguments[0] instanceof \nmvc\Model || $arguments[0] === self::INSTANCE_JIT_REFERENCE);
-        static $js_lib_included = false;
-        if (!$js_lib_included) {
-            \nmvc\View::render("/qmi/js_lib", null, false, true);
-            $js_lib_included = true;
-        }
         if ($arguments[0] instanceof \nmvc\Model)
             $arguments[0] = $this->getInstanceReference($arguments[0], true);
         $operation = array(\substr($function_name, 2), $arguments);
