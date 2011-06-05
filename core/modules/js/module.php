@@ -1,6 +1,6 @@
 <?php namespace nmvc\js;
 
-class JqueryModule extends \nmvc\CoreModule {
+class JsModule extends \nmvc\CoreModule {
     public static function beforeRequestProcess() {
         // Auto include scripts.
         \nmvc\View::render("/js/include_jquery", null, false, true);
