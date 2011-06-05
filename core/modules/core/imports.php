@@ -6,5 +6,6 @@
     "__" => 'gettext',
     "ngettext",
     "pgettext",
+    "jsngettext",
     "now",
 );

@@ -577,6 +577,16 @@ function ngettext($msgid, $msgid_plural, $n) {
 }
 
 /**
+ * Returns a javascript function that takes "n" as a first argument and
+ * then sprintf parameters.
+ * @param string $msgid
+ * @param string $msgid_plural
+ */
+function jsngettext($msgid, $msgid_plural) {
+    return LocalizationEngine::translate($msgid, $msgid_plural, "", null, array());
+}
+
+/**
  * Translates by context.
  * @param string $context Context of string.
  * @param string $msgid Must be string litteral expression. Function call is

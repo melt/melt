@@ -149,13 +149,13 @@ class LocalizationEngine {
                     $pending_arguments = 1;
                     $pending_function = "gettext";
                     $expected = true;
-                } else if ($token == "ngettext") {
+                } else if ($token == "ngettext" || $token == "jsngettext") {
                     $pending_arguments = 2;
-                    $pending_function = $token;
+                    $pending_function = "ngettext";
                     $expected = true;
                 } else if ($token == "pgettext") {
                     $pending_arguments = 2;
-                    $pending_function = $token;
+                    $pending_function = "pgettext";
                     $expected = true;
                 }
                 break;
@@ -459,18 +459,27 @@ class LocalizationEngine {
      * Makes a gnu gettext type string translation.
      * @param string $str String to translate.
      * @param string $plural_str Plural form of string.
-     * @param integer $n
+     * @param mixed $n The plural count. Plural count is only used to determine
+     * what plural form to use and is not passed as an argument.
+     * If null, returns javascript function that dynamically translates string.
      * @param context $context
      * @return string Translation of string.
      */
     public static function translate($str, $plural_str = "", $context = "", $n = 1, $sprintf_args = array()) {
+        // No argument could either mean that callee either wants the raw
+        // translation and do sprintf later - or that there are no arguments.
+        // In both cases vsprintf should not be called and
+        // raw translation returned instead.
+        $do_sprintf = \count($sprintf_args) > 0;
         // Cast arguments to their correct data types.
         $str = \strval($str);
         $plural_str = \strval($plural_str);
         $context = \strval($context);
-        $n = intval($n);
-        if ($n < 0)
-            $n = 0;
+        if ($n !== null) {
+            $n = intval($n);
+            if ($n < 0)
+                $n = 0;
+        }
         if (config\TRANSLATION_ENABLED) {
             // Load current translation from locale.
             static $translate_strings = null;
@@ -493,6 +502,25 @@ class LocalizationEngine {
                 if (\array_key_exists($context, $translations)) {
                     $translations = $translations[$context]["translations"];
                     if (count($translations) > 0) {
+                        if ($n === null) {
+                            // Generate translation code.
+                            $indexformula = ($indexformula != null)? $indexformula: 'n == 1? 0: 1';
+                            $jstranslations = array();
+                            foreach ($translations as $i => $translation)
+                                $jstranslations["i$i"] = $translation;
+                            $translations = \json_encode($jstranslations);
+                            return "function(n) {"
+                            . "var index =  ($indexformula);"
+                            . "if (index > $maxindex) index = $maxindex;"
+                            . "if (index < 0) index = 0;"
+                            . "index = 'i' + index;"
+                            . "var translations = $translations;"
+                            . "var translation;"
+                            . "if (translations[index] == undefined) {"
+                            . "{ for (translation in translations) break; }"
+                            . "else { translation = translations[index]; }"
+                            . "return translation }";
+                        }
                         // Calculate translation index.
                         $index = ($indexformula != null)? intval(eval($indexformula)): ($n == 1? 0: 1);
                         if ($index > $maxindex)
@@ -503,18 +531,25 @@ class LocalizationEngine {
                             $translation = $translations[$index];
                         else
                             $translation = \reset($translations);
-                        return @\vsprintf($translation, $sprintf_args);
+                        return $do_sprintf? @\vsprintf($translation, $sprintf_args): $translation;
                     }
                 }
             }
         }
         // No translation used. Just do standard plural switch.
-        if ($plural_str == "")
-            return @\vsprintf($str, $sprintf_args);
-        if ($n > 1)
-            return @\vsprintf($plural_str, $sprintf_args);
-        else
-            return @\vsprintf($str, $sprintf_args);
+        if ($n === null) {
+            $str = \json_encode((string) $str);
+            $plural_str = \json_encode((string) $plural_str);
+            return "function(n) {"
+            . "var str = $str;"
+            . "var plural_str = $plural_str;"
+            . "if (plural_str == '') return str;"
+            . "return (n > 1)? plural_str: str; }";
+        } else if ($plural_str != "" && $n > 1) {
+            return $do_sprintf? @\vsprintf($plural_str, $sprintf_args): $plural_str;
+        } else {
+            return $do_sprintf? @\vsprintf($str, $sprintf_args): $str;
+        }
     }
 
     public static function __set_state($saved_state) {
