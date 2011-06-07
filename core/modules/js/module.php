@@ -48,7 +48,7 @@ class JsModule extends \nmvc\CoreModule {
         . "<li>jquery 1.6.1 - http://jquery.com/</li>"
         . "<li>jquery-corner 2.09 - http://jquery.malsup.com/corner/</li>"
         . "<li>jquery-lightbox 0.5 - http://leandrovieira.com/projects/js/lightbox/</li>"
-        . "<li>jquery-ui 1.8.6 - http://jqueryui.com/</li>"
+        . "<li>jquery-ui 1.8.13 - http://jqueryui.com/</li>"
         . "<li>jquery-ui-themes 1.7 - http://jqueryui.com/</li>"
         . "<li>jquery-alerts 1.1 - http://abeautifulsite.net/blog/2008/12/jquery-alert-dialogs/</li>"
         . "<li>jquery-tree 1.0rc2 - http://www.jstree.com/</li>"
