@@ -150,7 +150,7 @@ class PointerType extends \nmvc\AppType {
      * instance that has the in memory object pointer and where the
      * second index is the name of the pointer field that points to the
      * given instance. The keys or order of the returned array is undefined.
-     * @return array Array of array(\nmvc\Model, string)
+     * @return array Array of array(\nmvc\Type, string)
      */
     public static function getIncommingMemoryObjectPointers(\nmvc\Model $for_instance) {
         $key = spl_object_hash($for_instance);
@@ -190,10 +190,10 @@ class PointerType extends \nmvc\AppType {
             return;
         // Unset any previous in memory object pointer backlink.
         if (is_object($this->value))
-            unset(self::$memory_object_pointer_backlinks[spl_object_hash($this->value)][spl_object_hash($this)]);
+            unset(self::$memory_object_pointer_backlinks[spl_object_hash($this)][spl_object_hash($this)]);
         // Store backlink of this memory object pointer.
         if (!is_null($value))
-            self::$memory_object_pointer_backlinks[spl_object_hash($value)][spl_object_hash($this)] = array($this->parent, $this->key);
+            self::$memory_object_pointer_backlinks[spl_object_hash($value)][spl_object_hash($this)] = array($this, $this->key);
         // Store memory object pointer.
         $this->value = $value;
     }

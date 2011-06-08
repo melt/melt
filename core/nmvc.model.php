@@ -705,7 +705,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
             // Turn virtual object pointers to this instance
             // into real database pointers.
             foreach (core\PointerType::getIncommingMemoryObjectPointers($this) as $incomming_pointer) {
-                list($instance, $ptr_field) = $incomming_pointer;
+                list($type, $ptr_field) = $incomming_pointer;
+                $instance = $type->parent;
                 if (!$instance->isLinked())
                     continue;
                 $table_name = self::classNameToTableName(get_class($instance));
@@ -1055,7 +1056,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $called_class = \get_called_class();
         // Populate array with local references to the instance.
         foreach (core\PointerType::getIncommingMemoryObjectPointers($instance) as $reference) {
-            list($instance, $ptr_field) = $reference;
+            list($type, $ptr_field) = $reference;
+            $instance = $type->parent;
             if (is(\get_class($instance), $called_class))
                 $out_array[\spl_object_hash($instance) . "_" . $ptr_field] = $reference;
         }
