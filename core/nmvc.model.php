@@ -753,18 +753,18 @@ abstract class Model implements \IteratorAggregate, \Countable {
         // Before unlink event.
         $this->beforeUnlink();
         // Gather information.
-        $name = get_class($this);
+        $class_name = get_class($this);
         $old_id = intval($this->_id);
         $this->_id = -1;
         // Unlink from database.
-        $table_name = self::classNameToTableName($name);
+        $table_name = self::classNameToTableName($class_name);
         db\query("DELETE FROM " . db\table($table_name) . " WHERE id = " . $old_id);
         // Remove from instance cache.
         unset(self::$_instance_cache[$old_id]);
         // Resycronize all fields to default original value
         // for correct has changed check after unlink.
-        foreach (static::getParsedColumnArray() as $name => $column)
-            $this->_cols[$name]->setSyncPointReference($column->get());
+        foreach (static::getParsedColumnArray() as $column_name => $column)
+            $this->_cols[$column_name]->setSyncPointReference($column->get());
         // Remove pointers that gets broken by this unlink
         //  and handle this disconnect according to it's configuration.
         // Nullifying pointers before doing *anything* else to prevent
@@ -772,8 +772,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $cascade_callbacks = array();
         $disconnect_callbacks = array();
         $pointer_map = self::getMetaData("pointer_map");
-        if (isset($pointer_map[$name]))
-        foreach ($pointer_map[$name] as $pointer) {
+        if (isset($pointer_map[$class_name]))
+        foreach ($pointer_map[$class_name] as $pointer) {
             list($child_model, $child_column) = $pointer;
             $instances = $child_model::select()->where($child_column)->is($old_id)->forUpdate()->all();
             if (count($instances) == 0)
