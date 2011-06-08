@@ -28,6 +28,10 @@ function qmi_mutate(action_blobs) {
     var xhr = new XMLHttpRequest();
     xhr.open("POST", qmi_mutate_url, false);
     var qmi_e = document.getElementById(identity);
+    if (qmi_e == null) {
+        console.error("Qmi mutation failed! Could not locate hidden qmi blob element: #" + identity);
+        return null;
+    }
     xhr.send(qmi_e.value + "," + operation_blobs.join(","));
     var qmi_blob_length = xhr.getResponseHeader("X-Qmi-Blob-Length");
     if (qmi_blob_length == null)
