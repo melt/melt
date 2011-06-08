@@ -191,7 +191,7 @@ function get_shell_count() {
 function login(UserModel $user) {
     if (!config\SHELL_LOGIN)
         unset($_SESSION['userx\auth']);
-    $_SESSION['userx\auth']['timeout'] = time() + config\SESSION_TIMEOUT_MINUTES * 60;
+    $_SESSION['userx\auth']['timeout'] = config\SESSION_TIMEOUT_MINUTES !== false? time() + config\SESSION_TIMEOUT_MINUTES * 60: \PHP_INT_MAX;
     if (isset($_SESSION['userx\auth']['user'])) {
         if (!isset($_SESSION['userx\auth']['shells']))
             $_SESSION['userx\auth']['shells'] = array();
@@ -221,7 +221,7 @@ function get_user() {
             \nmvc\messenger\redirect_message(REQ_URL, __("Your session expired due to inactivity. You need to log in again."));
         }
         // Get the user and cache it.
-        $_SESSION['userx\auth']['timeout'] = time() + config\SESSION_TIMEOUT_MINUTES * 60;
+        $_SESSION['userx\auth']['timeout'] = config\SESSION_TIMEOUT_MINUTES !== false? time() + config\SESSION_TIMEOUT_MINUTES * 60: \PHP_INT_MAX;
         $auth_user = UserModel::selectByID(intval($_SESSION['userx\auth']['user']));
         if ($auth_user === null) {
             // Account does not exist, just redirect.
