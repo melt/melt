@@ -9,7 +9,6 @@
     "INCLUDE_JQUERY_COOKIE" => true,
     "INCLUDE_JQUERY_FORM" => true,
     "INCLUDE_JQUERY_RESIZE" => true,
-    "INCLUDE_JQUERY_HOTKEYS" => true,
     "INCLUDE_JQUERY_JSTREE" => true,
     "INCLUDE_LESS_CSS" => true,
 );

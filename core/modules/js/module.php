@@ -27,8 +27,6 @@ class JsModule extends \nmvc\CoreModule {
             \nmvc\View::render("/js/include_form", null, false, true);
         if (config\INCLUDE_JQUERY_RESIZE)
             \nmvc\View::render("/js/include_resize", null, false, true);
-        if (config\INCLUDE_JQUERY_HOTKEYS)
-            \nmvc\View::render("/js/include_hotkeys", null, false, true);
         if (config\INCLUDE_JQUERY_JSTREE) {
             \nmvc\View::render("/js/include_jstree", null, false, true);
             if (!config\INCLUDE_JQUERY_HOTKEYS || !config\INCLUDE_JQUERY_COOKIE)
@@ -54,7 +52,6 @@ class JsModule extends \nmvc\CoreModule {
         . "<li>jquery-tree 1.0rc2 - http://www.jstree.com/</li>"
         . "<li>jquery-form 2.81 - http://jquery.malsup.com/form/</li>"
         . "<li>jquery-autocomplete 1.1 - http://bassistance.de/jquery-plugins/jquery-plugin-autocomplete/</li>"
-        . "<li>jquery-hotkeys 0.7.9 - http://code.google.com/p/js-hotkeys/</li>"
         . "<li>less css 1.1.3 - http://lesscss.org/</li>"
         . "<li>sprintf() for JavaScript 0.7-beta1 - http://www.diveintojavascript.com/projects/javascript-sprintf</li>"
         . "</ul>";
