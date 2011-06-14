@@ -257,8 +257,7 @@ function create_url($url, $get = null) {
     if ($get != null && count($get) > 0) {
         $url .= "?";
         foreach ($get as $key => $val)
-            if (!empty($val))
-                $url .= urlencode($key) . "=" . urlencode($val) . "&";
+            $url .= urlencode($key) . "=" . urlencode($val) . "&";
         $url = substr($url, 0, -1);
     }
     return $url;
