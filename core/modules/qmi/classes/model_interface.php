@@ -35,7 +35,7 @@ class ModelInterface {
         $this->default_style = (string) $default_style;
         $this->success_url = is_null($success_url)? url(REQ_URL): $success_url;
         $this->time_created = new \DateTime();
-        $this->identity = \nmvc\string\random_alphanum_str(10);
+        $this->identity = "qi" . \nmvc\string\random_alphanum_str(10);
     }
 
     /**
