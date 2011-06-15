@@ -27,11 +27,6 @@ class JsModule extends \nmvc\CoreModule {
             \nmvc\View::render("/js/include_form", null, false, true);
         if (config\INCLUDE_JQUERY_RESIZE)
             \nmvc\View::render("/js/include_resize", null, false, true);
-        if (config\INCLUDE_JQUERY_JSTREE) {
-            \nmvc\View::render("/js/include_jstree", null, false, true);
-            if (!config\INCLUDE_JQUERY_HOTKEYS || !config\INCLUDE_JQUERY_COOKIE)
-                trigger_error("Dependancy error in jquery configuration: JsTree plugin requires cookie and hotkeys to be enabled.", \E_USER_ERROR);
-        }
         if (config\INCLUDE_LESS_CSS)
             \nmvc\View::render("/js/include_less", null, false, true);
     }
