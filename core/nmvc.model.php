@@ -1338,7 +1338,12 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $table_name = db\table(self::classNameToTableName($from_model));
         $found_rows_identifier = $select_query->getIsCalcFoundRows()? "SQL_CALC_FOUND_ROWS": "";
         $locking_read_mode = $locking_read? ($select_query->getIsForUpdate()? "FOR UPDATE": "LOCK IN SHARE MODE"): "";
-        return "SELECT $found_rows_identifier $columns_sql FROM $table_name AS $base_model_alias $left_joins_sql $sql_select_expr $locking_read_mode";
+        $query = "SELECT $found_rows_identifier $columns_sql FROM $table_name AS $base_model_alias $left_joins_sql $sql_select_expr $locking_read_mode";
+        if ($select_query->getIsCounting() && $select_query->getIsGrouping()) {
+            // When grouping mysql changes the count() function - negating this behaviour.
+            $query = "SELECT COUNT(*) FROM ($query) AS " . string\from_index($alias_offset);
+        }
+        return $query;
     }
 
     /**

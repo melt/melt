@@ -104,6 +104,10 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
         $this->select_fields = $select_fields;
     }
 
+    public function getIsGrouping() {
+        return \count($this->group_by_tokens) > 0;
+    }
+
     public function getIsCounting() {
         return $this->is_counting;
     }
