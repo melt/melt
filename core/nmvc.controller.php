@@ -114,7 +114,7 @@ abstract class Controller {
             if ($action !== null) {
                 $path .= "/" . $action;
                 foreach ($arguments as $argument)
-                    $path .= "/" . $$argument;
+                    $path .= "/" . $argument;
             }
         }
         return $path;
