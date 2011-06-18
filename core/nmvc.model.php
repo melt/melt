@@ -368,9 +368,12 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 $type_instance = clone $type_instance;
             $type_instance->parent = $this;
         }
-        // Enter default values.
-        if (!self::$_skip_initialize)
+        if (!self::$_skip_initialize) {
+            // Enter default values and set sync point.
             $this->initialize();
+            foreach ($this->_cols as $type_instance)
+                $type_instance->setSyncPoint();
+        }
     }
 
 
@@ -1275,8 +1278,29 @@ abstract class Model implements \IteratorAggregate, \Countable {
             $partition_conditions[$from_model] = $partition_condition;
         } else
             $partition_condition = $partition_conditions[$from_model];
+        $additional_condition = $partition_condition;
+        // Process groupwise orderings.
+        $left_joins_sql = array();
+        $groupwise_orderings = $select_query->getGroupwiseOrderings();
+        if (\count($groupwise_orderings) > 0) {
+            $left_join_on = array();
+            $self_join_alias = string\from_index($alias_offset);
+            $alias_offset++;
+            foreach ($groupwise_orderings as $groupwise_ordering) {
+                list($group_field, $order_field, $is_ascending) = $groupwise_ordering;
+                list($group_column) = $from_model::getColumnPrototype($group_field);
+                list($order_column) = $from_model::getColumnPrototype($order_field);
+                $left_join_on[] = "$base_model_alias.$group_column = $self_join_alias.$group_column";
+                $compare = $is_ascending? ">": "<";
+                // The second OR clause makes sure only the highest ID are picked when all order_column in group are equal.
+                $left_join_on[] = "(($base_model_alias.$order_column $compare $self_join_alias.$order_column) OR ($base_model_alias.$order_column = $self_join_alias.$order_column AND $base_model_alias.id < $self_join_alias.id))";
+            }
+            $left_joins_sql[] = "LEFT JOIN " . db\table(self::classNameToTableName($from_model))
+            . " AS $self_join_alias ON " . \implode(" AND ", $left_join_on);
+            $additional_condition = expr($additional_condition)->and(new db\InjectedCondition("$self_join_alias.id IS NULL"));
+        }
         // Process select tokens.
-        $select_tokens = $select_query->getTokens($partition_condition);
+        $select_tokens = $select_query->getTokens($additional_condition);
         $sql_select_expr = "";
         /*$nonindexed_notice_triggered = false;*/
         if (\count($select_tokens) > 0) {
@@ -1327,8 +1351,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 }
             }
         } 
-        // Compile left joins.
-        $left_joins_sql = array();
+        // Compile left joins from column data.
         foreach ($columns_data as $column_datas) {
             $left_join = $column_datas[3];
             if ($left_join != null)
@@ -1339,7 +1362,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $found_rows_identifier = $select_query->getIsCalcFoundRows()? "SQL_CALC_FOUND_ROWS": "";
         $locking_read_mode = $locking_read? ($select_query->getIsForUpdate()? "FOR UPDATE": "LOCK IN SHARE MODE"): "";
         $query = "SELECT $found_rows_identifier $columns_sql FROM $table_name AS $base_model_alias $left_joins_sql $sql_select_expr $locking_read_mode";
-        if ($select_query->getIsCounting() && $select_query->getIsGrouping()) {
+        if ($select_query->getIsCounting() && $select_query->hasGroupBy()) {
             // When grouping mysql changes the count() function - negating this behaviour.
             $query = "SELECT COUNT(*) FROM ($query) AS " . string\from_index($alias_offset);
         }
@@ -1369,7 +1392,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         if (isset($cur_columns_data[$column_name]))
             return $cur_columns_data[$column_name];
         if (false === \strpos($column_name, "->")) {
-            list($column_name, $prototype_type) = self::getColumnPrototype($column_name);
+            list($column_name, $prototype_type) = static::getColumnPrototype($column_name);
             $col_sql_ref = $base_model_alias . '.' . $column_name;
             $cur_columns_data[$column_name] = array($col_sql_ref, null, null, null, $prototype_type);
             return $cur_columns_data[$column_name];

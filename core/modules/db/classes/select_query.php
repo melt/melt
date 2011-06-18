@@ -3,6 +3,7 @@
 class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countable {
     private $group_by_tokens = array();
     private $order_tokens = array();
+    private $groupwise_orderings = array();
     private $limit = 0;
     private $offset = 0;
 
@@ -104,7 +105,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
         $this->select_fields = $select_fields;
     }
 
-    public function getIsGrouping() {
+    public function hasGroupBy() {
         return \count($this->group_by_tokens) > 0;
     }
 
@@ -118,6 +119,10 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
 
     public function getIsForUpdate() {
         return $this->is_for_update;
+    }
+
+    public function getGroupwiseOrderings() {
+        return $this->groupwise_orderings;
     }
 
     private function setOrderedField($operator, &$tokens_array, $field, $field_id, $order) {
@@ -151,6 +156,22 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
             $tokens[] = $this->limit > 0? (string) $this->limit: "18446744073709551615";
         }
         return $tokens;
+    }
+
+    /**
+     * Groups instances in an ordered fashion. The row selected for each
+     * group will be determined by the order field and the order field sorting.
+     * @param string $group_field Group to group by.
+     * @param string $order_field Field to order by.
+     * @param string $order ASC or DESC.
+     * @see http://dev.mysql.com/doc/refman/5.5/en/example-maximum-column-group-row.html
+     * @return SelectQuery
+     */
+    public function groupwiseOrder($group_field, $order_field, $order = "ASC") {
+        if ($order != "ASC" && $order != "DESC")
+            \trigger_error(__METHOD__ . " error: Unexpected \$order argument. Expected 'ASC' or 'DESC'.", \E_USER_ERROR);
+        $this->groupwise_orderings[] = array($group_field, $order_field, $order === "ASC");
+        return $this;
     }
 
     /**

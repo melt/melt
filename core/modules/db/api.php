@@ -245,15 +245,16 @@ function data_seek(\mysqli_result $result, $n) {
 */
 function sql_column_need_update($specified, $current) {
     $lengthy_pattern = '#(\w+)\s*\((\d+)\)#';
+    $specified = \preg_replace('#\s+#', '', $specified);
+    $current = \preg_replace('#\s+#', '', $current);
     $specified_is_lengthy = (1 == \preg_match($lengthy_pattern, $specified, $lengthy_specified));
     $current_is_lengthy = (1 == \preg_match($lengthy_pattern, $current, $lengthy_current));
     if (!$current_is_lengthy && !$specified_is_lengthy) {
         // Needs update if they differ.
-        return \strtolower($specified) != \strtolower($current);
+        return \strcasecmp($specified, $current) !== 0;
     } else if ($current_is_lengthy && !$specified_is_lengthy) {
         // Needs update if type differ.
-        $current_type = \strtolower($lengthy_current[1]);
-        return $current_type != \strtolower($specified);
+        return \strcasecmp($lengthy_current[1], $specified) !== 0;
     } else if (!$current_is_lengthy && $specified_is_lengthy) {
         // Needs update (specified has length).
         return true;
@@ -261,10 +262,10 @@ function sql_column_need_update($specified, $current) {
         // Needs update if length differs.
         $current_length = \intval($lengthy_current[2]);
         $specified_length = \intval($lengthy_specified[2]);
-        if ($current_length != $specified_length)
+        if ($current_length !== $specified_length)
             return true;
         // Needs update if type differs.
-        return \strtolower($lengthy_current[1]) != \strtolower($lengthy_specified[1]);
+        return \strcasecmp($lengthy_current[1], $lengthy_specified[1]) !== 0;
     }
 }
 
