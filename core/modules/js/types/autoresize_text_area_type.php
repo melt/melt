@@ -1,4 +1,4 @@
-<?php namespace nmvc\jquery;
+<?php namespace nmvc\js;
 
 class AutoresizeTextAreaType extends \nmvc\core\TextAreaType {
     public $animate = true;
