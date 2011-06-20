@@ -368,6 +368,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 $type_instance = clone $type_instance;
             $type_instance->parent = $this;
         }
+        unset($type_instance);
         if (!self::$_skip_initialize) {
             // Enter default values and set sync point.
             $this->initialize();
