@@ -120,12 +120,17 @@ abstract class InterfaceCallback_app_overrideable {
      * interface.
      * @param boolean $auto_redirect Set to false to return count of invalid
      * fields instead of automatically redirecting.
+     * @param \Closure $should_validate_instance_fn Set to closure that
+     * takes a model instance as a first argument and returns false
+     * if the model instance should not be validated.
      */
-    protected final function doValidate($auto_redirect = true) {
+    protected final function doValidate($auto_redirect = true, \Closure $should_validate_instance_fn = null) {
         // Validate all instances.
         $error_count = 0;
         foreach ($this->instances as $instance_key => $instance) {
             if (!($instance instanceof UserInterfaceProvider))
+                continue;
+            if ($should_validate_instance_fn !== null && !$should_validate_instance_fn($instance))
                 continue;
             $error_fields = $instance->uiValidate($this->interface_name);
             // Validation not returning array = validation success.
@@ -143,7 +148,7 @@ abstract class InterfaceCallback_app_overrideable {
                 $this->pushError($instance, $field_name, $error);
             $error_count += \count($error_fields);
         }
-        if ($error_count > 0)
+        if ($auto_redirect && $error_count > 0)
             $this->doInvalidRedirect();
         return $error_count;
     }
