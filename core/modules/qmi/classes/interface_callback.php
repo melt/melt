@@ -5,14 +5,13 @@
  * Declare a callback by using the model interface name.
  */
 abstract class InterfaceCallback_app_overrideable {
-    /** @var ModelInterface The original (and best) model interface. */
-    private $original_model_interface;
     private $interface_name;
     private $instances;
     private $instance_components;
     private $is_deleting;
     private $success_url;
     private $ajax_submit;
+    private $interface_continuum;
     /** @var \DateTime When the interface was created. */
     private $time_created;
 
@@ -21,8 +20,7 @@ abstract class InterfaceCallback_app_overrideable {
      */
     protected $validate_failed_message;
 
-    public final function __construct(ModelInterface $original_model_interface, $interface_name, $instances, $instance_components, $is_deleting, $success_url, $ajax_submit, $time_created) {
-        $this->original_model_interface = $original_model_interface;
+    public final function __construct(ModelInterface $original_model_interface, $interface_name, $instances, $instance_components, $is_deleting, $success_url, $ajax_submit, $time_created, $get_interface_continuum_fn) {
         $this->interface_name = $interface_name;
         $this->instances = $instances;
         $this->instance_components = $instance_components;
@@ -31,6 +29,7 @@ abstract class InterfaceCallback_app_overrideable {
         $this->validate_failed_message = __("Validation failed. Please check your input.");
         $this->ajax_submit = $ajax_submit;
         $this->time_created = $time_created;
+        $this->interface_continuum = $get_interface_continuum_fn;
     }
 
     /**
@@ -41,8 +40,12 @@ abstract class InterfaceCallback_app_overrideable {
         return $this->is_deleting;
     }
     
-    protected final function getOriginalModelInterface() {
-        return $this->original_model_interface;
+    protected final function getInterfaceContinuum() {
+        if (!($this->interface_continuum instanceof ModelInterface)) {
+            $interface_continuum = $this->interface_continuum;
+            $this->interface_continuum = $interface_continuum();
+        }
+        return $this->interface_continuum;
     }
 
     /**
