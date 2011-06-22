@@ -684,31 +684,12 @@ class ModelInterface {
         $prev_interface_name = $this->interface_name;
         $new_instance_to_tag_map = \array_flip($this->new_instance_tags);
         $next_model_interface = new ModelInterface($next_interface_name, $this->default_style, $this->success_url);
-        // Cache all changes made in previous step.
+        // Transfer all changes made in previous step and log being on step.
+        foreach ($this->instances as $instance)
+            $next_model_interface->attachChanges($instance);
         $next_model_interface->continuum_steps = $this->continuum_steps;
-        $next_model_interface->continuum_steps[$prev_interface_name] = array();
-        foreach ($this->instances as $instance) {
-            $instance_key = \spl_object_hash($instance);
-            $instance_tag = isset($new_instance_to_tag_map[$instance_key])? $new_instance_to_tag_map[$instance_key]: null;
-            $next_model_interface->continuum_steps[$prev_interface_name][] = array(self::getInstanceReference($instance, true), $instance_tag);
-        }
-        if (isset($this->continuum_steps[$next_interface_name])) {
-            // Attach instances from cache.
-            foreach ($this->continuum_steps[$next_interface_name] as $instance_reference) {
-                list($instance_reference, $instance_tag) = $instance_reference;
-                $instance = self::getReferencedInstance($instance_reference, true);
-                if ($instance === false)
-                    \nmvc\request\show_404();
-                // Just ignore if already attached instance.
-                if ($next_model_interface->hasInstance($instance))
-                    continue;
-                // Instance and changes may be attached now.
-                $instance = self::getReferencedInstance($instance_reference, false);
-                if ($instance_tag !== null)
-                    $instance = $next_model_interface->tagNewInstance($instance, $instance_tag);
-                $next_model_interface->attachChanges($instance);
-            }
-        }
+        $next_model_interface->continuum_steps[$prev_interface_name] = true;
+        $next_model_interface->new_instance_tags = $this->new_instance_tags;
         return $next_model_interface;
     }
     
