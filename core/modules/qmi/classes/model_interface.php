@@ -604,7 +604,7 @@ class ModelInterface {
     }
 
     public function getInterfaceContinuum() {
-        $model_interface_continuum = new ModelInterface($instance->interface_name, $instance->default_style, $instance->success_url);
+        $model_interface_continuum = new ModelInterface($this->interface_name, $this->default_style, $this->success_url);
         foreach ($this->instances as $instance)
             $model_interface_continuum->attachChanges($instance);
         return $model_interface_continuum;
