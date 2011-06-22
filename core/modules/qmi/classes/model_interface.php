@@ -650,7 +650,7 @@ class ModelInterface {
         if (!is($callback_class, $callback_class . "_app_overrideable"))
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not declared overridable by the responsible module!", \E_USER_ERROR);
         $ajax_submit = array_key_exists("_qmi_ajax_submit", $_POST) && $_POST["_qmi_ajax_submit"] == true;
-        $callback_class = new $callback_class($this->interface_name, $this->instances, $instance_components, $is_deleting, $this->success_url, $ajax_submit, $this->time_created);
+        $callback_class = new $callback_class($this, $this->interface_name, $this->instances, $instance_components, $is_deleting, $this->success_url, $ajax_submit, $this->time_created);
         $callback_class->$callback_method();
         if ($ajax_submit) {
             $data = array("success" => true, "unlinked" => false, "errors" => array());

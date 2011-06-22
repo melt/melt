@@ -5,6 +5,8 @@
  * Declare a callback by using the model interface name.
  */
 abstract class InterfaceCallback_app_overrideable {
+    /** @var ModelInterface The original (and best) model interface. */
+    private $original_model_interface;
     private $interface_name;
     private $instances;
     private $instance_components;
@@ -19,7 +21,8 @@ abstract class InterfaceCallback_app_overrideable {
      */
     protected $validate_failed_message;
 
-    public final function __construct($interface_name, $instances, $instance_components, $is_deleting, $success_url, $ajax_submit, $time_created) {
+    public final function __construct(ModelInterface $original_model_interface, $interface_name, $instances, $instance_components, $is_deleting, $success_url, $ajax_submit, $time_created) {
+        $this->original_model_interface = $original_model_interface;
         $this->interface_name = $interface_name;
         $this->instances = $instances;
         $this->instance_components = $instance_components;
@@ -36,6 +39,10 @@ abstract class InterfaceCallback_app_overrideable {
      */
     protected final function isDeleting() {
         return $this->is_deleting;
+    }
+    
+    protected final function getOriginalModelInterface() {
+        return $this->original_model_interface;
     }
 
     /**
