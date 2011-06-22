@@ -11,7 +11,7 @@ abstract class InterfaceCallback_app_overrideable {
     private $is_deleting;
     private $success_url;
     private $ajax_submit;
-    private $interface_continuum;
+    private $original_model_interface;
     /** @var \DateTime When the interface was created. */
     private $time_created;
 
@@ -20,7 +20,7 @@ abstract class InterfaceCallback_app_overrideable {
      */
     protected $validate_failed_message;
 
-    public final function __construct($interface_name, $instances, $instance_components, $is_deleting, $success_url, $ajax_submit, $time_created, $get_interface_continuum_fn) {
+    public final function __construct($interface_name, $instances, $instance_components, $is_deleting, $success_url, $ajax_submit, $time_created, ModelInterface $original_model_interface) {
         $this->interface_name = $interface_name;
         $this->instances = $instances;
         $this->instance_components = $instance_components;
@@ -29,7 +29,7 @@ abstract class InterfaceCallback_app_overrideable {
         $this->validate_failed_message = __("Validation failed. Please check your input.");
         $this->ajax_submit = $ajax_submit;
         $this->time_created = $time_created;
-        $this->interface_continuum = $get_interface_continuum_fn;
+        $this->original_model_interface = $original_model_interface;
     }
 
     /**
@@ -39,13 +39,13 @@ abstract class InterfaceCallback_app_overrideable {
     protected final function isDeleting() {
         return $this->is_deleting;
     }
-    
-    protected final function getInterfaceContinuum() {
-        if (!($this->interface_continuum instanceof ModelInterface)) {
-            $interface_continuum = $this->interface_continuum;
-            $this->interface_continuum = $interface_continuum();
-        }
-        return $this->interface_continuum;
+
+    /**
+     * Returns the original (and best) model interface.
+     * @return ModelInterface
+     */
+    protected final function getOriginalModelInterface() {
+        return $this->original_model_interface;
     }
 
     /**
@@ -82,18 +82,7 @@ abstract class InterfaceCallback_app_overrideable {
     protected final function doInvalidRedirect() {
         if ($this->ajax_submit)
             \nmvc\request\send_json_data(array("success" => false, "unlinked" => false, "errors" => $this->invalidation_data['errors']));
-        // Fetch all interface values and return them.
-        foreach ($this->instances as $instance_key => $instance) {
-            foreach ($instance as $field_name => $field) {
-                if (!isset($this->instance_components[$instance_key][$field_name]))
-                    continue;
-                $component_key = $this->instance_components[$instance_key][$field_name];
-                $value = $field->get();
-                if ($value instanceof Type)
-                    $value = $field->getSQLValue();
-                $this->invalidation_data['values'][$component_key] = $value;
-            }
-        }
+        $this->invalidation_data['values'] = \array_merge($this->invalidation_data['values'], $this->original_model_interface->getComponentFieldValues());
         // Store invalid and reload this URL.
         $_SESSION['qmi_invalid'][$this->interface_name] = $this->invalidation_data;
         \nmvc\messenger\redirect_message(REQ_URL, $this->validate_failed_message);

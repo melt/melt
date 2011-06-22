@@ -5,6 +5,7 @@
  */
 class ModelInterface {
     private $instances = array();
+    private $new_instance_tags = array();
     private $setters = array();
     private $components = array();
     private $autolinks = array();
@@ -15,8 +16,11 @@ class ModelInterface {
     private $default_style;
     private $time_created;
     private $identity;
+    private $continuum_steps = array();
 
     const INSTANCE_JIT_REFERENCE = -1;
+
+    private $prev_continuum_data = array();
 
     /**
      * @param string $interface_name Name of interface (its identifier).
@@ -36,6 +40,11 @@ class ModelInterface {
         $this->success_url = is_null($success_url)? url(REQ_URL): $success_url;
         $this->time_created = new \DateTime();
         $this->identity = "qi" . \nmvc\string\random_alphanum_str(10);
+    }
+
+    public function hasInstance(UserInterfaceProvider $instance) {
+        $instance_key = \spl_object_hash($instance);
+        return \array_key_exists($instance_key, $this->instances);
     }
 
     /**
@@ -82,7 +91,7 @@ class ModelInterface {
         return array($instance->getID(), \get_class($instance), $instance->isVolatile(), $changed_fields);
     }
 
-    private static function getReferencedInstance($reference) {
+    private static function getReferencedInstance($reference, $ignore_stored_changes = false) {
         list($id, $name, $is_volatile, $changed_fields) = $reference;
         if ($id > 0) {
             $instance = $name::selectByID($id);
@@ -91,8 +100,10 @@ class ModelInterface {
         } else {
             $instance = new $name($is_volatile);
         }
-        foreach ($changed_fields as $column => $value)
-            $instance->$column = $value;
+        if (!$ignore_stored_changes) {
+            foreach ($changed_fields as $column => $value)
+                $instance->$column = $value;
+        }
         return $instance;
     }
 
@@ -122,6 +133,21 @@ class ModelInterface {
             $instance_index_offset++;
         }
         return $instance_index_offset;
+    }
+
+    /**
+     * Attaches an unlinked instance if it's not attached, tags it and returns it.
+     * If instance is already attached and tagged with this name - returns
+     * the already tagged instance.
+     * @param Model $instance
+     * @param string $instance_tag
+     */
+    public function tagNewInstance(\nmvc\Model $instance, $instance_tag) {
+        \assert(!$instance->isLinked());
+        if (isset($this->new_instance_tags[$instance_tag]))
+            return $this->instances[$this->new_instance_tags[$instance_tag]];
+        $this->new_instance_tags[$instance_tag] = $this->getMemoryInstanceKey($instance);
+        return $instance;
     }
 
     /**
@@ -536,6 +562,7 @@ class ModelInterface {
         // Serialize to encrypted blob.
         return \nmvc\string\simple_crypt(\gzcompress(\serialize(array(
             $instance_references,
+            $this->new_instance_tags,
             $this->setters,
             $this->components,
             $this->autolinks,
@@ -546,6 +573,7 @@ class ModelInterface {
             $this->default_style,
             $this->time_created,
             $this->identity,
+            $this->continuum_steps,
         ))));
     }
 
@@ -559,6 +587,7 @@ class ModelInterface {
         $model_interface = new ModelInterface(null);
         list(
             $instance_references,
+            $model_interface->new_instance_tags,
             $setters,
             $model_interface->components,
             $model_interface->autolinks,
@@ -569,6 +598,7 @@ class ModelInterface {
             $model_interface->default_style,
             $model_interface->time_created,
             $model_interface->identity,
+            $model_interface->continuum_steps
         ) = $qmi_data;
         // Restore all instances.
         $new_instance_keys = array();
@@ -580,7 +610,9 @@ class ModelInterface {
             $model_interface->instances[$new_instance_key] = $instance;
             $new_instance_keys[$old_instance_key] = $new_instance_key;
         }
-        // Translate all instance keys from old to new.
+        // Translate all instance keys from old to new
+        foreach ($model_interface->new_instance_tags as &$new_instance_tag)
+            $new_instance_tag = $new_instance_keys[$new_instance_tag];
         foreach ($model_interface->components as &$component)
             $component[0] = $new_instance_keys[$component[0]];
         foreach ($model_interface->jit_references as &$instance_key)
@@ -603,11 +635,81 @@ class ModelInterface {
         $model_interface->processSubmit();
     }
 
-    public function getInterfaceContinuum() {
-        $model_interface_continuum = new ModelInterface($this->interface_name, $this->default_style, $this->success_url);
-        foreach ($this->instances as $instance)
-            $model_interface_continuum->attachChanges($instance);
-        return $model_interface_continuum;
+    /**
+     * Returns a simple array of component keys mapped to their current
+     * instance value. The data structure is used when pre-filling form values
+     * that has already been entered at a previous point in time.
+     * @return string
+     */
+    public function getComponentFieldValues() {
+        $component_field_values = array();
+        foreach ($this->instances as $instance_key => $instance) {
+            foreach ($instance as $field_name => $field_type) {
+                if (!isset($this->components[$instance_key][$field_name]))
+                    continue;
+                $component_key = $this->components[$instance_key][$field_name];
+                $value = ($field_type instanceof \nmvc\core\PointerType)? $field_type->getID(): $field_type->get();
+                $component_field_values[$component_key] = $value;
+            }
+        }
+        return $component_field_values;
+    }
+
+    /**
+     * Returns true if has visited the continuum step.
+     * @param string $interface_name
+     * @return boolean
+     */
+    public function hasVisitedContinuum($interface_name) {
+        return \array_key_exists($interface_name, $this->continuum_steps);
+    }
+
+    /**
+     * Is used to generate an interface for continuous
+     * interaction with a model interface state - such as in step to step
+     * guides. It takes the name of the desired next ModelInterface and
+     * returns a new object. If the step has previously not been visited
+     * this is equivialent to generating a new model interface with
+     * previous instances attached to it. If the step has already been visited
+     * (if getInterfaceContinuum() has been called transisioning from or to it)
+     * then internaly cached information of how the fields where filled
+     * and what instances was stored before rendering the interface will be
+     * used. This is similar to how qmi handles invalid non-ajax redirections
+     * although the data is stored in the model interface rather than
+     * temporarily in the session.
+     * @param string $next_interface_name
+     * @return ModelInterface
+     */
+    public function getInterfaceContinuum($next_interface_name) {
+        $prev_interface_name = $this->interface_name;
+        $new_instance_to_tag_map = \array_flip($this->new_instance_tags);
+        $next_model_interface = new ModelInterface($next_interface_name, $this->default_style, $this->success_url);
+        // Cache all changes made in previous step.
+        $next_model_interface->continuum_steps = $this->continuum_steps;
+        $next_model_interface->continuum_steps[$prev_interface_name] = array();
+        foreach ($this->instances as $instance) {
+            $instance_key = \spl_object_hash($instance);
+            $instance_tag = isset($new_instance_to_tag_map[$instance_key])? $new_instance_to_tag_map[$instance_key]: null;
+            $next_model_interface->continuum_steps[$prev_interface_name][] = array(self::getInstanceReference($instance, true), $instance_tag);
+        }
+        if (isset($this->continuum_steps[$next_interface_name])) {
+            // Attach instances from cache.
+            foreach ($this->continuum_steps[$next_interface_name] as $instance_reference) {
+                list($instance_reference, $instance_tag) = $instance_reference;
+                $instance = self::getReferencedInstance($instance_reference, true);
+                if ($instance === false)
+                    \nmvc\request\show_404();
+                // Just ignore if already attached instance.
+                if ($next_model_interface->hasInstance($instance))
+                    continue;
+                // Instance and changes may be attached now.
+                $instance = self::getReferencedInstance($instance_reference, false);
+                if ($instance_tag !== null)
+                    $instance = $next_model_interface->tagNewInstance($instance, $instance_tag);
+                $next_model_interface->attachChanges($instance);
+            }
+        }
+        return $next_model_interface;
     }
     
     /**
@@ -658,11 +760,7 @@ class ModelInterface {
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not declared overridable by the responsible module!", \E_USER_ERROR);
         $ajax_submit = array_key_exists("_qmi_ajax_submit", $_POST) && $_POST["_qmi_ajax_submit"] == true;
         $model_interface = $this;
-        $callback_class = new $callback_class($this->interface_name, $this->instances
-        , $instance_components, $is_deleting, $this->success_url
-        , $ajax_submit, $this->time_created, function() use ($model_interface) {
-            return $model_interface->getInterfaceContinuum();
-        });
+        $callback_class = new $callback_class($this->interface_name, $this->instances, $instance_components, $is_deleting, $this->success_url, $ajax_submit, $this->time_created, $this);
         $callback_class->$callback_method();
         if ($ajax_submit) {
             $data = array("success" => true, "unlinked" => false, "errors" => array());
