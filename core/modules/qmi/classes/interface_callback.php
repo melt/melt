@@ -20,7 +20,7 @@ abstract class InterfaceCallback_app_overrideable {
      */
     protected $validate_failed_message;
 
-    public final function __construct(ModelInterface $original_model_interface, $interface_name, $instances, $instance_components, $is_deleting, $success_url, $ajax_submit, $time_created, $get_interface_continuum_fn) {
+    public final function __construct($interface_name, $instances, $instance_components, $is_deleting, $success_url, $ajax_submit, $time_created, $get_interface_continuum_fn) {
         $this->interface_name = $interface_name;
         $this->instances = $instances;
         $this->instance_components = $instance_components;
