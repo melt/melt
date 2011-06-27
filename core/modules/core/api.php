@@ -40,7 +40,10 @@ function fork($callback, $parameters = array()) {
     . "\r\nContent-Length: " . \strlen($rpc_payload)
     . $cookie_header
     . "\r\n\r\n$rpc_payload";
-    $stream = \fsockopen($server_addr, $server_port, $errno, $errstr, NMVC_CORE_FORK_TIMEOUT);
+    $binary_server_addr = @\inet_pton($server_addr);
+    if ($binary_server_addr === false)
+        \trigger_error("Fork failed, could not parse server address \"$server_addr\".", \E_USER_ERROR);
+    $stream = \fsockopen(\strlen($binary_server_addr) > 4? "[$server_addr]": $server_addr, $server_port, $errno, $errstr, NMVC_CORE_FORK_TIMEOUT);
     \fwrite($stream, $request_data);
     \stream_set_timeout($stream, 10);
     // Just grab the first chunk with the status code and close the
