@@ -1,12 +1,19 @@
 <?php namespace nmvc\core;
 
 class EnumType extends \nmvc\AppType {
-    private $enumeration = null;
+    private $enumeration;
+    private $labels = array();
 
     public function __construct(array $enumeration) {
         parent::__construct();
         if (\count($enumeration) == 0)
             \trigger_error("The enumeration must have at least one index.", \E_USER_ERROR);
+        foreach ($enumeration as $key => &$value) {
+            if (\is_integer($key))
+                continue;
+            $this->labels[$key] = (string) $value;
+            $value = (string) $key;
+        }
         $this->enumeration = \array_combine($enumeration, $enumeration);
     }
 
@@ -57,6 +64,7 @@ class EnumType extends \nmvc\AppType {
     }
 
     public function __toString() {
-        return escape($this->get());
+        $value = $this->get();
+        return escape(\array_key_exists($value, $this->labels)? $this->labels[$value]: $value);
     }
 }
