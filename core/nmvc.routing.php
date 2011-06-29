@@ -84,7 +84,7 @@
                 $last_error = \error_get_last();
                 if ($last_error !== null) {
                     $crash = \in_array($last_error["type"]
-                    , array(E_ERROR, E_PARSE, E_CORE_ERROR,	E_COMPILE_ERROR, E_USER_ERROR));
+                    , array(E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR));
                     // Tries to send internal server error here as these crashes
                     // bypass error handler.
                     if ($crash && !\headers_sent()) {
