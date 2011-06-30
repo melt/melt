@@ -35,6 +35,11 @@
             position: absolute;
             left: 0px;
         }
+        .delta {
+            color: red;
+            position: absolute;
+            left: 70px;
+        }
     </style>
     <script type="text/javascript">
         function autoload_toggle(visible) {
@@ -46,7 +51,29 @@
                 $(this).find(".subcalls:first").toggle();
                 return false;
             });
+            $(".timing").each(function(id, element) {
+                var time_a = $(this).text();
+                var time_b = null;
+                
+                
+                time_b = $(this).parent(".call").next().find(".timing").text();
+                if(time_b != null){
+                    $(this).parents().nextAll(".call").each(function () {
+                       time_b = $(this).find(".timing").text();
+                       if(time_b !== null) { return false; }
+                    });
+                }
+                
+                if(!isNaN(parseFloat(time_b)))
+                {
+                    var delta = parseFloat(time_b) - parseFloat(time_a);
+                    $(this).after($("<span>").addClass("delta").text(Math.round(delta*1000)/1000));
+                }
+                
+            });
         });
+            
+                
     </script>
 </head>
 <body>
