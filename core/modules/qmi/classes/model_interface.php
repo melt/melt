@@ -177,7 +177,7 @@ class ModelInterface {
      */
     public function attachRelation(\nmvc\Model $source_model, \nmvc\Model $target_model = null, $explicit_pointer_name = null) {
         // Validate the attached relation.
-        $pointer_columns = $source_model->getPointerColumns(false);
+        $pointer_columns = $source_model->getPointerColumns(false, true);
         if (substr($explicit_pointer_name, -3) == "_id")
             trigger_error("Field syntax '$explicit_pointer_name' is reserved for id access. Pointer fields must be passed without '_id' suffix.", \E_USER_ERROR);
         if ($explicit_pointer_name == null) {

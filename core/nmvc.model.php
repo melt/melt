@@ -857,9 +857,10 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * class names they point to.
      * @param boolean $as_id_fields Set to true to return fields
      * with suffixed '_id'.
+     * @param boolean $include_volatile Also incldue fields which are volatile.
      * @return array
      */
-    public static function getPointerColumns($as_id_fields = true) {
+    public static function getPointerColumns($as_id_fields = true, $include_volatile = false) {
         $self = get_called_class();
         static $cache = array();
         if (isset($cache[$self][$as_id_fields]))
@@ -868,7 +869,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         foreach (static::getParsedColumnArray() as $col_name => $column) {
             if (!($column instanceof core\PointerType))
                 continue;
-            if ($column->storage_type === VOLATILE)
+            if (!$include_volatile && $column->storage_type === VOLATILE)
                 continue;
             if (!$as_id_fields)
                 $col_name = substr($col_name, 0, -3);
