@@ -50,9 +50,9 @@ class EnumType extends \nmvc\AppType {
     public function getInterface($name) {
         $html = "<select name=\"$name\" id=\"$name\">";
         $selected = ' selected="selected"';
-        foreach ($this->enumeration as $enum_token) {
-            $label = escape($enum_token);
-            $s = ($this->value == $enum_token)? $selected: null;
+        foreach ($this->enumeration as $key) {
+            $label = isset($this->labels[$key])? escape($this->labels[$key]): escape($key);
+            $s = ($this->value == $key)? $selected: null;
             $html .= "<option$s value=\"$label\">$label</option>";
         }
         $html .= "</select>";
