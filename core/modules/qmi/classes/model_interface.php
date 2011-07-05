@@ -471,18 +471,19 @@ class ModelInterface {
         foreach ($operations as $operation) {
             list($function_name, $arguments, $jit_reference) = $operation;
             // Dereference/evaluate target instance.
-            $instance = $arguments[0];
-            if ($instance === self::INSTANCE_JIT_REFERENCE) {
+            $instance_declaration = $arguments[0];
+            if ($instance_declaration === self::INSTANCE_JIT_REFERENCE) {
                 // Referencing an instance just-in-time.
                 if (!isset($this->jit_references[$jit_reference]))
                     \nmvc\request\show_invalid();
                 $instance = $this->instances[$this->jit_references[$jit_reference]];
             } else {
                 // Load the related instance.
-                $instance = ModelInterface::getReferencedInstance($instance);
-                if ($instance === false)
+                list($declaration_in_memory, $instance_key) = $instance_declaration;
+                $instance = $declaration_in_memory? $this->instances[$instance_key]: self::getReferencedInstance($instance_key);
+                if (!$instance instanceof \nmvc\Model)
                     \nmvc\request\show_404();
-                if (!$instance->isLinked()) {
+                if (!$declaration_in_memory && !$instance->isLinked()) {
                     // Adding an instance dynamically, add JIT reference to it.
                     $jit_reference = \nmvc\string\random_alphanum_str(10);
                     $this->jit_references[$jit_reference] = $this->getMemoryInstanceKey($instance);
@@ -505,8 +506,10 @@ class ModelInterface {
 
     private function getJsExpression($function_name, array $arguments) {
         \assert($arguments[0] instanceof \nmvc\Model || $arguments[0] === self::INSTANCE_JIT_REFERENCE);
-        if ($arguments[0] instanceof \nmvc\Model)
-            $arguments[0] = $this->getInstanceReference($arguments[0], true);
+        if ($arguments[0] instanceof \nmvc\Model) {
+            $instance_id = \spl_object_hash($arguments[0]);
+            $arguments[0] = \array_key_exists($instance_id, $this->instances)? array(true, $instance_id): array(false, self::getInstanceReference($arguments[0], true));
+        }
         $operation = array(\substr($function_name, 2), $arguments);
         $operation_blob = \nmvc\string\simple_crypt(\gzcompress(\serialize($operation)));
         $identity = $this->identity;
