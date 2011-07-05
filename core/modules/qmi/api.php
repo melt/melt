@@ -46,5 +46,7 @@ function get_action_link($model = null, $action = "delete", $url = null, $argume
         $url = url(REQ_URL);
     $uid = $secure? id(\nmvc\userx\get_user()): 0;
     $qmi_data = \nmvc\string\simple_crypt(gzcompress(serialize(array($id, $model_name, $action, $url, array_values($arguments), $uid)), 9));
+    if (\strlen($qmi_data) > 1020)
+        \trigger_error("Generating action link that is larger than 1K. This link might not be supported on all browsers/servers.", \E_USER_NOTICE);
     return url("/qmi/actions/set/$qmi_data");
 }
