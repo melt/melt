@@ -479,15 +479,21 @@ class ModelInterface {
                 $instance = $this->instances[$this->jit_references[$jit_reference]];
             } else {
                 // Load the related instance.
-                list($declaration_in_memory, $instance_key) = $instance_declaration;
-                $instance = $declaration_in_memory? $this->instances[$instance_key]: self::getReferencedInstance($instance_key);
-                if (!$instance instanceof \nmvc\Model)
-                    \nmvc\request\show_404();
-                if (!$declaration_in_memory && !$instance->isLinked()) {
-                    // Adding an instance dynamically, add JIT reference to it.
-                    $jit_reference = \nmvc\string\random_alphanum_str(10);
-                    $this->jit_references[$jit_reference] = $this->getMemoryInstanceKey($instance);
-                    \header("X-Qmi-Instance-Id: $jit_reference");
+                list($auto_jit_declared, $instance_ref) = $instance_declaration;
+                if ($auto_jit_declared) {
+                    if (!isset($this->jit_references[$instance_ref]))
+                        \nmvc\request\show_404();
+                    $instance = $this->instances[$this->jit_references[$instance_ref]];
+                } else {
+                    $instance = self::getReferencedInstance($instance_ref);
+                    if (!$instance instanceof \nmvc\Model)
+                        \nmvc\request\show_404();
+                    if (!$instance->isLinked()) {
+                        // Adding an instance dynamically, add JIT reference to it.
+                        $jit_reference = \nmvc\string\random_alphanum_str(10);
+                        $this->jit_references[$jit_reference] = $this->getMemoryInstanceKey($instance);
+                        \header("X-Qmi-Instance-Id: $jit_reference");
+                    }
                 }
             }
             $arguments[0] = $instance;
@@ -508,7 +514,27 @@ class ModelInterface {
         \assert($arguments[0] instanceof \nmvc\Model || $arguments[0] === self::INSTANCE_JIT_REFERENCE);
         if ($arguments[0] instanceof \nmvc\Model) {
             $instance_id = \spl_object_hash($arguments[0]);
-            $arguments[0] = \array_key_exists($instance_id, $this->instances)? array(true, $instance_id): array(false, self::getInstanceReference($arguments[0], true));
+            if (\array_key_exists($instance_id, $this->instances) && !$arguments[0]->isLinked()) {
+                // If already attached but not linked we genereate an automatic JIT reference to the instance.
+                $this->attachChanges($arguments[0]);
+                $instance_key = $this->getMemoryInstanceKey($arguments[0]);
+                $jit_reference = null;
+                foreach ($this->jit_references as $jit_reference_2 => $instance_key_2) {
+                    if ($instance_key_2 === $instance_key) {
+                        $jit_reference = $jit_reference_2;
+                        break;
+                    }
+                }
+                if ($jit_reference === null) {
+                    $jit_reference = \nmvc\string\random_alphanum_str(10);
+                    $this->jit_references[$jit_reference] = $instance_key;
+                }
+                $instance_declaration = array(true, $jit_reference);
+            } else {
+                // Just a normal instance reference.
+                $instance_declaration = array(false, self::getInstanceReference($arguments[0], true));
+            }
+            $arguments[0] = $instance_declaration;
         }
         $operation = array(\substr($function_name, 2), $arguments);
         $operation_blob = \nmvc\string\simple_crypt(\gzcompress(\serialize($operation)));
