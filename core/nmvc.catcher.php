@@ -58,7 +58,7 @@ function error_handler($errno, $errstr, $errfile, $errline) {
         exit;
     }
     // The developer is not interested in bad vendor code.
-    $vendor_path = APP_DIR . "/vendors/";
+    $vendor_path = \str_replace("\\", "/", APP_DIR . "/vendors/");
     foreach (array(array(array('file' => $errfile)), $backtrace) as $backtraces)
     foreach ($backtraces as $call) {
         if (!isset($call['file']))
