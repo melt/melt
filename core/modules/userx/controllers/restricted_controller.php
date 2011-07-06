@@ -25,7 +25,7 @@ abstract class RestrictedController extends \nmvc\AppController {
     }
 
     /**
-     * Returns true if given group can use this controller.
+     * Returns true if given group or user can access the specified local url.
      * If this group uses special permissions for this controller the
      * action and arguments will also be evaluated.
      * @param mixed $local_url String or core\InvokeData
