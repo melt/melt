@@ -3,8 +3,7 @@ function qmi_mutate(action_blobs) {
         action_blobs = [action_blobs];
     var identity = null;
     var operation_blobs = [];
-    for (var i in action_blobs) {
-        var action_blob = action_blobs[i];
+    $.each(action_blobs, function(i, action_blob) {
         var instance_id = null;
         if (typeof(action_blob) == "object") {
             instance_id = action_blob[1];
@@ -13,20 +12,22 @@ function qmi_mutate(action_blobs) {
         var match = action_blob.match(/([^,]+),(.*)/);
         if (match === null) {
             console.error("One or more action blobs passed is invalid.");
-            return null;
+            return false;
         }
         if (identity === null) {
             identity = match[1];
         } else if (identity != match[1]) {
             console.error("Multiple interfaces cannot be mutated in the same request!");
-            return null;
+            return false;
         }
         operation_blobs.push(match[2]);
         if (instance_id != null)
             operation_blobs.push("@" + instance_id);
-    }
+    });
+    if (operation_blobs.length === 0)
+        return null;
     var xhr = new XMLHttpRequest();
-    xhr.open("POST", qmi_mutate_url, false);
+    xhr.open("POST", QMI_MUTATE_URL, false);
     var qmi_e = document.getElementById(identity);
     if (qmi_e == null) {
         console.error("Qmi mutation failed! Could not locate hidden qmi blob element: #" + identity);
@@ -38,7 +39,7 @@ function qmi_mutate(action_blobs) {
         return null;
     if (xhr.status == 404) {
         // QMI state no longer valid, reload page.
-        if (confirm(qmi_error_state_invalid_confirm)) {
+        if (confirm(QMI_ERROR_STATE_INVALID_CONFIRM)) {
             window.location.reload();
         }
         return {response: null, new_instance_id: null};;
