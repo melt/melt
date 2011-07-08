@@ -53,7 +53,7 @@ class EnumType extends \nmvc\AppType {
         foreach ($this->enumeration as $key) {
             $label = isset($this->labels[$key])? escape($this->labels[$key]): escape($key);
             $s = ($this->value == $key)? $selected: null;
-            $html .= "<option$s value=\"$label\">$label</option>";
+            $html .= "<option$s value=\"$key\">$label</option>";
         }
         $html .= "</select>";
         return $html;
