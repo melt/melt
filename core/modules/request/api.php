@@ -221,16 +221,45 @@ function get_url_query($url) {
 }
 
 /**
-* @desc Creates a local URL from given path.
-* @param String $path A local path, eg /etc/lol.png
-* @param Array $get An optional array of keys and values to point to in get part.
-* @return String A clean, non relative, formated URL to local destination.
+ * Creates a local URL from given path.
+ * @param string $path A local path, eg /etc/lol.png
+ * @param array $get An optional array of keys and values to point to in get part.
+ * @see path() - inverse of url()
+ * @return string A clean, non relative, formated URL to local destination.
 */
-function url($path, $get = null) {
-    if (strlen($path) == 0 || $path[0] != '/')
-        $path = '/' . $path;
-    $path = (substr(APP_ROOT_URL, -1) == '/'? substr(APP_ROOT_URL, 0, -1): APP_ROOT_URL) . $path;
-    return $get === null? $path: create_url($path, $get);
+function url($path, array $get = null) {
+    static $app_root_url_prefix = null;
+    if ($app_root_url_prefix === null)
+        $app_root_url_prefix = \substr(APP_ROOT_URL, -1) === '/'? \substr(APP_ROOT_URL, 0, -1): APP_ROOT_URL;
+    $url = $app_root_url_prefix . (\strlen($path) === 0 || $path[0] !== '/'? "/": "") . $path;
+    return $get === null? $url: create_url($url, $get);
+}
+
+/**
+ * Extracts the local path from url. Returns the full path if given url
+ * is not an application url - otherwise it returns the root path cleaned path.
+ * The definition of "application url" is that the application root host
+ * and the url host matches.
+ * @param string $url A uniform resource location.
+ * @see url() - inverse of path()
+ * @return string Local path or null.
+ */
+function path($url) {
+    $host = (string) @\parse_url($url, PHP_URL_HOST);
+    $path = (string) @\parse_url($url, PHP_URL_PATH);
+    if (\strcasecmp($host, APP_ROOT_HOST) !== 0)
+        return $path;
+    static $app_root_path_prefix = null;
+    if ($app_root_path_prefix === null)
+        $app_root_path_prefix = \substr(APP_ROOT_PATH, -1) === '/'? \substr(APP_ROOT_PATH, 0, -1): APP_ROOT_PATH;
+    if (\strlen($path) < $app_root_path_prefix)
+        return $path;
+    if (\strlen($app_root_path_prefix) == 0 || !\nmvc\string\starts_with($path, $app_root_path_prefix))
+        return $path;
+    $start = (string) \substr($path, \strlen($app_root_path_prefix), 1);
+    if ($start !== "/" && $start !== "")
+        return $path;
+    return (string) \substr($path, \strlen($app_root_path_prefix));
 }
 
 /**
