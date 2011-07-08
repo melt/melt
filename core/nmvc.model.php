@@ -1501,44 +1501,36 @@ abstract class Model implements \IteratorAggregate, \Countable {
     }
 
     /**
-     * Lists all model classes in application.
+     * Returns an array of all model classes in application.
+     * @return array
      */
-    private static final function findAllModels() {
-        $model_classes = array();
+    public static final function getAllModels($include_abstract = false) {
+        static $model_classes = null;
+        if ($model_classes !== null)
+            return $model_classes;
         // Locate and sync all models in all enabled modules.
-        $model_paths = array(APP_DIR . "/models");
-        foreach (\nmvc\internal\get_all_modules() as $module_params) {
+        $model_paths = array("" => APP_DIR . "/models");
+        foreach (\nmvc\internal\get_all_modules() as $module_name => $module_params) {
             list($class, $path) = $module_params;
-            $model_paths[] = $path . "/models";
+            $model_paths[$module_name] = $path . "/models";
         }
-        // Array that keeps track of all incomming pointers to tables.
-        $pointer_map = array();
         $model_classes = array();
-        $sequence_max = 1;
-        foreach ($model_paths as $model_path) {
-            $model_filenames = glob($model_path . "/*_model.php");
-            // In some conditions glob returns non arrays instead of empty array on no results. See glob() in manual.
-            if (!is_array($model_filenames))
-                continue;
-            $has_module = $model_path != $model_paths[0];
+        foreach ($model_paths as $module_name => $model_path) {
+            $model_filenames = core\grep($model_path, null, false);
             foreach ($model_filenames as $model_filename) {
-                if (!is_file($model_filename))
-                    continue;
-                $table_name = substr(basename($model_filename), 0, -10);
-                $cls_name = \nmvc\string\underline_to_cased($table_name);
-                if ($has_module) {
-                    $module_name = basename(dirname(dirname($model_filename)));
-                    $cls_name = $module_name . "\\" . $cls_name;
+                $table_name = \substr($model_filename, 0, -10);
+                $class_name = \nmvc\string\underline_to_cased($table_name);
+                if ($module_name !== "") {
+                    $class_name = $module_name . "\\" . $class_name;
                     $table_name = $module_name . "__" . $table_name;
                 }
-                $cls_name = "nmvc\\" . $cls_name . "Model";
+                $class_name = "nmvc\\" . $class_name . "Model";
                 // Expect model to be declared after require.
-                if (!class_exists($cls_name))
-                    \trigger_error("Found model file that didn't declare it's expected model: $cls_name", \E_USER_ERROR);
-                // Ignore models that are abstract.
-                if (core\is_abstract($cls_name))
+                if (!\class_exists($class_name))
+                    \trigger_error("Found model file that didn't declare it's expected model: $class_name", \E_USER_ERROR);
+                if (!$include_abstract && core\is_abstract($class_name))
                     continue;
-                $model_classes[$table_name] = $cls_name;
+                $model_classes[$table_name] = $class_name;
             }
         }
         return $model_classes;
@@ -1551,7 +1543,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
     public static final function purifyAllModels() {
         // This maintenance script can run forever.
         ignore_user_abort(false);
-        $model_classes = self::findAllModels();
+        $model_classes = self::getAllModels();
         echo "\nSearching for redundant/not used columns and removing them...\n\n";
         \ob_flush();
         ignore_user_abort(true);
@@ -1586,7 +1578,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         set_time_limit(0);
         $cascade_callbacks = array();
         $disconnect_callbacks = array();
-        $model_classes = self::findAllModels();
+        $model_classes = self::getAllModels();
         $family_tree = self::getMetaData("family_tree");
         // Find intersecting ID's.
         echo "\nSearching for corrupt (intersected) primary keys...\n\n";
@@ -1683,7 +1675,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         set_time_limit(0);
         $cascade_callbacks = array();
         $disconnect_callbacks = array();
-        $model_classes = self::findAllModels();
+        $model_classes = self::getAllModels();
         $family_tree = self::getMetaData("family_tree");
         // Find intersecting ID's.
         echo "\nCulling all duplicates that prevents unique indexes from being added...\n\n";
@@ -1767,7 +1759,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 $creating_sequence = !self::validateCoreSeq();
         }
         $sequence_max = 1;
-        $model_classes = self::findAllModels();
+        $model_classes = self::getAllModels();
         foreach ($model_classes as $table_name => $model_class) {
             // Syncronize this model.
             $parsed_col_array = $model_class::getParsedColumnArray();
