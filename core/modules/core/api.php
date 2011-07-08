@@ -223,31 +223,33 @@ function array_merge_recursive_distinct() {
  * @param string $directory The directory to search.
  * @param integer $pattern Regex pattern to match with the relative paths
  * of the traversed files, or NULL to match all files.
+ * @param boolean $recurse Set to false to disable recursion.
  * @return array Files matching the pattern.
  */
-function grep($directory, $pattern = null) {
+function grep($directory, $pattern = null, $recurse = true) {
     static $in_recurse = false;
     static $skip_charachers;
     $reset_in_recurse = false;
     if (!$in_recurse) {
-        if (!is_dir($directory))
+        if (!\is_dir($directory))
             return array();
-        $directory = realpath($directory) . "/";
-        $skip_charachers = strlen($directory);
+        $directory = \realpath($directory) . "/";
+        $skip_charachers = \strlen($directory);
         $in_recurse = $reset_in_recurse = true;
     }
     $ret = array();
-    $dirhandle = opendir($directory);
-    while (false !== ($nodename = readdir($dirhandle))) {
+    $dirhandle = \opendir($directory);
+    while (false !== ($nodename = \readdir($dirhandle))) {
         if ($nodename[0] == ".")
             continue;
         $subpath = $directory . $nodename;
-        if (is_dir($subpath))
-            $ret = array_merge($ret, grep($subpath . "/", $pattern));
-        else if ($pattern == null || preg_match($pattern, $subpath))
-            $ret[] = substr($subpath, $skip_charachers);
+        if (\is_dir($subpath)) {
+            if ($recurse)
+                $ret = \array_merge($ret, \grep($subpath . "/", $pattern));
+        } else if ($pattern == null || \preg_match($pattern, $subpath))
+            $ret[] = \substr($subpath, $skip_charachers);
     }
-    closedir($dirhandle);
+    \closedir($dirhandle);
     if ($reset_in_recurse)
         $in_recurse = false;
     return $ret;
