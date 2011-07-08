@@ -59,18 +59,18 @@ function random_str($length = 16) {
 
 /**  Returns true if $subject starts with $prefix. */
 function starts_with($subject, $prefix) {
-    if (strlen($subject) < strlen($prefix))
+    if (\strlen($subject) < \strlen($prefix))
         return false;
-    return (substr($subject, 0, strlen($prefix)) == $prefix);
+    return (\substr($subject, 0, \strlen($prefix)) === $prefix);
 }
 
 /**
  * @desc Returns true if $subject ends with $tail.
  */
 function ends_with($subject, $tail) {
-    if (strlen($subject) < strlen($tail))
+    if (\strlen($subject) < \strlen($tail))
         return false;
-    return (substr($subject, -strlen($tail)) == $tail);
+    return (\substr($subject, -\strlen($tail)) === $tail);
 }
 
 /**
