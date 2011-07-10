@@ -1003,15 +1003,15 @@ jQuery.extend({
 						// make sure args are available (#8421)
 						args = args || [];
 						firing = 1;
-						try {
+						//try {
 							while( callbacks[ 0 ] ) {
 								callbacks.shift().apply( context, args );
 							}
-						}
-						finally {
+						//}
+						//finally {
 							fired = [ context, args ];
 							firing = 0;
-						}
+						//}
 					}
 					return this;
 				},
