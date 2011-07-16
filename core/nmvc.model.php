@@ -42,6 +42,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
     private $_cols;
     /** @var array Cache of all fetched instances.  */
     private static $_instance_cache = array();
+    /** @var array Cache of all incomming references to instance. */
+    private $_incomming_references;
     /** @var boolean Volatile model instances will ignore store and unlink
      * requests so their changes cannot be saved, nor can they
      * be linked/unlinked. */
@@ -323,16 +325,23 @@ abstract class Model implements \IteratorAggregate, \Countable {
     public static function chainedTransactionCommit() {
         if (!db\config\REQUEST_LEVEL_TRANSACTIONALITY)
             return;
-        // Unset as much instance data as possible.
+       // Unset as much instance data as possible.
         foreach (self::$_instance_cache as $instance) {
             foreach (\get_object_vars($instance) as $var => $data)
                 unset($instance->$var);
         }
         // Clear all core instance caches.
         self::$_instance_cache = array();
-        core\PointerType::_clearIncommingMemoryObjectPointers();
         // Restart transaction.
         db\query("COMMIT AND CHAIN");
+    }
+
+    public function _registerIncommingRef(core\PointerType $pointer) {
+        $this->_incomming_references->attach($pointer);
+    }
+
+    public function _unregisterIncommingRef(core\PointerType $pointer) {
+        $this->_incomming_references->detach($pointer);
     }
 
     /**
@@ -359,6 +368,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $this->_is_volatile = $volatile;
         // Copies all columns into this model.
         $this->_cols = static::getParsedColumnArray();
+        $this->_incomming_references = new \SplObjectStorage();
         foreach ($this->_cols as $column_name => &$type_instance) {
             // Assignment overload.
             unset($this->$column_name);
@@ -708,14 +718,13 @@ abstract class Model implements \IteratorAggregate, \Countable {
             self::$_instance_cache[$id] = $this;
             // Turn virtual object pointers to this instance
             // into real database pointers.
-            foreach (core\PointerType::getIncommingMemoryObjectPointers($this) as $incomming_pointer) {
-                list($type, $ptr_field) = $incomming_pointer;
-                $instance = $type->parent;
-                if (!$instance->isLinked())
+            foreach ($this->_incomming_references as $source_pointer) {
+                $source_instance = $source_pointer->parent;
+                if (!$source_instance->isLinked())
                     continue;
-                $table_name = self::classNameToTableName(get_class($instance));
-                db\query("UPDATE " . db\table($table_name) . " SET `$ptr_field` = $id WHERE id = " . $instance->_id);
-                $instance->type($ptr_field)->setSyncPoint();
+                $table_name = $source_instance::getTableName();
+                db\query("UPDATE " . db\table($table_name) . " SET `$ptr_field` = $id WHERE id = " . $source_instance->_id);
+                $source_pointer->setSyncPoint();
             }
         }
         // Exiting "storing" transition state and calling afterStore callback.
@@ -1050,8 +1059,8 @@ abstract class Model implements \IteratorAggregate, \Countable {
     /**
      * Returns an array of model instances of this type that refer to this
      * instance and the name of the refering pointers. The returned instances
-     * is not neccessarly linked. The memory relation graph state is
-     * used, not the database one.
+     * is not neccessarly linked since the memory relation graph state is
+     * also used.
      * @param boolean $is_for_update Set to true if instances are intended
      * to be updated to reduce deadlock risk.
      * @return array Tuples of array(instance, pointer_field).
@@ -1060,29 +1069,27 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $out_array = array();
         $called_class = \get_called_class();
         // Populate array with local references to the instance.
-        foreach (core\PointerType::getIncommingMemoryObjectPointers($instance) as $reference) {
-            list($type, $ptr_field) = $reference;
-            $instance = $type->parent;
-            if (is(\get_class($instance), $called_class))
-                $out_array[\spl_object_hash($instance) . "_" . $ptr_field] = $reference;
+        foreach ($instance->_incomming_references as $source_pointer) {
+            $source_instance = $source_pointer->parent;
+            if (is(\get_class($source_instance), $called_class))
+                $out_array[\spl_object_hash($source_pointer)] = array($source_instance, $source_pointer);
         }
         if (!$instance->isLinked())
             return $out_array;
-        $instance_id = $instance->id;
         foreach (static::getChildModels() as $model_class_name) {
             $ptr_fields = $model_class_name::getParentPointers(\get_class($instance), false);
             if (\count($ptr_fields) == 0)
                 continue;
             $select_query = new db\SelectQuery(\get_called_class(), $fields);
             foreach ($ptr_fields as $ptr_field)
-                $select_query->or($ptr_field)->is($id);
+                $select_query->or($ptr_field)->is($instance->id);
             if ($is_for_update)
                 $select_query->forUpdate();
-            $instances = $select_query->all();
-            foreach ($instances as $instance)
+            $source_instances = $select_query->all();
+            foreach ($source_instances as $source_instance)
             foreach ($ptr_fields as $ptr_field) {
-                if ($instance->{$ptr_field . "_id"} == $instance_id)
-                    $out_array[\spl_object_hash($instance) . "_" . $ptr_field] = array($instance, $ptr_field);
+                if ($source_instance->$ptr_field === $instance_id)
+                    $out_array[\spl_object_hash($source_instance->type($ptr_field))] = array($source_instance, $source_instance->type($ptr_field));
             }
         }
         return $out_array;
