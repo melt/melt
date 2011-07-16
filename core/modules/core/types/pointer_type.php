@@ -114,6 +114,15 @@ class PointerType extends \nmvc\AppType {
     }
 
     /**
+     * Contains pointers that represent in-memory object relations
+     * (non-id relations) that are mapped from pointer target spl hash
+     * and the pointer type spl hash (the unique in memory relation).
+     * This makes it possible to reverse lookup in-memory pointers.
+     * @var array
+     */
+    private static $memory_object_pointer_backlinks = array();
+
+    /**
      * Memory object pointers are reset when cloning to keep
      * memory object pointer backlink structure intact.
      */
@@ -127,6 +136,31 @@ class PointerType extends \nmvc\AppType {
     }
 
     /**
+     * Internal function. Called to clear incomming memory object pointers
+     * when flushing instance cache. DO NOT CALL.
+     * @internal
+     */
+    public static function _clearIncommingMemoryObjectPointers() {
+        self::$memory_object_pointer_backlinks = array();
+    }
+
+    /**
+     * For some instance, returns its incomming memory object pointers.
+     * These are represented as arrays where the first index is the
+     * instance that has the in memory object pointer and where the
+     * second index is the name of the pointer field that points to the
+     * given instance. The keys or order of the returned array is undefined.
+     * @return array Array of array(\nmvc\Type, string)
+     */
+    public static function getIncommingMemoryObjectPointers(\nmvc\Model $for_instance) {
+        $key = spl_object_hash($for_instance);
+        if (!array_key_exists($key, self::$memory_object_pointer_backlinks))
+            return array();
+        else
+            return self::$memory_object_pointer_backlinks[$key];
+    }
+
+    /**
      * Sets the model this pointer points to.
      * @param mixed $value ID of model or model instance.
      * @return void
@@ -136,32 +170,32 @@ class PointerType extends \nmvc\AppType {
         // This is to ensure data integrity. If it turns out to be a
         // performance bump in some cases, it can simply be
         //resolved by implementing model JIT data fetching.
-        if (\is_integer($value)) {
+        if (is_integer($value)) {
             if ($value > 0) {
                 $id = $value;
                 $target_model = $this->target_model;
                 $value = $target_model::selectByID($id);
                 if ($value === null)
-                    \trigger_error("Setting a $target_model pointer to non existing ID: $id (Assuming NULL)", \E_USER_WARNING);
+                    trigger_error("Setting a $target_model pointer to non existing ID: $id (Assuming NULL)", \E_USER_WARNING);
             } else
                 $value = null;
-        } else if (\is_object($value)) {
+        } else if (is_object($value)) {
             // Make sure this is a type of model we are pointing to.
-            if (!\is_a($value, $this->target_model))
-                \trigger_error("Attempted to set a pointer to an incorrect object. The pointer expects " . $this->target_model . " objects, it was given a " . get_class($value) . " object.", \E_USER_ERROR);
+            if (!is_a($value, $this->target_model))
+                trigger_error("Attempted to set a pointer to an incorrect object. The pointer expects " . $this->target_model . " objects, it was given a " . get_class($value) . " object.", \E_USER_ERROR);
         } else if (!is_null($value))
-            \trigger_error("Pointer expecting Model object or integer ID. Got: " . gettype($value), \E_USER_ERROR);
+            trigger_error("Pointer expecting Model object or integer ID. Got: " . gettype($value), \E_USER_ERROR);
         // Return on no change.
         if ($value === $this->value)
             return;
         // Unset any previous in memory object pointer backlink.
-        if (\is_object($this->value))
-            $this->value->_unregisterIncommingRef($this);
+        if (is_object($this->value))
+            unset(self::$memory_object_pointer_backlinks[spl_object_hash($this)][spl_object_hash($this)]);
+        // Store backlink of this memory object pointer.
+        if (!is_null($value))
+            self::$memory_object_pointer_backlinks[spl_object_hash($value)][spl_object_hash($this)] = array($this, $this->key);
         // Store memory object pointer.
         $this->value = $value;
-        // Store backlink of this memory object pointer.
-        if (!\is_null($value))
-            $value->_registerIncommingRef($this);
     }
 
     public function takes($value) {
