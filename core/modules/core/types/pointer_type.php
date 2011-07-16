@@ -120,7 +120,7 @@ class PointerType extends \nmvc\AppType {
      * This makes it possible to reverse lookup in-memory pointers.
      * @var array
      */
-    private static $memory_object_pointer_backlinks = array();
+    public static $memory_object_pointer_backlinks = array();
 
     /**
      * Memory object pointers are reset when cloning to keep
@@ -189,8 +189,11 @@ class PointerType extends \nmvc\AppType {
         if ($value === $this->value)
             return;
         // Unset any previous in memory object pointer backlink.
-        if (is_object($this->value))
-            unset(self::$memory_object_pointer_backlinks[spl_object_hash($this)][spl_object_hash($this)]);
+        if (is_object($this->value)) {
+            unset(self::$memory_object_pointer_backlinks[spl_object_hash($this->value)][spl_object_hash($this)]);
+            if (isset(self::$memory_object_pointer_backlinks[spl_object_hash($this->value)]) && count(self::$memory_object_pointer_backlinks[spl_object_hash($this->value)]) == 0)
+                unset(self::$memory_object_pointer_backlinks[spl_object_hash($this->value)]);
+        }
         // Store backlink of this memory object pointer.
         if (!is_null($value))
             self::$memory_object_pointer_backlinks[spl_object_hash($value)][spl_object_hash($this)] = array($this, $this->key);
