@@ -174,8 +174,8 @@ function read_server_var($var_name, $alt_var_name = null) {
     // Disable some features in critical core requests.
     \define("REQ_IS_CORE_DEV_ACTION", \strncasecmp(REQ_URL, "/core/action/", \strlen("/core/action/")) == 0);
     // The gettext extention conflicts with nanomvc and must be disabled.
-    if (\nmvc\core\config\TRANSLATION_ENABLED && \extension_loaded("gettext"))
-        trigger_error("NanoMVC compability error: The Gettext PHP extention is loaded in your installation and must be disabled as it conflicts with the NanoMVC core gettext implementation. Optionally you can disable translation by setting core\config\TRANSLATION_ENABLED to false.", \E_USER_ERROR);
+    //if (\nmvc\core\config\TRANSLATION_ENABLED && \extension_loaded("gettext"))
+    //    trigger_error("NanoMVC compability error: The Gettext PHP extention is loaded in your installation and must be disabled as it conflicts with the NanoMVC core gettext implementation. Optionally you can disable translation by setting core\config\TRANSLATION_ENABLED to false.", \E_USER_ERROR);
     // \define identifier constants.
     \define("VOLATILE", "VOLATILE");
     \define("INDEXED", "INDEXED");
