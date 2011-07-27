@@ -1,2 +1,0 @@
-<?php namespace nmvc; ?>
-<?php $this->layout->enterSection("some_section"); ?><?php echo $this->display("/tg1_routing/test_layout_view_3_b"); ?>[foo]<?php $this->layout->exitSection(); ?><?php View::render("/tg1_routing/test_layout_view_3_b", null, false, true); ?>

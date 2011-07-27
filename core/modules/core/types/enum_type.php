@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class EnumType extends \nmvc\AppType {
+class EnumType extends \melt\AppType {
     private $enumeration;
     private $labels = array();
 
@@ -39,12 +39,12 @@ class EnumType extends \nmvc\AppType {
 
     public function getSQLType() {
         return "ENUM(" . \implode(", ", \array_map(function($enum_token) {
-            return \nmvc\db\strfy($enum_token);
+            return \melt\db\strfy($enum_token);
         }, $this->enumeration)) . ")";
     }
 
     public function getSQLValue() {
-        return \nmvc\db\strfy($this->get());
+        return \melt\db\strfy($this->get());
     }
 
     public function getInterface($name) {

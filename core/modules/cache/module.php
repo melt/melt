@@ -1,3 +1,3 @@
-<?php namespace nmvc\cache;
+<?php namespace melt\cache;
 
-class CacheModule extends \nmvc\CoreModule { }
+class CacheModule extends \melt\CoreModule { }

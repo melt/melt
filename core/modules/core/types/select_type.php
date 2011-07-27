@@ -1,7 +1,7 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 /** SelectType, for selecting multiple options. */
-class SelectType extends \nmvc\AppType {
+class SelectType extends \melt\AppType {
     private $options;
     private $hash_to_key_map = array();
     private $key_to_hash_map = array();

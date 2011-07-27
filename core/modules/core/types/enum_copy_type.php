@@ -1,7 +1,7 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class EnumCopyType extends \nmvc\core\TextType {
-    /** @var \nmvc\db\SelectQuery Target model selection. */
+class EnumCopyType extends \melt\core\TextType {
+    /** @var \melt\db\SelectQuery Target model selection. */
     private $selection;
     /* Targeting options. */
     private $label_column;
@@ -9,8 +9,8 @@ class EnumCopyType extends \nmvc\core\TextType {
 
     public function __construct($target_model, $label_column = null, $varchar_size = 128) {
         parent::__construct($varchar_size);
-        $target_model = 'nmvc\\' . $target_model;
-        if (!class_exists($target_model) || !is_subclass_of($target_model, 'nmvc\Model'))
+        $target_model = 'melt\\' . $target_model;
+        if (!class_exists($target_model) || !is_subclass_of($target_model, 'melt\Model'))
             trigger_error("Attempted to declare a pointer pointing to a non existing model '$target_model'.");
         $this->target_model = $target_model;
         $this->label_column = $label_column;

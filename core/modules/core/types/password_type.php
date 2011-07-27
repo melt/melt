@@ -1,4 +1,4 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 class PasswordType extends TextType {
     public function getInterface($name) {

@@ -1,9 +1,9 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 /**
  * @internal
  */
-class CallbackController extends \nmvc\core\InternalController {
+class CallbackController extends \melt\core\InternalController {
     private $rpc_data;
 
     public function beforeFilter($action_name, $parameters) {
@@ -17,7 +17,7 @@ class CallbackController extends \nmvc\core\InternalController {
         This is however not a security breach as read permission would allow
         you to read other sensitive data anyway, like passwords or session keys.
         Read permission therefore indicates a sufficient level of trust.*/
-        $this->rpc_data = \nmvc\string\simple_decrypt(
+        $this->rpc_data = \melt\string\simple_decrypt(
             \file_get_contents("php://input")
             , get_fork_key()
         );
@@ -25,17 +25,17 @@ class CallbackController extends \nmvc\core\InternalController {
             $this->dropRequest();
         $this->rpc_data = \unserialize($this->rpc_data);
         // Only allow fresh rpc data as an extra security measure.
-        if (($this->rpc_data["time"] + NMVC_CORE_FORK_TIMEOUT + 1) < time())
+        if (($this->rpc_data["time"] + melt_CORE_FORK_TIMEOUT + 1) < time())
             $this->dropRequest();
     }
 
     public function script_fork($callback_payload) {
-        // This security measure is sufficient. Being able to start NanoMVC
+        // This security measure is sufficient. Being able to start Melt Framework
         // in scripted mode can only be done by administrators.
-        if (!REQ_IS_SCRIPT)
+        if (!REQ_IS_CLI)
             $this->dropRequest();
         // Commence execution.
-        list($callback, $parameters) = \unserialize(\nmvc\string\base64_alphanum_decode($callback_payload));
+        list($callback, $parameters) = \unserialize(\melt\string\base64_alphanum_decode($callback_payload));
         if (!\is_callable($callback))
             \trigger_error(__METHOD__ . " got uncallable callback: " . \print_r($callback, true), \E_USER_ERROR);
         \call_user_func_array($callback, $parameters);

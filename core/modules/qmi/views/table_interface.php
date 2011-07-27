@@ -1,4 +1,4 @@
-<?php namespace nmvc\qmi; ?>
+<?php namespace melt\qmi; ?>
 <div class="qmi_table_interface">
     <table>
         <?php foreach ($this->components as $name => $component): ?>

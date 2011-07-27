@@ -1,4 +1,4 @@
-<?php namespace nmvc\db;
+<?php namespace melt\db;
 
 class ModelFieldValue {
     private $value;
@@ -12,7 +12,7 @@ class ModelFieldValue {
     }
 
     public function __sleep() {
-        if ($this->value instanceof \nmvc\Model)
+        if ($this->value instanceof \melt\Model)
             $this->value = $this->value->id;
         return array("value");
     }

@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class TimestampType extends \nmvc\AppType {
+class TimestampType extends \melt\AppType {
     public $only_date = "false";
     public $title = "";
 

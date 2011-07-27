@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class TextType extends \nmvc\AppType {
+class TextType extends \melt\AppType {
     private $varchar_size = null;
     public $auto_trim = true;
 
@@ -20,7 +20,7 @@ class TextType extends \nmvc\AppType {
     }
     
     public function getSQLValue() {
-        return \nmvc\db\strfy($this->value, $this->varchar_size);
+        return \melt\db\strfy($this->value, $this->varchar_size);
     }
     
     public function getInterface($name) {

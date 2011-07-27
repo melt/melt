@@ -1,5 +1,5 @@
-<?php namespace nmvc\mail;
+<?php namespace melt\mail;
 
-class MailModule extends \nmvc\CoreModule {}
+class MailModule extends \melt\CoreModule {}
 
 

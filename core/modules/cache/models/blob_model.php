@@ -1,10 +1,10 @@
-<?php namespace nmvc\cache;
+<?php namespace melt\cache;
 
 /**
  * Blobs are stored in this separate model and referenced
  * so the data is only fetched when neccessary (when not cached locally).
  */
-abstract class BlobModel_app_overrideable extends \nmvc\AppModel {
+abstract class BlobModel_app_overrideable extends \melt\AppModel {
     // Blob data.
     public $dta = "cache\BlobType";
     // Extention enables apache to determine mime type.

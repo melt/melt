@@ -1,6 +1,6 @@
-<?php namespace nmvc\db;
+<?php namespace melt\db;
 
-class DbModule extends \nmvc\CoreModule {
+class DbModule extends \melt\CoreModule {
 
     public static function beforeRequestProcess() {
         parent::beforeRequestProcess();
@@ -12,10 +12,10 @@ class DbModule extends \nmvc\CoreModule {
             $stripslashes_deep_fn = function($value) use ($stripslashes_deep_fn) {
                 return is_array($value)? $stripslashes_deep_fn($value): stripslashes($value);
             };
-            $_POST = \array_map('\nmvc\db\_stripslashes_deep', $stripslashes_deep_fn);
-            $_GET = \array_map('\nmvc\db\_stripslashes_deep', $stripslashes_deep_fn);
-            $_COOKIE = \array_map('\nmvc\db\_stripslashes_deep', $stripslashes_deep_fn);
-            $_REQUEST = \array_map('\nmvc\db\_stripslashes_deep', $stripslashes_deep_fn);
+            $_POST = \array_map('\melt\db\_stripslashes_deep', $stripslashes_deep_fn);
+            $_GET = \array_map('\melt\db\_stripslashes_deep', $stripslashes_deep_fn);
+            $_COOKIE = \array_map('\melt\db\_stripslashes_deep', $stripslashes_deep_fn);
+            $_REQUEST = \array_map('\melt\db\_stripslashes_deep', $stripslashes_deep_fn);
         }
     }
     

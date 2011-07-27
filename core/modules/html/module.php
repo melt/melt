@@ -1,3 +1,3 @@
-<?php namespace nmvc\html;
+<?php namespace melt\html;
 
-class HtmlModule extends \nmvc\CoreModule { }
+class HtmlModule extends \melt\CoreModule { }

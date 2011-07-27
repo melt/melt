@@ -1,4 +1,4 @@
-<?php namespace nmvc\qmi;
+<?php namespace melt\qmi;
 
 /**
  * An interface to one or more model instances.
@@ -39,7 +39,7 @@ class ModelInterface {
         $this->default_style = (string) $default_style;
         $this->success_url = is_null($success_url)? url(REQ_URL): $success_url;
         $this->time_created = new \DateTime();
-        $this->identity = "qi" . \nmvc\string\random_alphanum_str(10);
+        $this->identity = "qi" . \melt\string\random_alphanum_str(10);
     }
 
     public function hasInstance(UserInterfaceProvider $instance) {
@@ -79,13 +79,13 @@ class ModelInterface {
     /**
      * Returns a serializeable instance reference.
      */
-    private static function getInstanceReference(\nmvc\Model $instance, $store_changes = false) {
+    private static function getInstanceReference(\melt\Model $instance, $store_changes = false) {
         $changed_fields = array();
         if ($store_changes) {
             foreach ($instance->getColumns() as $column_name => $column) {
                 if (!$column->hasChanged())
                     continue;
-                $changed_fields[$column_name] = ($column instanceof \nmvc\core\PointerType)? $column->getID(): $column->get();
+                $changed_fields[$column_name] = ($column instanceof \melt\core\PointerType)? $column->getID(): $column->get();
             }
         }
         return array($instance->getID(), \get_class($instance), $instance->isVolatile(), $changed_fields);
@@ -111,7 +111,7 @@ class ModelInterface {
      * Returns an instance key that represents an instance in memory
      * and proceeds to store it as an instance this interface is dealing with.
      */
-    private function getMemoryInstanceKey(\nmvc\Model $instance = null) {
+    private function getMemoryInstanceKey(\melt\Model $instance = null) {
         if ($instance === null)
             return null;
         $instance_key = \spl_object_hash($instance);
@@ -124,7 +124,7 @@ class ModelInterface {
      * Returns an instance key offset that can be used to construct
      * consistant, multi-request spanning component id/name.
      */
-    private function getInstanceKeyOffset(\nmvc\Model $instance = null) {
+    private function getInstanceKeyOffset(\melt\Model $instance = null) {
         $this->getMemoryInstanceKey($instance);
         $instance_index_offset = 0;
         foreach ($this->instances as $instance_in) {
@@ -142,7 +142,7 @@ class ModelInterface {
      * @param Model $instance
      * @param string $instance_tag
      */
-    public function tagNewInstance(\nmvc\Model $instance, $instance_tag) {
+    public function tagNewInstance(\melt\Model $instance, $instance_tag) {
         \assert(!$instance->isLinked());
         if (isset($this->new_instance_tags[$instance_tag]))
             return $this->instances[$this->new_instance_tags[$instance_tag]];
@@ -153,7 +153,7 @@ class ModelInterface {
     /**
      * @return boolean
      */
-    private function instanceAdded(\nmvc\Model $instance = null) {
+    private function instanceAdded(\melt\Model $instance = null) {
         $instance_key = spl_object_hash($instance);
         return \array_key_exists($instance_key, $this->instances);
     }
@@ -165,9 +165,9 @@ class ModelInterface {
      * is required to be linked at the time of calling this function.
      * If they aren't qmi will automatically insert and store them,
      * then link them afterwards.
-     * @param \nmvc\Model $source_model Relation source. The model with the
+     * @param \melt\Model $source_model Relation source. The model with the
      * pointer.
-     * @param \nmvc\Model $target_model Relation target or NULL to reset
+     * @param \melt\Model $target_model Relation target or NULL to reset
      * pointer.
      * @param string $explicit_pointer_name If source model has more
      * than one pointer fields that takes target model, or if you are
@@ -175,7 +175,7 @@ class ModelInterface {
      * will have to specificy the name of the pointer field explicitly.
      * @return void
      */
-    public function attachRelation(\nmvc\Model $source_model, \nmvc\Model $target_model = null, $explicit_pointer_name = null) {
+    public function attachRelation(\melt\Model $source_model, \melt\Model $target_model = null, $explicit_pointer_name = null) {
         // Validate the attached relation.
         $pointer_columns = $source_model->getPointerColumns(false, true);
         if (substr($explicit_pointer_name, -3) == "_id")
@@ -233,13 +233,13 @@ class ModelInterface {
      * @param array $values
      * @return void
      */
-    public function attachChangeArray(\nmvc\Model $instance, $values) {
+    public function attachChangeArray(\melt\Model $instance, $values) {
         // Reading the setters from the rest of the arguments.
         $instance_key = $this->getMemoryInstanceKey($instance);
         foreach ($values as $field_name => $value) {
             if (!$instance->hasField($field_name))
                 trigger_error("'$field_name' is not a valid field/column name!", \E_USER_ERROR);
-            else if (is($instance->type($field_name), 'nmvc\core\PointerType'))
+            else if (is($instance->type($field_name), 'melt\core\PointerType'))
                 trigger_error("'$field_name' is a pointer attachChangeArray does not take pointer fields! Use attachRelation() instead.", \E_USER_ERROR);
             $this->setters[$instance_key][$field_name] = $value;
         }
@@ -257,14 +257,14 @@ class ModelInterface {
      * @param Model $instance
      * @return void
      */
-    public function attachChanges(\nmvc\Model $instance) {
+    public function attachChanges(\melt\Model $instance) {
         // Make sure the instance is stored.
         $this->getMemoryInstanceKey($instance);
         $changed_fields = array();
         foreach ($instance->getColumns() as $column_name => $column) {
-            if ($column instanceof \nmvc\core\PointerType) {
+            if ($column instanceof \melt\core\PointerType) {
                 $target = $column->get();
-                if ($column->hasChanged() || (($target instanceof \nmvc\Model) && !$target->isLinked())) {
+                if ($column->hasChanged() || (($target instanceof \melt\Model) && !$target->isLinked())) {
                     $column_name = substr($column_name, 0, -3);
                     $this->attachRelation($instance, $target, $column_name);
                 }
@@ -290,7 +290,7 @@ class ModelInterface {
      * @return mixed HTML for interface.
      */
     public function getInterface(UserInterfaceProvider $instance, $field_set_name = null, $style = null, array $additional_view_data = array()) {
-        \assert($instance instanceof \nmvc\Model);
+        \assert($instance instanceof \melt\Model);
         \assert($style === null || \is_string($style));
         $html_components = array();
         // Storing all instance changes on success.
@@ -307,18 +307,18 @@ class ModelInterface {
         if (\strlen($style) == 0)
             \trigger_error("Style is empty!", \E_USER_ERROR);
         // Render the actual interface.
-        return \nmvc\View::render("/qmi/" . $style . "_interface", \array_merge($additional_view_data, array("components" => $html_components, "interface" => $this)));
+        return \melt\View::render("/qmi/" . $style . "_interface", \array_merge($additional_view_data, array("components" => $html_components, "interface" => $this)));
     }
 
     /**
      * Returns an array of HtmlComponent objects for the instance and field.
      * The component is also "attached" and "registred" internaly on
      * the Model Interface.
-     * @param \nmvc\Model $instance
+     * @param \melt\Model $instance
      * @param mixed $fields String or array of field names.
      * @return array[HtmlComponent]
      */
-    public function getInterfaceComponents(\nmvc\Model $instance, $fields, $field_labels = array()) {
+    public function getInterfaceComponents(\melt\Model $instance, $fields, $field_labels = array()) {
         if ($instance->isLinked())
             $this->creating = false;
         if (!\is_array($fields))
@@ -382,10 +382,10 @@ class ModelInterface {
      * to the instance is removed, including changes and relations from other
      * instances to this instance. Returns all component id's that where
      * removed as a result of the operation.
-     * @param \nmvc\Model $instance
+     * @param \melt\Model $instance
      * @return array
      */
-    public function detachInstance(\nmvc\Model $instance) {
+    public function detachInstance(\melt\Model $instance) {
         $instance_key = $this->getMemoryInstanceKey($instance);
         // Remove all references to the instance.
         $detached_components = array();
@@ -419,7 +419,7 @@ class ModelInterface {
      * @return array
      */
     public function detachInterface(UserInterfaceProvider $instance, $field_set_name = null) {
-        \assert($instance instanceof \nmvc\Model);
+        \assert($instance instanceof \melt\Model);
         \assert($style === null || \is_string($style));
         $ui_fields = $instance->uiGetInterface($this->interface_name, $field_set_name);
         if (!is_array($ui_fields))
@@ -434,11 +434,11 @@ class ModelInterface {
      * not the actual instance.
      * @see ModelInterface::detachInstance() to detach the actual instance.
      * @see ModelInterface::getInterfaceComponents() for more details.
-     * @param \nmvc\Model $instance
+     * @param \melt\Model $instance
      * @param mixed $fields
      * @return array
      */
-    public function detachInterfaceComponents(\nmvc\Model $instance, $fields) {
+    public function detachInterfaceComponents(\melt\Model $instance, $fields) {
         if (!\is_array($fields))
             $fields = array($fields);
         $instance_key = $this->getMemoryInstanceKey($instance);
@@ -475,22 +475,22 @@ class ModelInterface {
             if ($instance_declaration === self::INSTANCE_JIT_REFERENCE) {
                 // Referencing an instance just-in-time.
                 if (!isset($this->jit_references[$jit_reference]))
-                    \nmvc\request\show_invalid();
+                    \melt\request\show_invalid();
                 $instance = $this->instances[$this->jit_references[$jit_reference]];
             } else {
                 // Load the related instance.
                 list($auto_jit_declared, $instance_ref) = $instance_declaration;
                 if ($auto_jit_declared) {
                     if (!isset($this->jit_references[$instance_ref]))
-                        \nmvc\request\show_404();
+                        \melt\request\show_404();
                     $instance = $this->instances[$this->jit_references[$instance_ref]];
                 } else {
                     $instance = self::getReferencedInstance($instance_ref);
-                    if (!$instance instanceof \nmvc\Model)
-                        \nmvc\request\show_404();
+                    if (!$instance instanceof \melt\Model)
+                        \melt\request\show_404();
                     if (!$instance->isLinked()) {
                         // Adding an instance dynamically, add JIT reference to it.
-                        $jit_reference = \nmvc\string\random_alphanum_str(10);
+                        $jit_reference = \melt\string\random_alphanum_str(10);
                         $this->jit_references[$jit_reference] = $this->getMemoryInstanceKey($instance);
                         \header("X-Qmi-Instance-Id: $jit_reference");
                     }
@@ -502,7 +502,7 @@ class ModelInterface {
         }
         $response = \json_encode(\count($responses) > 1? $responses: \reset($responses));
         $qmi_blob = $this->serialize();
-        \nmvc\request\reset();
+        \melt\request\reset();
         \header("X-Qmi-Blob-Length: " . \strlen($qmi_blob));
         \header("Content-Type: application/octet-stream");
         print $qmi_blob;
@@ -511,8 +511,8 @@ class ModelInterface {
     }
 
     private function getJsExpression($function_name, array $arguments) {
-        \assert($arguments[0] instanceof \nmvc\Model || $arguments[0] === self::INSTANCE_JIT_REFERENCE);
-        if ($arguments[0] instanceof \nmvc\Model) {
+        \assert($arguments[0] instanceof \melt\Model || $arguments[0] === self::INSTANCE_JIT_REFERENCE);
+        if ($arguments[0] instanceof \melt\Model) {
             $instance_id = \spl_object_hash($arguments[0]);
             if (\array_key_exists($instance_id, $this->instances) && !$arguments[0]->isLinked()) {
                 // If already attached but not linked we genereate an automatic JIT reference to the instance.
@@ -526,7 +526,7 @@ class ModelInterface {
                     }
                 }
                 if ($jit_reference === null) {
-                    $jit_reference = \nmvc\string\random_alphanum_str(10);
+                    $jit_reference = \melt\string\random_alphanum_str(10);
                     $this->jit_references[$jit_reference] = $instance_key;
                 }
                 $instance_declaration = array(true, $jit_reference);
@@ -537,7 +537,7 @@ class ModelInterface {
             $arguments[0] = $instance_declaration;
         }
         $operation = array(\substr($function_name, 2), $arguments);
-        $operation_blob = \nmvc\string\simple_crypt(\gzcompress(\serialize($operation)));
+        $operation_blob = \melt\string\simple_crypt(\gzcompress(\serialize($operation)));
         $identity = $this->identity;
         return "$identity,$operation_blob";
     }
@@ -579,7 +579,7 @@ class ModelInterface {
      * @see ModelInterface::detachInterfaceComponents() for more details.
      * @return string Operation blob. Pass to qmi_mutate.
      */
-    public function jsDetachInterfaceComponents(\nmvc\Model $instance, $fields) {
+    public function jsDetachInterfaceComponents(\melt\Model $instance, $fields) {
         return self::getJsExpression(__FUNCTION__, \func_get_args());
     }
 
@@ -589,7 +589,7 @@ class ModelInterface {
         foreach ($instance_references as &$instance)
             $instance = self::getInstanceReference($instance, false);
         // Serialize to encrypted blob.
-        return \nmvc\string\simple_crypt(\gzcompress(\serialize(array(
+        return \melt\string\simple_crypt(\gzcompress(\serialize(array(
             $instance_references,
             $this->new_instance_tags,
             $this->setters,
@@ -607,7 +607,7 @@ class ModelInterface {
     }
 
     public static function unserialize($qmi_data) {
-        $qmi_data = \nmvc\string\simple_decrypt($qmi_data);
+        $qmi_data = \melt\string\simple_decrypt($qmi_data);
         if ($qmi_data === false)
             return false;
         $qmi_data = @\unserialize(\gzuncompress($qmi_data));
@@ -660,7 +660,7 @@ class ModelInterface {
             return;
         $model_interface = self::unserialize($_POST["_qmi"]);
         if ($model_interface === false)
-            \nmvc\messenger\redirect_message(REQ_URL, _("Saving changes failed."));
+            \melt\messenger\redirect_message(REQ_URL, _("Saving changes failed."));
         $model_interface->processSubmit();
     }
 
@@ -677,7 +677,7 @@ class ModelInterface {
                 if (!isset($this->components[$instance_key][$field_name]))
                     continue;
                 $component_key = $this->components[$instance_key][$field_name];
-                $value = ($field_type instanceof \nmvc\core\PointerType)? $field_type->getID(): $field_type->get();
+                $value = ($field_type instanceof \melt\core\PointerType)? $field_type->getID(): $field_type->get();
                 $component_field_values[$component_key] = $value;
             }
         }
@@ -761,11 +761,11 @@ class ModelInterface {
             $callback_method = $this->interface_name;
         }
         $callback_method = "ic_$callback_method";
-        $callback_class = 'nmvc\\' . $callback_module . '\\InterfaceCallback';
+        $callback_class = 'melt\\' . $callback_module . '\\InterfaceCallback';
         if (!\class_exists($callback_class))
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' does not exist!", \E_USER_ERROR);
-                if (!is($callback_class, 'nmvc\qmi\InterfaceCallback'))
-            \trigger_error(__METHOD__ . " error: The callback class '$callback_class' does not extend 'nmvc\qmi\InterfaceCallback'!", \E_USER_ERROR);
+                if (!is($callback_class, 'melt\qmi\InterfaceCallback'))
+            \trigger_error(__METHOD__ . " error: The callback class '$callback_class' does not extend 'melt\qmi\InterfaceCallback'!", \E_USER_ERROR);
         if (!is($callback_class, $callback_class . "_app_overrideable"))
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not declared overridable by the responsible module!", \E_USER_ERROR);
         $ajax_submit = array_key_exists("_qmi_ajax_submit", $_POST) && $_POST["_qmi_ajax_submit"] == true;
@@ -780,8 +780,8 @@ class ModelInterface {
                     break;
                 }
             }
-            \nmvc\request\send_json_data($data);
+            \melt\request\send_json_data($data);
         } else
-            \nmvc\request\redirect($callback_class->getSuccessUrl());
+            \melt\request\redirect($callback_class->getSuccessUrl());
     }
 }

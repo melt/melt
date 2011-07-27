@@ -1,4 +1,4 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 class FactoryConstructor {
     public function __construct(array $properties = array()) {

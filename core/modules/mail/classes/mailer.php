@@ -1,7 +1,7 @@
-<?php namespace nmvc\mail;
+<?php namespace melt\mail;
 
 /**
- * nanoMVC wrapper class for sending RFC compatible e-mails
+ * Melt Framework wrapper class for sending RFC compatible e-mails
  * platform compatible and without relying on wrappers.
  */
 class Mailer {
@@ -122,7 +122,7 @@ class Mailer {
         // Also append other standard headers.
         $start_headers = $this->addressEmail();
         $start_headers .= 'MIME-Version: 1.0' . Smtp::CRLF;
-        $start_headers .= 'X-Mailer: nanoMVC/' . \nmvc\internal\VERSION . '; PHP/' . phpversion() . Smtp::CRLF;
+        $start_headers .= 'X-Mailer: Melt Framework/' . \melt\internal\VERSION . '; PHP/' . phpversion() . Smtp::CRLF;
         $start_headers .= 'Date: ' . date("r") . Smtp::CRLF;
         $start_headers .= "Subject: =?UTF-8?B?" . base64_encode($this->subject) . "?=" . Smtp::CRLF;
         $start_headers .= $this->to->getAsHeader('To');
@@ -139,12 +139,12 @@ class Mailer {
             trigger_error(__CLASS__ . " failed, no repicents specified!", \E_USER_ERROR);
         $rcpt_array = array_keys($rcpt_array);
         foreach ($rcpt_array as $rcpt_email) {
-            if (!\nmvc\string\email_validate($rcpt_email))
+            if (!\melt\string\email_validate($rcpt_email))
                 trigger_error(__CLASS__ . " failed, invalid repicent email address: $rcpt_email", \E_USER_ERROR);
         }
         // Read FROM.
         $from_email = $this->from->email;
-        if (!\nmvc\string\email_validate($from_email))
+        if (!\melt\string\email_validate($from_email))
             trigger_error(__CLASS__ . " failed, invalid from address: $from_email", \E_USER_ERROR);
         // Prepend start headers to mail data.
         $data = $start_headers . $mail_data;
@@ -157,7 +157,7 @@ class Mailer {
     }
 
     private function boundaryWrap($sections, $multipart_mime) {
-        $boundary = \nmvc\string\random_alphanum_str(16);
+        $boundary = \melt\string\random_alphanum_str(16);
         if (\count($sections) < 1) {
             \trigger_error("Boundary wrap called with no sections.", \E_USER_ERROR);
         } else if (\count($sections) == 1) {

@@ -1,10 +1,10 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 /**
  * A date selector which uses jquery-ui to display a date picker.
  * It stores/gets/sets dates in ISO-8601 format (YYYY-mm-dd).
  */
-class DateType extends \nmvc\AppType {
+class DateType extends \melt\AppType {
     private $varchar_size = null;
 
     public function __construct() {
@@ -53,7 +53,7 @@ class DateType extends \nmvc\AppType {
     }
 
     public function getSQLValue() {
-        return \nmvc\db\strfy($this->value->format("Y-m-d"));
+        return \melt\db\strfy($this->value->format("Y-m-d"));
     }
 
     public function getInterface($name) {

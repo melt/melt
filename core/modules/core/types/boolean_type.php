@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class BooleanType extends \nmvc\AppType {
+class BooleanType extends \melt\AppType {
     public $true_str = "yes";
     public $false_str = "no";
 

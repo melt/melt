@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class UploadType extends \nmvc\cache\BlobPointerType {
+class UploadType extends \melt\cache\BlobPointerType {
     public $allowed_extentions = ".zip|.gz|.tar|.rar|.7z|.png|.gif|.jpg|.jpeg";
     public $upload_status = null;
     /**
@@ -26,7 +26,7 @@ class UploadType extends \nmvc\cache\BlobPointerType {
             $remote_name = $_FILES[$name]['name'];
             $is_ext = null;
             foreach ($allowed_extentions as $extention) {
-                if (\nmvc\string\ends_with($remote_name, $extention)) {
+                if (\melt\string\ends_with($remote_name, $extention)) {
                     $is_ext = $extention;
                     break;
                 }

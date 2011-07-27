@@ -1,4 +1,4 @@
-<?php namespace nmvc\string;
+<?php namespace melt\string;
 
 /** Returns a string from a numeric index. Eg 0 = a, 1 = b... */
 function from_index($index) {
@@ -230,14 +230,14 @@ function simple_decrypt($crypttext, $password = null) {
 * @desc Takes a text that is cased like this: fooBar and converts it to underlined form: foo_bar
 */
 function cased_to_underline($text) {
-    return \nmvc\internal\cased_to_underline($text);
+    return \melt\internal\cased_to_underline($text);
 }
 
 /**
  * @desc Takes a text that is underlined like this: foo_bar and converts it to cased form: FooBar
  */
 function underline_to_cased($text) {
-    return \nmvc\internal\underline_to_cased($text);
+    return \melt\internal\underline_to_cased($text);
 }
 
 /**

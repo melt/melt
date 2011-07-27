@@ -1,4 +1,4 @@
-<?php namespace nmvc\cache;
+<?php namespace melt\cache;
 
 /**
  * A binary data field that points to the binary data and uses
@@ -8,7 +8,7 @@
  *
  * Be sure to understand how it works before you use it.
  */
-class BlobPointerType extends \nmvc\core\PointerType {
+class BlobPointerType extends \melt\core\PointerType {
     /** Constructs this typed field with this column name. */
     public function __construct($disconnect_reaction = "SET NULL") {
         parent::__construct('cache\BlobModel', $disconnect_reaction);
@@ -56,7 +56,7 @@ class BlobPointerType extends \nmvc\core\PointerType {
                 // Need to delete the blob I'm pointing on.
                 // As unlink would require loading the blob into memory
                 // direct querying will be used instead.
-                \nmvc\db\run("DELETE FROM " . \nmvc\db\table('cache\blob') . " WHERE id = " . intval($this->value));
+                \melt\db\run("DELETE FROM " . \melt\db\table('cache\blob') . " WHERE id = " . intval($this->value));
             }
             if ($this->change_to === null) {
                 // Reset.
@@ -85,9 +85,9 @@ class BlobPointerType extends \nmvc\core\PointerType {
             // Prepare storing the binary data in a new blob model.
             $blob_model = new BlobModel();
             $blob_model->dta = $data;
-            $blob_model->tag = \nmvc\string\random_alphanum_str(8);
+            $blob_model->tag = \melt\string\random_alphanum_str(8);
             $blob_model->ext = $extention;
-            $blob_model->one_way_key = \nmvc\string\random_alphanum_str(8);
+            $blob_model->one_way_key = \melt\string\random_alphanum_str(8);
             $this->change_to = $blob_model;
         } else {
             // Prepare clearing the binary data.
@@ -117,8 +117,8 @@ class BlobPointerType extends \nmvc\core\PointerType {
             return null;
         // Returns the tag for the blob I'm pointing to.
         // Uses SQL querying to prevent loading BLOB into memory.
-        $result = \nmvc\db\query("SELECT tag,ext,one_way_key FROM " . \nmvc\db\table(BlobModel::getTableName()) . " WHERE id = " . intval($this->value));
-        $result = \nmvc\db\next_array($result);
+        $result = \melt\db\query("SELECT tag,ext,one_way_key FROM " . \melt\db\table(BlobModel::getTableName()) . " WHERE id = " . intval($this->value));
+        $result = \melt\db\next_array($result);
         if (!is_array($result))
             return null;
         return array($result[0], $result[1], $result[2]);

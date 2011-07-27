@@ -1,4 +1,4 @@
-<?php namespace nmvc\userx;
+<?php namespace melt\userx;
 
 /**
  * Hashes passwords to their storable form.
@@ -8,12 +8,12 @@
  */
 function hash_password($cleartext_password) {
     if (config\HASHING_ALGORITHM == "crypt") {
-        return crypt($cleartext_password, "$1$" . \nmvc\string\random_hex_str(8) . "$");
+        return crypt($cleartext_password, "$1$" . \melt\string\random_hex_str(8) . "$");
     } else if (config\HASHING_ALGORITHM == "sha1") {
-        $salt = \nmvc\string\random_hex_str(40);
+        $salt = \melt\string\random_hex_str(40);
         return $salt . sha1($salt . $cleartext_password, false);
     } else if (config\HASHING_ALGORITHM == "md5") {
-        $salt = \nmvc\string\random_hex_str(32);
+        $salt = \melt\string\random_hex_str(32);
         return $salt . \md5($salt . $cleartext_password, false);
     } else
         trigger_error("The configured hashing algorithm '" . config\HASHING_ALGORITHM . "' is not supported.", \E_USER_ERROR);
@@ -63,21 +63,21 @@ function validate_password($hashed_password, $cleartext_password) {
  */
 function deny($message = null) {
     // Ignore soft 403 for ajax requests as redirections is transparent.
-    if (config\SOFT_403 != false && !\nmvc\request\is_ajax()) {
+    if (config\SOFT_403 != false && !\melt\request\is_ajax()) {
         $user = get_user();
         if ($user === null) {
             if (config\LAST_DENY_AUTOREDIRECT)
                 $_SESSION['userx\LAST_DENY_PATH'] = APP_ROOT_URL . \substr(REQ_URL, 1);
             if ($message === null)
                 $message = _("Access denied. You are not logged in.");
-            \nmvc\messenger\redirect_message(config\SOFT_403, $message, "bad");
+            \melt\messenger\redirect_message(config\SOFT_403, $message, "bad");
         } else {
             if ($message === null)
                 $message = _("Access denied. Insufficient permissions.");
-            \nmvc\messenger\redirect_message(config\SOFT_403, $message, "bad");
+            \melt\messenger\redirect_message(config\SOFT_403, $message, "bad");
         }
     } else
-        \nmvc\request\show_xyz(403);
+        \melt\request\show_xyz(403);
     exit;
 }
 
@@ -125,7 +125,7 @@ function login_challenge($username, $cleartext_password, $remember_session = fal
             $user->last_login_time = time();
             $user->type("last_login_ip")->setToRemoteAddr();
             if ($remember_session) {
-                $user_remember_key = \nmvc\string\random_hex_str(16);
+                $user_remember_key = \melt\string\random_hex_str(16);
                 $user->user_remember_key = $user_remember_key;
                 $user->user_remember_key_expires = $expires = time() + 60 * 60 * 24 * intval(config\REMEMBER_ME_DAYS);
                 // Remember user, allowing auto-login for time period configured.
@@ -196,7 +196,7 @@ function login(UserModel $user) {
         if (!isset($_SESSION['userx\auth']['shells']))
             $_SESSION['userx\auth']['shells'] = array();
         else if (count($_SESSION['userx\auth']['shells']) > 64)
-            \nmvc\messenger\redirect_message(REQ_URL, __("Login failed! Your login shell depth is too high (max 64)!"));
+            \melt\messenger\redirect_message(REQ_URL, __("Login failed! Your login shell depth is too high (max 64)!"));
         array_push($_SESSION['userx\auth']['shells'], $_SESSION['userx\auth']['user']);
     }
     $_SESSION['userx\auth']['user'] = $user->getID();
@@ -218,7 +218,7 @@ function get_user() {
             // if the top user times out - all users time out.
             unset($_SESSION['userx\auth']);
             // Forward user to timeout page.
-            \nmvc\messenger\redirect_message(REQ_URL, __("Your session expired due to inactivity. You need to log in again."));
+            \melt\messenger\redirect_message(REQ_URL, __("Your session expired due to inactivity. You need to log in again."));
         }
         // Get the user and cache it.
         $_SESSION['userx\auth']['timeout'] = config\SESSION_TIMEOUT_MINUTES !== false? time() + config\SESSION_TIMEOUT_MINUTES * 60: \PHP_INT_MAX;
@@ -226,7 +226,7 @@ function get_user() {
         if ($auth_user === null) {
             // Account does not exist, just redirect.
             logout();
-            \nmvc\request\redirect(REQ_URL);
+            \melt\request\redirect(REQ_URL);
         }
         // Call prototyped login session validation.
         $error = $auth_user->sessionValidate();
@@ -239,7 +239,7 @@ function get_user() {
             if ($auth_user !== null && isset($_SESSION['userx\LAST_DENY_PATH'])) {
                 $path = $_SESSION['userx\LAST_DENY_PATH'];
                 unset($_SESSION['userx\LAST_DENY_PATH']);
-                \nmvc\request\redirect($path);
+                \melt\request\redirect($path);
             }
         }
     } else

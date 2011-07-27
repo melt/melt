@@ -1,12 +1,12 @@
-<?php namespace nmvc\core; ?>
+<?php namespace melt\core; ?>
 <p><code>
     __File: <?php echo $this->path; ?>
 </code></p>
 <p>
-    All nanoMVC files is required by convention to <em>exactly</em> begin with
+    All Melt Framework files is required by convention to <em>exactly</em> begin with
     the well defined prefix
-    <code><?php echo escape("<?php"); ?> namespace nmvc[\<i>module name</i>];</code>
-    This prefix enables parsers to quickly determine if this is a nanoMVC
+    <code><?php echo escape("<?php"); ?> namespace melt[\<i>module name</i>];</code>
+    This prefix enables parsers to quickly determine if this is a Melt Framework
     class/view or not, and conventions improve code readability.
     This prefix was found to either wrong or missing in this file.
 </p>

@@ -1,10 +1,10 @@
-<?php namespace nmvc\core; ?>
+<?php namespace melt\core; ?>
 <p><code>
     __File: <?php echo $this->path; ?>
 </code></p>
 <p>
     The file declared a concrete class with the <em>_app_overrideable</em>
-    keyword. nanoMVC requires that theese classes are declared abstract
+    keyword. Melt Framework requires that theese classes are declared abstract
     since they are treated as partial classes that the application finalizes.
 </p>
 <h2>Suggested Fix:</h2>

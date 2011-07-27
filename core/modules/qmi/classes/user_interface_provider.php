@@ -1,4 +1,4 @@
-<?php namespace nmvc\qmi;
+<?php namespace melt\qmi;
 
 interface UserInterfaceProvider {
     /**

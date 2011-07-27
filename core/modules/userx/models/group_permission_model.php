@@ -1,7 +1,7 @@
-<?php namespace nmvc\userx;
+<?php namespace melt\userx;
 
 /** That an instance of this model exists implies that this group has permission to access this controller. */
-abstract class GroupPermissionModel_app_overrideable extends \nmvc\AppModel {
+abstract class GroupPermissionModel_app_overrideable extends \melt\AppModel {
     protected $index_groups = array(
         "controller" => array("group_id" => INDEXED_UNIQUE),
     );

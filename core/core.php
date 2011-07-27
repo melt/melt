@@ -1,15 +1,15 @@
 <?php
 
 // Core design
-require "nmvc.controller.php";
-require "nmvc.model.php";
-require "nmvc.view.php";
-require "nmvc.module.php";
-require "nmvc.type.php";
+require "melt.controller.php";
+require "melt.model.php";
+require "melt.view.php";
+require "melt.module.php";
+require "melt.type.php";
 
 // Process request.
-require "nmvc.init.php";
-require "nmvc.loader.php";
-require "nmvc.catcher.php";
-require "nmvc.session.php";
-require "nmvc.routing.php";
+require "melt.init.php";
+require "melt.loader.php";
+require "melt.catcher.php";
+require "melt.session.php";
+require "melt.routing.php";

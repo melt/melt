@@ -1,4 +1,4 @@
-<?php namespace nmvc\mail;
+<?php namespace melt\mail;
 ////////////////////////////////////////////////////
 // SMTP - PHP SMTP class
 //
@@ -12,7 +12,7 @@
 //
 // License: LGPL, see LICENSE
 //
-// Integrated into NanoMVC by Hannes Landeholm.
+// Integrated into Melt Framework by Hannes Landeholm.
 ////////////////////////////////////////////////////
 
 /**
@@ -154,7 +154,7 @@ class Smtp
             $this->error = array(
                 "error" => "TLS startup failed",
                 "smtp_code" => "",
-                "smtp_msg" => \nmvc\string\starts_with(@$err["message"], "stream_socket_enable_crypto")? @$err["message"]: "",
+                "smtp_msg" => \melt\string\starts_with(@$err["message"], "stream_socket_enable_crypto")? @$err["message"]: "",
             );
             return false;
         }

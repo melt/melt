@@ -1,8 +1,8 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class CoreModule extends \nmvc\CoreModule {
+class CoreModule extends \melt\CoreModule {
     public static function beforeRequestProcess() {
         if (APP_IN_DEVELOPER_MODE)
-            \nmvc\View::render("/core/devmode_includes", null, false, true);
+            \melt\View::render("/core/devmode_includes", null, false, true);
     }
 }

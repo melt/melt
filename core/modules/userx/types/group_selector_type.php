@@ -1,6 +1,6 @@
-<?php namespace nmvc\userx;
+<?php namespace melt\userx;
 
-class GroupSelectorType extends \nmvc\AppType {
+class GroupSelectorType extends \melt\AppType {
     public function getSQLType() {
         return "int";
     }

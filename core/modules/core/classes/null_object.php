@@ -1,4 +1,4 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 /**
  * Used as a placeholder for NULL when using NULL

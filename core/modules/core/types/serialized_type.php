@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class SerializedType extends \nmvc\AppType {
+class SerializedType extends \melt\AppType {
     public function __construct() {
         parent::__construct();
         $this->value = null;
@@ -11,7 +11,7 @@ class SerializedType extends \nmvc\AppType {
     }
     
     public function getSQLValue() {
-        return $this->value === null? "''": \nmvc\db\strfy(\serialize($this->value));
+        return $this->value === null? "''": \melt\db\strfy(\serialize($this->value));
     }
 
 

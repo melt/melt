@@ -1,11 +1,11 @@
-<?php namespace nmvc\core; ?>
+<?php namespace melt\core; ?>
 <p><code>
     __File: <?php echo $this->path; ?>
 </code></p>
 <p>
     The file declared a concrete class with the name
     <code><?php echo $this->class_name; ?></code>.
-    However nanoMVC requires this class to be declared abstract by design.
+    However Melt Framework requires this class to be declared abstract by design.
 </p>
 <h2>Suggested Fix:</h2>
 <p>

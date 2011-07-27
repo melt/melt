@@ -1,6 +1,6 @@
-<?php namespace nmvc\userx;
+<?php namespace melt\userx;
 
-abstract class UserModel_app_overrideable extends \nmvc\AppModel implements \nmvc\qmi\UserInterfaceProvider {
+abstract class UserModel_app_overrideable extends \melt\AppModel implements \melt\qmi\UserInterfaceProvider {
     /* This field is only used when config\MULTIPLE_GROUPS == false */
     public $group_id = array('core\SelectModelType', 'userx\GroupModel');
     /* This field is only used when config\MULTIPLE_IDENTITIES == false */

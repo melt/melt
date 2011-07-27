@@ -1,4 +1,4 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 class CallTraceNode extends FactoryConstructor {
     public $call_signature = null;

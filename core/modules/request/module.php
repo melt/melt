@@ -1,5 +1,5 @@
-<?php namespace nmvc\request;
+<?php namespace melt\request;
 
-class RequestModule extends \nmvc\CoreModule { }
+class RequestModule extends \melt\CoreModule { }
 
 

@@ -1,4 +1,4 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 /**
  * A non garbage collected instance reference.
@@ -8,7 +8,7 @@
  * is no longer valid it could return null even though the internal value
  * is not array(null, 0).
  */
-class InstanceReferenceType extends \nmvc\AppType {
+class InstanceReferenceType extends \melt\AppType {
     protected $value = array(null, 0);
 
     public function get() {
@@ -19,7 +19,7 @@ class InstanceReferenceType extends \nmvc\AppType {
         if (!\is_array($this->value) || \count($this->value) != 2)
             return null;
         list($target_model, $id) = $this->value;
-        if (!\is_subclass_of($target_model, 'nmvc\Model'))
+        if (!\is_subclass_of($target_model, 'melt\Model'))
             return null;
         $id = \intval($id);
         if ($id <= 0)
@@ -35,7 +35,7 @@ class InstanceReferenceType extends \nmvc\AppType {
                 $this->value = array(null, 0);
         } else if ($value === null) {
             $this->value = array(null, 0);
-        } else if ($value instanceof \nmvc\Model) {
+        } else if ($value instanceof \melt\Model) {
             $this->value = array(\get_class($value), $value->getID());
         } else
             \trigger_error("Attempted to set UniversialReferenceType to non Model instance.", \E_USER_ERROR);
@@ -50,7 +50,7 @@ class InstanceReferenceType extends \nmvc\AppType {
     }
 
     public function getSQLValue() {
-        return \nmvc\db\strfy(serialize($this->value));
+        return \melt\db\strfy(serialize($this->value));
     }
     
     public function getInterface($name) { }

@@ -1,4 +1,4 @@
-<?php namespace nmvc\core; ?>
+<?php namespace melt\core; ?>
 <p><code>
     __File: <?php echo $this->path; ?>
 </code></p>

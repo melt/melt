@@ -1,4 +1,4 @@
-<?php namespace nmvc\core; ?>
+<?php namespace melt\core; ?>
 <?php $this->layout->enterSection("head"); ?>
 <title><?php echo _("Service Temporary Unavailible"); ?></title>
 <style type="text/css">

@@ -1,7 +1,7 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 /** A very special type that abstracts a pointer. */
-class PointerType extends \nmvc\AppType {
+class PointerType extends \melt\AppType {
     /** @var string Target model class name. Set by constructor. */
     protected $target_model;
     protected $disconnect_reaction;
@@ -46,13 +46,13 @@ class PointerType extends \nmvc\AppType {
     /**
      * Constructs this typed field with this column name.
      * @param $target_model The model class name pointer points too with
-     * the initial implicit 'nmvc\' removed.
+     * the initial implicit 'melt\' removed.
      * @param $disconnect_reaction Currently supported are 'SET NULL',
      * 'CASCADE' and 'CALLBACK'. See manual for more information.
      */
     public function __construct($target_model, $disconnect_reaction = "SET NULL") {
-        $target_model = 'nmvc\\' . $target_model;
-        if (!class_exists($target_model) || !is_subclass_of($target_model, 'nmvc\Model'))
+        $target_model = 'melt\\' . $target_model;
+        if (!class_exists($target_model) || !is_subclass_of($target_model, 'melt\Model'))
             trigger_error("Attempted to declare a pointer pointing to a non existing model '$target_model'.");
         $this->target_model = $target_model;
         // Read disconnect reaction.
@@ -79,13 +79,13 @@ class PointerType extends \nmvc\AppType {
     }
 
     /**
-     * The basic nanoMVC pointer does not have an interface by default.
+     * The basic Melt Framework pointer does not have an interface by default.
      * Simply returns a string representation of its value.
      */
     public function getInterface($name) { }
 
     /**
-     * The basic nanoMVC pointer does not have an interface
+     * The basic Melt Framework pointer does not have an interface
      * by default. Function does nothing.
      */
     public function readInterface($name) { }
@@ -93,7 +93,7 @@ class PointerType extends \nmvc\AppType {
     /**
      * Returns the model this pointer points to or null if
      * no such model exists.
-     * @return \nmvc\Model
+     * @return \melt\Model
      */
     public function get() {
         // If this is not yet an memory object pointer,
@@ -102,7 +102,7 @@ class PointerType extends \nmvc\AppType {
             if ($this->value > 0) {
                 $target_model = $this->target_model;
                 $this->value = $target_model::selectByID($this->value);
-                if ($this->value === null && !REQ_IS_CORE_DEV_ACTION)
+                if ($this->value === null && !REQ_IS_CORE_CONSOLE)
                     trigger_error("The database state is corrupt, please run repair. Pointer referencing $target_model has ID set, but target does not exist in database. Setting pointer to NULL.", \E_USER_WARNING);
             } else
                 $this->value = null;
@@ -150,9 +150,9 @@ class PointerType extends \nmvc\AppType {
      * instance that has the in memory object pointer and where the
      * second index is the name of the pointer field that points to the
      * given instance. The keys or order of the returned array is undefined.
-     * @return array Array of array(\nmvc\Type, string)
+     * @return array Array of array(\melt\Type, string)
      */
-    public static function getIncommingMemoryObjectPointers(\nmvc\Model $for_instance) {
+    public static function getIncommingMemoryObjectPointers(\melt\Model $for_instance) {
         $key = spl_object_hash($for_instance);
         if (!array_key_exists($key, self::$memory_object_pointer_backlinks))
             return array();

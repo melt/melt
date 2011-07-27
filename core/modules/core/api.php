@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-const NMVC_CORE_FORK_TIMEOUT = 10;
+const melt_CORE_FORK_TIMEOUT = 10;
 
 /**
  * Forks a function call, allowing parallell execution.
@@ -19,9 +19,9 @@ function fork($callback, $parameters = array()) {
     // Execute fork.
     $headers = array(
         "Host" => APP_ROOT_HOST,
-        "User-Agent" => "nanoMVC/" . \nmvc\internal\VERSION . " (Internal Fork)",
+        "User-Agent" => "Melt Framework/" . \melt\internal\VERSION . " (Internal Fork)",
     );
-    $rpc_payload = \nmvc\string\simple_crypt(\serialize(array(
+    $rpc_payload = \melt\string\simple_crypt(\serialize(array(
         "callback" => $callback,
         "parameters" => $parameters,
         "time" => time(),
@@ -34,7 +34,7 @@ function fork($callback, $parameters = array()) {
     $server_addr = $_SERVER["SERVER_ADDR"];
     // Using a socket directly so we can open and close as quickly as possible.
     $host = APP_ROOT_HOST;
-    $cookie_header = APP_IN_DEVELOPER_MODE? "\r\nCookie: NMVC_DEVKEY=" . config\DEVELOPER_KEY: "";
+    $cookie_header = APP_IN_DEVELOPER_MODE? "\r\nCookie: MELT_DEVKEY=" . config\DEVELOPER_KEY: "";
     $request_data = "POST $base_path/core/callback/fork HTTP/1.1\r\nHost: $host"
     . "\r\nContent-Type: text/plain"
     . "\r\nContent-Length: " . \strlen($rpc_payload)
@@ -43,7 +43,7 @@ function fork($callback, $parameters = array()) {
     $binary_server_addr = @\inet_pton($server_addr);
     if ($binary_server_addr === false)
         \trigger_error("Fork failed, could not parse server address \"$server_addr\".", \E_USER_ERROR);
-    $stream = \fsockopen(\strlen($binary_server_addr) > 4? "[$server_addr]": $server_addr, $server_port, $errno, $errstr, NMVC_CORE_FORK_TIMEOUT);
+    $stream = \fsockopen(\strlen($binary_server_addr) > 4? "[$server_addr]": $server_addr, $server_port, $errno, $errstr, melt_CORE_FORK_TIMEOUT);
     \fwrite($stream, $request_data);
     \stream_set_timeout($stream, 10);
     // Just grab the first chunk with the status code and close the
@@ -73,11 +73,11 @@ function fork($callback, $parameters = array()) {
 function script_fork($callback, $parameters = array()) {
     if (!\is_callable($callback))
         \trigger_error("The callback '$callback' is invalid!", \E_USER_ERROR);
-    if (!\is_executable(\nmvc\core\config\PHP_BINARY))
-        \trigger_error("PHP_BINARY is not executable (" . \nmvc\core\config\PHP_BINARY . ")", \E_USER_ERROR);
-    $callback_payload = \nmvc\string\base64_alphanum_encode(\serialize(array($callback, $parameters)));
+    if (!\is_executable(\melt\core\config\PHP_BINARY))
+        \trigger_error("PHP_BINARY is not executable (" . \melt\core\config\PHP_BINARY . ")", \E_USER_ERROR);
+    $callback_payload = \melt\string\base64_alphanum_encode(\serialize(array($callback, $parameters)));
     $slash = on_windows()? "\\": "/";
-    $cmdline = \escapeshellarg(\nmvc\core\config\PHP_BINARY) . " " . \escapeshellarg(APP_DIR . $slash . "core" . $slash . "core.php") . " /core/callback/script_fork/" . $callback_payload;
+    $cmdline = \escapeshellarg(\melt\core\config\PHP_BINARY) . " " . \escapeshellarg(APP_DIR . $slash . "core" . $slash . "core.php") . " /core/callback/script_fork/" . $callback_payload;
     // Asyncronously execute command.
     if (on_windows())
         pclose(popen("start \"\" /B $cmdline", "r"));
@@ -99,7 +99,7 @@ function get_fork_key() {
             if (\preg_match('#^[0-9a-f]{16,16}$#', $fork_key))
                 return $fork_key;
         }
-        $fork_key = \strtolower(\nmvc\string\random_hex_str(16));
+        $fork_key = \strtolower(\melt\string\random_hex_str(16));
         \file_put_contents($fork_key_path, $fork_key);
     }
     return $fork_key;
@@ -130,7 +130,7 @@ function req_is_ipv4() {
  * Note: Relies on a hack that might stop working in future versions.
  */
 function req_unhook() {
-    \nmvc\request\reset();
+    \melt\request\reset();
     ignore_user_abort(true);
     header("Connection: close");
     header("Content-Encoding: none");
@@ -141,28 +141,6 @@ function req_unhook() {
     flush();
     ob_end_clean();
 }
-
-/**
-* @param Integer $byte Number of bytes.
-* @param Boolean $si Set this to false to use IEC standard size notation instead of the SI notation. (SI: 1000 b/Kb, IEC: 1024 b/KiB)
-* @return String The number of bytes in a readable unit representation.
-*/
-function byte_unit($byte, $si = true) {
-    $byte = intval($byte);
-    if ($si) {
-        $u = 1000;
-        $uarr = array("B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB");
-    } else {
-        $u = 1024;
-        $uarr = array("B", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB", "ZiB", "YiB");
-    }
-    foreach ($uarr as $unit) {
-        if ($byte < $u) return strval(round($byte, 2)) . " " . $unit;
-        else $byte /= $u;
-    }
-    return strval(round($byte, 2)) . " " . $uarr[count($uarr) - 1];
-}
-
 
 /**
 * @desc Returns TRUE if arrays are recursivly equal, otherwise FALSE.
@@ -245,7 +223,7 @@ function grep($directory, $pattern = null, $recurse = true) {
         $subpath = $directory . $nodename;
         if (\is_dir($subpath)) {
             if ($recurse)
-                $ret = \array_merge($ret, \grep($subpath . "/", $pattern));
+                $ret = \array_merge($ret, grep($subpath . "/", $pattern));
         } else if ($pattern == null || \preg_match($pattern, $subpath))
             $ret[] = \substr($subpath, $skip_charachers);
     }
@@ -269,7 +247,7 @@ function require_module($module_name, $min_version = null) {
             $of = ($min_version != null)? " of '$min_version'": "";
             request\show_invalid("Module '$module_name'$of not installed but required.");
         } else
-            \nmvc\request\show_404();
+            \melt\request\show_404();
     }
 }
 
@@ -280,7 +258,7 @@ function require_module($module_name, $min_version = null) {
  * @param string $min_version NULL for no version checkor or a minimum version eg "1.5.3"
  */
 function module_loaded($module_name, $min_version = null) {
-    $module_class_name = 'nmvc\\' . $module_name . '\\' . \nmvc\string\underline_to_cased($module_name) . "Module";
+    $module_class_name = 'melt\\' . $module_name . '\\' . \melt\string\underline_to_cased($module_name) . "Module";
     if (class_exists($module_class_name)) {
         if ($min_version !== null) {
             $module_version = call_user_func(array($module_class_name, "getVersion"));
@@ -304,7 +282,7 @@ function require_shared_data($entry_name) {
     if (!isset($entry_cache[$entry_name])) {
         $shared_data = array();
         $func_name = "bcd_" . $entry_name;
-        foreach (array(\nmvc\internal\get_all_modules(), array('Application' => array('nmvc\AppController'))) as $module_class_names)
+        foreach (array(\melt\internal\get_all_modules(), array('Application' => array('melt\AppController'))) as $module_class_names)
         foreach ($module_class_names as $module_name => $module) {
             $module_clsname = $module[0];
             if (method_exists($module_clsname, $func_name)) {
@@ -334,7 +312,7 @@ function require_shared_data($entry_name) {
 function generate_ul_navigation($menu_structure, $current_css_class = "current", &$current_tokens = array(), &$parent_output = null) {
     $has_match = false;
     $first_url = null;
-    $has_userx_module = \nmvc\core\module_loaded("userx");
+    $has_userx_module = \melt\core\module_loaded("userx");
     if ($parent_output === null)
         $output = '<ul class="nav">';
     else
@@ -354,7 +332,7 @@ function generate_ul_navigation($menu_structure, $current_css_class = "current",
                 array_merge(array($label), $current_tokens);
         }
         $has_match = $has_match || $match_here;
-        if ($has_userx_module && !\nmvc\userx\RestrictedController::canAccess($url_here, \nmvc\userx\get_user()))
+        if ($has_userx_module && !\melt\userx\RestrictedController::canAccess($url_here, \melt\userx\get_user()))
             continue;
         if ($first_url === null)
             $first_url = $url_here;
@@ -412,7 +390,7 @@ function on_windows() {
  * or if input is a combination of constants.
  */
 function get_error_name($error_number) {
-    return \nmvc\internal\get_error_name($error_number);
+    return \melt\internal\get_error_name($error_number);
 }
 
 
@@ -460,7 +438,7 @@ function get_uploaded_file($form_name, &$file_name = null, $only_path = false) {
  * @return array
  */
 function get_all_modules() {
-    return \nmvc\internal\get_all_modules();
+    return \melt\internal\get_all_modules();
 }
 
 /**
@@ -501,7 +479,7 @@ function debug() {
 
 /**
  * Gets the ID for a model instance or 0 for null.
- * @param \nmvc\Model $instance
+ * @param \melt\Model $instance
  * @return integer
  */
 function id($instance = null) {

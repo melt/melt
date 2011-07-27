@@ -1,11 +1,11 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 /**
  * For fixed point, decimal storage.
  * This type is recommended to be used with BC Math Functions.
  * @see http://www.php.net/manual/en/ref.bc.php
  */
-class DecimalType extends \nmvc\AppType {
+class DecimalType extends \melt\AppType {
     public $precision = 20;
     public $scale = 10;
     protected $value = "0";
@@ -30,7 +30,7 @@ class DecimalType extends \nmvc\AppType {
     }
 
     public function getSQLValue() {
-        return \nmvc\db\strfy($this->value);
+        return \melt\db\strfy($this->value);
     }
 
     public function setSQLValue($value) {

@@ -1,21 +1,21 @@
-<?php namespace nmvc\qmi;
+<?php namespace melt\qmi;
 
-class ActionsController extends \nmvc\AppController {
+class ActionsController extends \melt\AppController {
     /**
      * Callback for qmi actions.
      * @see get_action_link
      */
     public function set($data) {
-        $data = \nmvc\string\simple_decrypt($data);
+        $data = \melt\string\simple_decrypt($data);
         if ($data === false)
-            \nmvc\request\show_404();
+            \melt\request\show_404();
         list($id, $model_name, $action, $url, $arguments, $uid) = unserialize(gzuncompress($data));
-        if ($uid > 0 && $uid !== id(\nmvc\userx\get_user()))
-            \nmvc\request\show_xyz(403);
+        if ($uid > 0 && $uid !== id(\melt\userx\get_user()))
+            \melt\request\show_xyz(403);
         if ($id > 0) {
             $instance = call_user_func(array($model_name, "selectByID"), $id);
             if ($instance === null)
-                \nmvc\request\show_404();
+                \melt\request\show_404();
             switch ($action) {
             case "delete":
                 $instance->unlink();
@@ -34,10 +34,10 @@ class ActionsController extends \nmvc\AppController {
             // Static function.
             \call_user_func_array(array($model_name, $action), $arguments);
         }
-        if (\nmvc\request\is_ajax())
-            \nmvc\request\send_json_data(true);
+        if (\melt\request\is_ajax())
+            \melt\request\send_json_data(true);
         else
-            \nmvc\request\redirect($url);
+            \melt\request\redirect($url);
     }
 
     /**
@@ -47,7 +47,7 @@ class ActionsController extends \nmvc\AppController {
         $blob = \file_get_contents("php://input");
         $blobs = \explode(",", $blob);
         if (\count($blobs) < 2)
-            \nmvc\request\show_invalid();
+            \melt\request\show_invalid();
         $interface_blob = $blobs[0];
         $operations = array();
         for ($i = 1; $i < \count($blobs); $i++) {
@@ -56,15 +56,15 @@ class ActionsController extends \nmvc\AppController {
                 $operations[$i - 1][2] = \substr($blobs[$i], 1);
                 continue;
             }
-            $operation = @\unserialize(\gzuncompress(\nmvc\string\simple_decrypt($blobs[$i])));
+            $operation = @\unserialize(\gzuncompress(\melt\string\simple_decrypt($blobs[$i])));
             if (!\is_array($operation))
-                \nmvc\request\show_invalid();
+                \melt\request\show_invalid();
             $operations[$i] = $operation;
             $operations[$i][2] = null;
         }
         $model_interface = ModelInterface::unserialize($interface_blob);
         if (!($model_interface instanceof ModelInterface))
-            \nmvc\request\show_invalid();
+            \melt\request\show_invalid();
         $model_interface->__jsMutate($operations);
         exit;
     }

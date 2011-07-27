@@ -1,4 +1,4 @@
-<?php namespace nmvc\qmi;
+<?php namespace melt\qmi;
 
 /**
  * Prints a generic interface. A generic example of how output from
@@ -10,9 +10,9 @@
 function print_interface($html_components, $labels, $as_table = false) {
     $data = compact("html_components", "labels");
     if ($as_table)
-        \nmvc\View::render("/qmi/interface", $data, false, false);
+        \melt\View::render("/qmi/interface", $data, false, false);
     else
-        \nmvc\View::render("/qmi/table_interface", $data, false, false);
+        \melt\View::render("/qmi/table_interface", $data, false, false);
 }
 
 
@@ -30,22 +30,22 @@ function print_interface($html_components, $labels, $as_table = false) {
  */
 function get_action_link($model = null, $action = "delete", $url = null, $arguments = array(), $secure = true) {
     if (is_object($model)) {
-        if (!is_a($model, '\nmvc\Model'))
+        if (!is_a($model, '\melt\Model'))
             throw new \Exception("Cannot make a delete link to a non model object!");
         $id = $model->getID();
         if ($id <= 0)
             return null;
         $model_name = get_class($model);
     } else {
-        if (!is($model, 'nmvc\Model'))
-            throw new \Exception("The supplied class '$model' is not a nmvc\\Model!");
+        if (!is($model, 'melt\Model'))
+            throw new \Exception("The supplied class '$model' is not a melt\\Model!");
         $model_name = $model;
         $id = 0;
     }
     if ($url == null)
         $url = url(REQ_URL);
-    $uid = $secure? id(\nmvc\userx\get_user()): 0;
-    $qmi_data = \nmvc\string\simple_crypt(gzcompress(serialize(array($id, $model_name, $action, $url, array_values($arguments), $uid)), 9));
+    $uid = $secure? id(\melt\userx\get_user()): 0;
+    $qmi_data = \melt\string\simple_crypt(gzcompress(serialize(array($id, $model_name, $action, $url, array_values($arguments), $uid)), 9));
     if (\strlen($qmi_data) > 1020)
         \trigger_error("Generating action link that is larger than 1K. This link might not be supported on all browsers/servers.", \E_USER_NOTICE);
     return url("/qmi/actions/set/$qmi_data");

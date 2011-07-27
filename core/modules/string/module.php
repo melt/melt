@@ -1,5 +1,5 @@
-<?php namespace nmvc\string;
+<?php namespace melt\string;
 
-class StringModule extends \nmvc\CoreModule { }
+class StringModule extends \melt\CoreModule { }
 
 

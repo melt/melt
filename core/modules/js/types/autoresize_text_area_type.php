@@ -1,6 +1,6 @@
-<?php namespace nmvc\js;
+<?php namespace melt\js;
 
-class AutoresizeTextAreaType extends \nmvc\core\TextAreaType {
+class AutoresizeTextAreaType extends \melt\core\TextAreaType {
     public $animate = true;
     public $animateDuration = 150;
     public $extraSpace = 20;

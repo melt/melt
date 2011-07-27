@@ -1,4 +1,4 @@
-<?php namespace nmvc\db;
+<?php namespace melt\db;
 
 class IndexRequirement {
     private $constant_keys;

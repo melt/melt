@@ -1,4 +1,4 @@
-<?php namespace nmvc\js; ?>
+<?php namespace melt\js; ?>
 <?php $this->layout->enterSection("head"); ?>
     <script type="text/javascript" src="<?php echo url("/static/cmod/js/jquery-autocomplete/lib/jquery.ajaxQueue.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo url("/static/cmod/js/jquery-autocomplete/lib/jquery.bgiframe.min.js"); ?>"></script>

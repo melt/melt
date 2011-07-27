@@ -1,34 +1,34 @@
-<?php namespace nmvc\js;
+<?php namespace melt\js;
 
-class JsModule extends \nmvc\CoreModule {
+class JsModule extends \melt\CoreModule {
     public static function beforeRequestProcess() {
         // Auto include required scripts that core needs.
-        \nmvc\View::render("/js/include_jquery", null, false, true);
-        \nmvc\View::render("/js/include_sprintf", null, false, true);
+        \melt\View::render("/js/include_jquery", null, false, true);
+        \melt\View::render("/js/include_sprintf", null, false, true);
         // Auto include optional/configurable scripts.
         $ui_theme = config\JQUERY_UI_THEME;
         if (is_string($ui_theme) && strlen($ui_theme) > 0)
-            \nmvc\View::render("/js/include_ui", array("theme" => $ui_theme), false, true);
+            \melt\View::render("/js/include_ui", array("theme" => $ui_theme), false, true);
         if (config\INCLUDE_JQUERY_ALERTS)
-            \nmvc\View::render("/js/include_alerts", null, false, true);
+            \melt\View::render("/js/include_alerts", null, false, true);
         if (config\INCLUDE_JQUERY_CORNER)
-            \nmvc\View::render("/js/include_corner", null, false, true);
+            \melt\View::render("/js/include_corner", null, false, true);
         if (config\INCLUDE_JQUERY_LIGHTBOX)
-            \nmvc\View::render("/js/include_lightbox", null, false, true);
+            \melt\View::render("/js/include_lightbox", null, false, true);
         if (config\INCLUDE_JQUERY_DATATABLES)
-            \nmvc\View::render("/js/include_datatables", null, false, true);
+            \melt\View::render("/js/include_datatables", null, false, true);
         if (config\INCLUDE_JQUERY_AUTOCOMPLETE)
-            \nmvc\View::render("/js/include_autocomplete", null, false, true);
+            \melt\View::render("/js/include_autocomplete", null, false, true);
         if (config\INCLUDE_JQUERY_AUTORESIZE)
-            \nmvc\View::render("/js/include_autoresize", null, false, true);
+            \melt\View::render("/js/include_autoresize", null, false, true);
         if (config\INCLUDE_JQUERY_COOKIE)
-            \nmvc\View::render("/js/include_cookie", null, false, true);
+            \melt\View::render("/js/include_cookie", null, false, true);
         if (config\INCLUDE_JQUERY_FORM)
-            \nmvc\View::render("/js/include_form", null, false, true);
+            \melt\View::render("/js/include_form", null, false, true);
         if (config\INCLUDE_JQUERY_RESIZE)
-            \nmvc\View::render("/js/include_resize", null, false, true);
+            \melt\View::render("/js/include_resize", null, false, true);
         if (config\INCLUDE_LESS_CSS)
-            \nmvc\View::render("/js/include_less", null, false, true);
+            \melt\View::render("/js/include_less", null, false, true);
     }
 
     public static function getAuthor() {

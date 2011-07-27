@@ -1,15 +1,15 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 /**
  * CountryType stores countries using the ISO 3166-1 encoding.
  */
-class CountryType extends \nmvc\AppType {
+class CountryType extends \melt\AppType {
     public function getSQLType() {
         return "varchar(2)";
     }
 
     public function getSQLValue() {
-        return \nmvc\db\strfy($this->value);
+        return \melt\db\strfy($this->value);
     }
 
     public function getInterface($name) {

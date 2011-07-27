@@ -1,4 +1,4 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 class LocalizationEngine {
     /**
@@ -224,7 +224,7 @@ class LocalizationEngine {
         foreach ($php_files as $php_file) {
             if ($php_file == "localization.php")
                 continue;
-            if (\nmvc\string\starts_with($php_file, "vendors/"))
+            if (\melt\string\starts_with($php_file, "vendors/"))
                 continue;
             if (\preg_match('#^modules/([^/]+)/#', $php_file, $matches)) {
                 $module = $matches[1];
@@ -248,7 +248,7 @@ class LocalizationEngine {
                         foreach ($old_locale_strings as $old_msgid => $old_contexts) {
                             if (\count($old_contexts) == 0)
                                 continue;
-                            $similarity = \nmvc\string\lcs_similarity($msgid, $old_msgid, $record);
+                            $similarity = \melt\string\lcs_similarity($msgid, $old_msgid, $record);
                             if ($similarity !== false && $similarity > $record) {
                                 $best_match = $old_contexts;
                                 $record = $similarity;
@@ -290,10 +290,10 @@ class LocalizationEngine {
                 $references[$old_msgid][$old_context] = array();
             }
         }
-        $comment = "NanoMVC Application Automatically Generated .PO Translation File";
+        $comment = "Melt Framework Application Automatically Generated .PO Translation File";
         $headers = array(
             "Project-Id-Version" => "",
-            "Report-Msgid-Bugs-To" => "http://getsatisfaction.com/omnicloud/products/omnicloud_nanomvc",
+            "Report-Msgid-Bugs-To" => "http://meltframework.com/",
             "POT-Creation-Date" => date("r"),
             "PO-Revision-Date" => date("r", $this->locale_data[$locale]["last_import"]),
             "Last-Translator" => $this->locale_data[$locale]["last_translator"],
@@ -341,7 +341,7 @@ class LocalizationEngine {
             foreach ($po_file_rows as $po_file_row) {
                 if ($po_file_row == "")
                     continue;
-                if (\nmvc\string\starts_with($po_file_row, "#,")) {
+                if (\melt\string\starts_with($po_file_row, "#,")) {
                     if (false !== \strpos($po_file_row, "fuzzy"))
                         $po_section_data["fuzzy"] = true;
                     continue;
@@ -406,7 +406,7 @@ class LocalizationEngine {
             }
         }
         if ($charset !== null && $charset !== "UTF-8")
-            trigger_error("PO file specified charset '$charset', NanoMVC currently only supports UTF-8 encoded PO files. Change encoding in your PO editor!", \E_USER_ERROR);
+            trigger_error("PO file specified charset '$charset', Melt Framework currently only supports UTF-8 encoded PO files. Change encoding in your PO editor!", \E_USER_ERROR);
         if ($locale_code == null || \strlen($locale_code) != 2)
             trigger_error("Input PO file did not specify a language or language has invalid format! Expected two letter ISO 639-1 identifier.", \E_USER_ERROR);
         if (!\array_key_exists($locale_code, $this->locale_data))

@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class FloatType extends \nmvc\AppType {
+class FloatType extends \melt\AppType {
     protected $value = 0;
 
     public function getSQLType() {

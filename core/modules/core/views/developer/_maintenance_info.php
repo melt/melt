@@ -1,4 +1,4 @@
-<?php namespace nmvc\core; ?>
+<?php namespace melt\core; ?>
 <?php $this->display("/core/developer/error_layout"); ?>
 <h1>
     <?php echo _("Temporary Maintenance"); ?>

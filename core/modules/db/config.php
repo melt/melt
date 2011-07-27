@@ -3,7 +3,7 @@
     "USER" => "root",
     "PASSWORD" => "",
     "PORT" => 3306,
-    "NAME" => "nanomvc",
+    "NAME" => "melt",
     "PREFIX" => "",
     "USE_TRIGGER_SEQUENCING" => true,
     "DEBUG_QUERY_BENCHMARK" => false,

@@ -1,11 +1,11 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 /**
  * A singleton model is a model that only and always has exactly one instance.
  * Singleton models does not have an unlinked state.
  * Use get() to get the instance.
  */
-abstract class SingletonModel extends \nmvc\AppModel {
+abstract class SingletonModel extends \melt\AppModel {
     private static $is_getting = false;
 
     /**

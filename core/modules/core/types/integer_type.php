@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class IntegerType extends \nmvc\AppType {
+class IntegerType extends \melt\AppType {
     public function getSQLType() {
         return "bigint";
     }

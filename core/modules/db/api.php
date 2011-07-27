@@ -1,11 +1,11 @@
-<?php namespace nmvc\db;
+<?php namespace melt\db;
 
 /**
  * @desc Calling this function enables buffer printing of all SQL queries.
  *       Useful for SQL batch scripts.
  */
 function enable_display() {
-    \nmvc\request\reset();
+    \melt\request\reset();
     \header('Content-Type: text/plain');
     \define("OUTPUT_MYSQL_QUERIES", true);
     \ob_end_clean();
@@ -85,7 +85,7 @@ function php_value_to_sql($php_value) {
 /**
  * Returns the configured storage engine (in lowercase) that is expected
  * to be configured for all tables (and will be configured during sync).
- * It can also return NULL which means that NanoMVC will not autoconfigure
+ * It can also return NULL which means that Melt Framework will not autoconfigure
  * any storage engines.
  * @return string
  */
@@ -144,7 +144,7 @@ function run($query) {
     $time_start = microtime(true);
     $ret = get_link()->query($query);
     $total = \microtime(true) - $time_start;
-    $debug_info = \date("r") . ": $query\n^-" . \round($total * 1000, 1) . " ms\ncaller: " . \nmvc\internal\get_user_callpoint() . "\n\n";
+    $debug_info = \date("r") . ": $query\n^-" . \round($total * 1000, 1) . " ms\ncaller: " . \melt\internal\get_user_callpoint() . "\n\n";
     \file_put_contents(APP_DIR . "/db_debug_query_benchmark.log", $debug_info, FILE_APPEND);
     return $ret;
 }
@@ -159,7 +159,7 @@ function get_link() {
         return $mysqli;
     // Make sure mysql extention is loaded.
     if (!\extension_loaded("mysqli"))
-        \trigger_error("Error: The MySQLi extention is not loaded. Your PHP installation is not compatible with nanoMVC!", \E_USER_ERROR);
+        \trigger_error("Error: The MySQLi extention is not loaded. Your PHP installation is not compatible with Melt Framework!", \E_USER_ERROR);
     // Can spend 10 seconds max connecting or half the request time limit.
     // This allows graceful handling of timeouts.
     $max_mysql_timeout = \intval(\ini_get("max_execution_time"))  / 2;
@@ -285,7 +285,7 @@ function get_all_tables() {
 
 /**
 * Syncronizes a table in the database with
-* the generic table model used by nanoMVC.
+* the generic table model used by Melt Framework.
 * @paam string $table_name The raw table name, the identifier without prefixing.
 * @param $parsed_col_array array Parsed column array of model.
 */
@@ -309,7 +309,7 @@ function sync_table_layout_with_model($table_name, array $parsed_col_array, arra
             $supports_null = \strcasecmp($index[2], "no") != 0;
             // ID column is special case.
             if ($current_name == 'id') {
-                if (!\nmvc\string\starts_with($current_type, "bigint"))
+                if (!\melt\string\starts_with($current_type, "bigint"))
                     query("ALTER TABLE " . table($table_name) . " MODIFY COLUMN id bigint NOT NULL");
                 continue;
             }
@@ -353,8 +353,8 @@ function sync_table_layout_with_model($table_name, array $parsed_col_array, arra
         }
     }
     foreach ($current_indexes as $key_name => $current_index) {
-        $nmvc_index = \nmvc\string\starts_with($key_name, '_nmvc_');
-        if (!$nmvc_index)
+        $melt_index = \melt\string\starts_with($key_name, '_melt_');
+        if (!$melt_index)
             continue;
         $unique = $index["Non_unique"] == 0;
         // Compare index and see if it's still valid.
@@ -476,10 +476,10 @@ function table($table_name) {
 /**
  * Starts building an inner selection query expression.
  * @param string $first_field The first field name in the selector.
- * @return nmvc\db\WhereCondition
+ * @return melt\db\WhereCondition
  */
 function expr($first_field = null) {
-    $wc = new \nmvc\db\WhereCondition();
+    $wc = new \melt\db\WhereCondition();
     if ($first_field !== null)
         $wc->where($first_field);
     return $wc;
@@ -488,10 +488,10 @@ function expr($first_field = null) {
 /**
  * Signifies a field in a selection query.
  * @param string $field_name
- * @return \nmvc\db\ModelField
+ * @return \melt\db\ModelField
  */
 function field($field_name) {
-    return new \nmvc\db\ModelField($field_name);
+    return new \melt\db\ModelField($field_name);
 }
 
 /**
@@ -500,14 +500,14 @@ function field($field_name) {
  * @return string
  */
 function trim_id($column_name) {
-    return \nmvc\string\ends_with($column_name, "_id")? \substr($column_name, 0, -3): $column_name;
+    return \melt\string\ends_with($column_name, "_id")? \substr($column_name, 0, -3): $column_name;
 }
 
 
 /**
  * Converts an ordered key set (array of columns) to an index identifier.
  * @param string $key_set
- * @return \nmvc\db\FieldSet
+ * @return \melt\db\FieldSet
  */
 function key_set_to_index_id(array $key_set) {
     $key_set_size = \count($key_set);
@@ -518,5 +518,5 @@ function key_set_to_index_id(array $key_set) {
             $key = trim_id($key);
         $key_set = \implode(",", $key_set);
     }
-    return "_nmvc_" . \substr(\sha1($key_set), 1, 12);
+    return "_melt_" . \substr(\sha1($key_set), 1, 12);
 }

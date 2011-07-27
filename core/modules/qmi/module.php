@@ -1,9 +1,9 @@
-<?php namespace nmvc\qmi;
+<?php namespace melt\qmi;
 
-class QmiModule extends \nmvc\CoreModule {
+class QmiModule extends \melt\CoreModule {
     public static function beforeRequestProcess() {
         ModelInterface::_checkSubmit();
         // Auto include required scripts.
-        \nmvc\View::render("/qmi/include_mutate", null, false, true);
+        \melt\View::render("/qmi/include_mutate", null, false, true);
     }
 }

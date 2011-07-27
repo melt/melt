@@ -1,4 +1,4 @@
-<?php namespace nmvc\messenger; ?>
+<?php namespace melt\messenger; ?>
 <?php $this->layout->enterSection("head"); ?>
     <script type="text/javascript">
         $(function() {

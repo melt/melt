@@ -1,4 +1,4 @@
-<?php namespace nmvc\js; ?>
+<?php namespace melt\js; ?>
 <?php $this->layout->enterSection("head_head"); ?>
     <?php if ($this->theme[0] == "/"): ?>
         <link type="text/css" href="<?php echo url($this->theme); ?>" rel="stylesheet" />

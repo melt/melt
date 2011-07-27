@@ -1,6 +1,6 @@
-<?php namespace nmvc\userx;
+<?php namespace melt\userx;
 
-abstract class RestrictedController extends \nmvc\AppController {
+abstract class RestrictedController extends \melt\AppController {
 
     private static function getGroupPermitted($group, $controller_class_name, $invoke_data, &$special_permissions) {
         // Root groups can always login.
@@ -36,11 +36,11 @@ abstract class RestrictedController extends \nmvc\AppController {
      */
     public static function canAccess($local_url, $group_or_user, &$special_permissions = null) {
         $special_permissions = null;
-        if (is($local_url, 'nmvc\core\InvokeData')) {
+        if (is($local_url, 'melt\core\InvokeData')) {
             $invoke_data = $local_url;
         } else {
             // Get controller, action and arguments from path.
-            $invoke_data = \nmvc\Controller::pathToInvokeData($local_url);
+            $invoke_data = \melt\Controller::pathToInvokeData($local_url);
             if ($invoke_data === false)
                 return true;
         }
@@ -77,7 +77,7 @@ abstract class RestrictedController extends \nmvc\AppController {
      * Return default permission for the given group and controller.
      * The group can be null which indicates a groupless user or guest.
      * Returns 'Deny' by default.
-     * @param nmvc\userx\GroupModel $group Group to evaluate.
+     * @param melt\userx\GroupModel $group Group to evaluate.
      */
     public static function getDefaultPermission(GroupModel $group = null) {
         return "Deny";
@@ -116,7 +116,7 @@ abstract class RestrictedController extends \nmvc\AppController {
 
     /** Only allows request if user is authorized. */
     public function beforeFilter($action_name, $parameters) {
-        if (!self::canAccess(\nmvc\Controller::getCurrentlyInvoked(), get_user(), $this->special_permissions))
+        if (!self::canAccess(\melt\Controller::getCurrentlyInvoked(), get_user(), $this->special_permissions))
             deny();
         parent::beforeFilter($action_name, $parameters);
     }
@@ -133,9 +133,9 @@ abstract class RestrictedController extends \nmvc\AppController {
         $controllers = $restricted_controllers = array();
         foreach (scandir(APP_DIR . "/controllers/") as $contr_file_name)
             if ($contr_file_name[0] != ".")
-                $controllers[] = "nmvc\\" . \nmvc\string\underline_to_cased(substr($contr_file_name, 0, -4));
+                $controllers[] = "melt\\" . \melt\string\underline_to_cased(substr($contr_file_name, 0, -4));
         foreach ($controllers as $class_name) {
-            if (\nmvc\core\is_abstract($class_name))
+            if (\melt\core\is_abstract($class_name))
                 continue;
             if (!is_subclass_of($class_name, __CLASS__))
                 continue;

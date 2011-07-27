@@ -1,9 +1,9 @@
-<?php namespace nmvc\userx;
+<?php namespace melt\userx;
 
-class UserxModule extends \nmvc\CoreModule {
+class UserxModule extends \melt\CoreModule {
 
     public static function beforeRequestProcess() {
-        if (REQ_IS_CORE_DEV_ACTION)
+        if (REQ_IS_CORE_CONSOLE)
             return;
         // Check if the user has a remembered login key.
         if (get_user() === null && isset($_COOKIE['REMBR_USR_KEY'])) {
@@ -16,7 +16,7 @@ class UserxModule extends \nmvc\CoreModule {
             } else {
                 // Automatically log in.
                 login($auth_user);
-                \nmvc\messenger\redirect_message(REQ_URL, __("Remember login active. You where automatically logged in."), "good");
+                \melt\messenger\redirect_message(REQ_URL, __("Remember login active. You where automatically logged in."), "good");
             }
         }
     }

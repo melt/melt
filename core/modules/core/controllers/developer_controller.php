@@ -1,4 +1,4 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 /**
  * @internal
@@ -18,15 +18,15 @@ class DeveloperController extends InternalController {
                 $expire = time() + 60 * 60 * 24;
             else
                 $expire = 0;
-            setcookie("NMVC_DEVKEY", $_POST["devkey"], $expire, APP_ROOT_PATH, null, APP_ROOT_PROTOCOL == "https");
-            \nmvc\request\redirect(url(REQ_URL));
+            setcookie("MELT_DEVKEY", $_POST["devkey"], $expire, APP_ROOT_PATH, null, APP_ROOT_PROTOCOL == "https");
+            \melt\request\redirect(url(REQ_URL));
         }
         // Block other invokes if not maintence and in developer mode.
-        if (!\nmvc\core\config\MAINTENANCE_MODE) {
-            \nmvc\View::render("/core/developer/no_access", $this, false, true);
+        if (!\melt\core\config\MAINTENANCE_MODE) {
+            \melt\View::render("/core/developer/no_access", $this, false, true);
             exit;
         } else if (!APP_IN_DEVELOPER_MODE) {
-            \nmvc\View::render("/core/developer/enter_key", $this, false, true);
+            \melt\View::render("/core/developer/enter_key", $this, false, true);
             exit;
         }
     }

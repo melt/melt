@@ -1,4 +1,4 @@
-<?php namespace nmvc\messenger;
+<?php namespace melt\messenger;
 
 /**
  * Displays a message inline in the current request if the
@@ -8,7 +8,7 @@
  * Application should at least support good|bad.
  */
 function show_message($message, $status = "bad") {
-    \nmvc\View::render("/messenger/message", compact("message", "status"), false, true);
+    \melt\View::render("/messenger/message", compact("message", "status"), false, true);
 }
 
 /**
@@ -29,8 +29,8 @@ function push_message($message, $status = "bad") {
  * Application should at least support good|bad.
  */
 function redirect_message($url, $message, $status = "bad") {
-    if (!\nmvc\string\starts_with($url, "http"))
+    if (!\melt\string\starts_with($url, "http"))
         $url = url($url);
     push_message($message, $status);
-    \nmvc\request\redirect($url);
+    \melt\request\redirect($url);
 }

@@ -1,9 +1,6 @@
-<?php namespace nmvc\userx;
+<?php namespace melt\userx;
 
-/**
- * Interface that automatically
- */
-class PasswordType extends \nmvc\AppType {
+class PasswordType extends \melt\AppType {
     public function getSQLType() {
         return "varchar(80)";
     }
@@ -21,9 +18,9 @@ class PasswordType extends \nmvc\AppType {
 
     public function getSQLValue() {
         if (\is_string($this->value))
-            return \nmvc\db\strfy(hash_password($this->value));
+            return \melt\db\strfy(hash_password($this->value));
         else
-            return \nmvc\db\strfy($this->stored_hashed_value);
+            return \melt\db\strfy($this->stored_hashed_value);
     }
 
     public function getInterface($name) {

@@ -1,6 +1,6 @@
-<?php namespace nmvc\mail;
+<?php namespace melt\mail;
 
-abstract class SpooledMailModel_app_overrideable extends \nmvc\AppModel {
+abstract class SpooledMailModel_app_overrideable extends \melt\AppModel {
     public $from_email = array('core\TextType', 128);
     public $rcpt_list = array('core\SerializedType');
 
@@ -26,23 +26,23 @@ abstract class SpooledMailModel_app_overrideable extends \nmvc\AppModel {
     public final static function processMailQueue($check_first = true) {
         // Cancel if mail queue is alredy beeing proccessed
         // (prevents beeing blocked when checking).
-        if (!\nmvc\db\enter_critical_section(self::MUTEX_PROCESS_MAIL_QUEUE, 0))
+        if (!\melt\db\enter_critical_section(self::MUTEX_PROCESS_MAIL_QUEUE, 0))
             return;
         // Check if there are any mail ready to send.
         $mail_ready = $check_first? (self::selectReadyMail()->limit(1)->count() > 0): true;
-        \nmvc\db\exit_critical_section(self::MUTEX_PROCESS_MAIL_QUEUE);
+        \melt\db\exit_critical_section(self::MUTEX_PROCESS_MAIL_QUEUE);
         if (!$mail_ready)
             return;
         // Do work of sending mail in another thread.
-        \nmvc\core\fork(array('nmvc\mail\SpooledMailModel', 'processMailQueueFork'));
+        \melt\core\fork(array('melt\mail\SpooledMailModel', 'processMailQueueFork'));
     }
 
     public final static function processMailQueueFork() {
-        \nmvc\db\enter_critical_section(self::MUTEX_PROCESS_MAIL_QUEUE);
+        \melt\db\enter_critical_section(self::MUTEX_PROCESS_MAIL_QUEUE);
         // Process mail queue.
         foreach (self::selectReadyMail()->forUpdate() as $spooled_mail)
             $spooled_mail->sendMail();
-        \nmvc\db\exit_critical_section(self::MUTEX_PROCESS_MAIL_QUEUE);
+        \melt\db\exit_critical_section(self::MUTEX_PROCESS_MAIL_QUEUE);
     }
 
     public function sendMail() {

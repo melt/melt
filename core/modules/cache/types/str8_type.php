@@ -1,15 +1,15 @@
-<?php namespace nmvc\cache;
+<?php namespace melt\cache;
 
 /**
  * Tag module - only designed to be used inside cache module.
  */
-class Str8Type extends \nmvc\AppType {    
+class Str8Type extends \melt\AppType {    
     public function getSQLType() {
         return "varchar(8)";
     }
     
     public function getSQLValue() {
-        return \nmvc\db\strfy($this->value);
+        return \melt\db\strfy($this->value);
     }
 
     public function  __toString() {

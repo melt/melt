@@ -1,4 +1,4 @@
-<?php namespace nmvc\db;
+<?php namespace melt\db;
 
 class WhereCondition {
     private $pending_field_operation = false;
@@ -111,11 +111,11 @@ class WhereCondition {
             } else if ($op == "LIKE") {
                 if (!is_scalar($arg))
                     \trigger_error(__CLASS__ . " error: Unexpected argument. $name operator expects PHP scalar value! Got: " . gettype($arg), \E_USER_ERROR);
-                if (\nmvc\string\ends_with($name, "StartingWith"))
+                if (\melt\string\ends_with($name, "StartingWith"))
                     $arg = "'" . like_pattern_strfy($arg) . "%'";
-                else if (\nmvc\string\ends_with($name, "EndingWith"))
+                else if (\melt\string\ends_with($name, "EndingWith"))
                     $arg = "'%" . like_pattern_strfy($arg) . "'";
-                else if (\nmvc\string\ends_with($name, "Containing"))
+                else if (\melt\string\ends_with($name, "Containing"))
                     $arg = "'%" . like_pattern_strfy($arg) . "%'";
                 else
                     $arg = strfy($arg);

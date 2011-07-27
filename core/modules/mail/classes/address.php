@@ -1,4 +1,4 @@
-<?php namespace nmvc\mail;
+<?php namespace melt\mail;
 
 /**
 * @desc Wraps a single email address.

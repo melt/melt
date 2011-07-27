@@ -1,4 +1,4 @@
-<?php namespace nmvc\core; ?>
+<?php namespace melt\core; ?>
 <?php
     $fn_print_call_branch = function($calls) use (&$fn_print_call_branch) {
         static $start_time = 0;

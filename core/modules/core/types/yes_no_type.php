@@ -1,9 +1,9 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 define("STR_YES", __("YES"));
 define("STR_NO", __("NO"));
 
-class YesNoType extends \nmvc\AppType {
+class YesNoType extends \melt\AppType {
     public $true_str = null;
     public $false_str = null;
 

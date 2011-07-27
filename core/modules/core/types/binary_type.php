@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class BinaryType extends \nmvc\AppType {
+class BinaryType extends \melt\AppType {
     private $varbinary_size = null;
 
     public function __construct($varbinary_size = null) {
@@ -17,7 +17,7 @@ class BinaryType extends \nmvc\AppType {
     public function getSQLValue() {
         if ($this->varbinary_size !== null)
             $this->value = substr($this->value, 0, $this->varbinary_size);
-        return \nmvc\db\strfy($this->value);
+        return \melt\db\strfy($this->value);
     }
 
     public function get() {

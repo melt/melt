@@ -1,29 +1,28 @@
-<?php namespace nmvc\core; ?>
+<?php namespace melt\core; ?>
 <p>
-    You havn't configured a database yet. NanoMVC requires a database to
+    You havn't configured a database yet. Melt Framework requires a database to
     function correctly.
 </p>
 <h2>Suggested Fix:</h2>
 <p>
-    It's recommended to use a local database when developing applications
-    for NanoMVC. Install MySQL and create a database called 'nanomvc'.
-    Then go to <code>config.local.php</code>
-    and enter the authentication details like so:
+    It's required to use a database when developing applications
+    for Melt Framework. Go to 
+    <a href="<?php echo url("/core/console"); ?>">/core/console</a>
+    and run "install" for more information.
+</p>
+<p>
+    You can also enter the information manually
+    in your config (<code>config.php</code>) like so:
 </p>
 <p>
     <?php $this->layout->enterSection("code"); ?>
-namespace nmvc\db\config {
+namespace melt\db\config {
     const HOST = 'localhost';
     const USER = 'root';
     const PASSWORD = '';
     const PORT = 3306;
-    const NAME = 'nanomvc';
+    const NAME = 'mydb';
 }
     <?php $this->layout->exitSection(); ?>
     <?php highlight_string($this->code); ?>
-</p>
-<p>
-    Afterwards NanoMVC must syncronize the database so it contains everything
-    neccessary to be used. Do this by visiting 
-    <a href="<?php echo url("/core/action/sync"); ?>">/core/action/sync</a>.
 </p>

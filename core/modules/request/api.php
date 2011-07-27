@@ -1,4 +1,4 @@
-<?php namespace nmvc\request;
+<?php namespace melt\request;
 
 /**
 * @desc Attempts to reset the output buffer to the default state
@@ -16,7 +16,7 @@ function reset() {
     if (intval(ob_get_length()) > 0)
         ob_clean();
     // Reset the application layout.
-    \nmvc\View::reset_app_layout();
+    \melt\View::reset_app_layout();
     // Always using using a single buffer level to enable reset at any point.
     ob_start();
 }
@@ -24,7 +24,7 @@ function reset() {
 /**
  * Use this function when you have a library configured to accept requests
  * by itself. (Handler usually called rpc.php)
- * It will disable nanoMVC error handling and forward the request there.
+ * It will disable Melt Framework error handling and forward the request there.
  * Note: Does not disable \Exception handling. That would be pointless.
  * @param string $php_file Path to php file to pass execution to.
  * @return void Does not return.
@@ -254,7 +254,7 @@ function path($url) {
         $app_root_path_prefix = \substr(APP_ROOT_PATH, -1) === '/'? \substr(APP_ROOT_PATH, 0, -1): APP_ROOT_PATH;
     if (\strlen($path) < $app_root_path_prefix)
         return $path;
-    if (\strlen($app_root_path_prefix) == 0 || !\nmvc\string\starts_with($path, $app_root_path_prefix))
+    if (\strlen($app_root_path_prefix) == 0 || !\melt\string\starts_with($path, $app_root_path_prefix))
         return $path;
     $start = (string) \substr($path, \strlen($app_root_path_prefix), 1);
     if ($start !== "/" && $start !== "")
@@ -347,7 +347,7 @@ function send_file($filepath, $mime = 'application/octet-stream', $filename = nu
  * @param mixed $json_data Data to encode and transmit.
  */
 function send_json_data($data) {
-    \nmvc\request\reset();
+    \melt\request\reset();
     header("Content-Type: application/json");
     die(json_encode($data));
 }
@@ -361,7 +361,7 @@ function current_url_in($local_url) {
     $slash_cnt_cur = substr_count(REQ_URL, "/");
     $slash_cnt = substr_count($local_url, "/");
     if ($slash_cnt >= 2 && $slash_cnt_cur > $slash_cnt)
-        return \nmvc\string\starts_with(REQ_URL, $local_url);
+        return \melt\string\starts_with(REQ_URL, $local_url);
     else if ($slash_cnt_cur == $slash_cnt)
         return $local_url == REQ_URL;
     else

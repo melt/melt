@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class FileType extends \nmvc\AppType {
+class FileType extends \melt\AppType {
     public $only_read_path = false;
     public $max_file_size = -1;
 
@@ -11,7 +11,7 @@ class FileType extends \nmvc\AppType {
     }
 
     public function getSQLValue() {
-        return \nmvc\db\strfy($this->value);
+        return \melt\db\strfy($this->value);
     }
 
     public function getSQLType() {

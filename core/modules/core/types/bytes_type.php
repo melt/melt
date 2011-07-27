@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class BytesType extends \nmvc\AppType {
+class BytesType extends \melt\AppType {
     /** @var boolean Displaying with SI units by default. Set to
      * false to display with IEC units instead. */
     public $display_si = true;

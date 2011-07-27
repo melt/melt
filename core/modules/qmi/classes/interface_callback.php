@@ -1,4 +1,4 @@
-<?php namespace nmvc\qmi;
+<?php namespace melt\qmi;
 
 /**
  * Used for declaring callbacks to model interfaces.
@@ -81,14 +81,14 @@ abstract class InterfaceCallback_app_overrideable {
 
     protected final function doInvalidRedirect() {
         if ($this->ajax_submit)
-            \nmvc\request\send_json_data(array("success" => false, "unlinked" => false, "errors" => $this->invalidation_data['errors']));
+            \melt\request\send_json_data(array("success" => false, "unlinked" => false, "errors" => $this->invalidation_data['errors']));
         $this->invalidation_data['values'] = \array_merge($this->invalidation_data['values'], $this->original_model_interface->getComponentFieldValues());
         // Store invalid and reload this URL.
         $_SESSION['qmi_invalid'][$this->interface_name] = $this->invalidation_data;
-        \nmvc\messenger\redirect_message(REQ_URL, $this->validate_failed_message);
+        \melt\messenger\redirect_message(REQ_URL, $this->validate_failed_message);
     }
 
-    protected final function pushError(\nmvc\Model $instance, $field_name, $error) {
+    protected final function pushError(\melt\Model $instance, $field_name, $error) {
         $instance_key = \array_search($instance, $this->instances, true);
         if ($instance_key === false)
             trigger_error("Trying to push error to unknown instance.", \E_USER_ERROR);
@@ -177,7 +177,7 @@ abstract class InterfaceCallback_app_overrideable {
      * Contains default qmi interface callback handler.
      */
     public function __call($name, $arguments) {
-        if (\nmvc\string\starts_with($name, "ic_")) {
+        if (\melt\string\starts_with($name, "ic_")) {
             if ($this->doValidate() > 0)
                 $this->doInvalidRedirect();
             if ($this->is_deleting)

@@ -1,4 +1,4 @@
-<?php namespace nmvc\db;
+<?php namespace melt\db;
 
 class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countable {
     private $group_by_tokens = array();
@@ -63,7 +63,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
     private function validateModelName($model_name) {
         if ($model_name === null)
             return;
-        if (!\is_subclass_of($model_name, 'nmvc\AppModel'))
+        if (!\is_subclass_of($model_name, 'melt\AppModel'))
             trigger_error("Cannot represent non scalar values in sql!", \E_USER_ERROR);
     }
     
@@ -394,7 +394,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
     /**
      * Returns the first instance of this selection or NULL if
      * selection is empty.
-     * @return \nmvc\Model
+     * @return \melt\Model
      */
     public function first() {
         if ($this->internal_first_result_cache !== false)
@@ -413,8 +413,8 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
     }
 
     /**
-     * Returns all instances of this selection in an array of \nmvc\Model's
-     * @return array[\nmvc\Model]
+     * Returns all instances of this selection in an array of \melt\Model's
+     * @return array[\melt\Model]
      */
     public function all() {
         if ($this->internal_result_cache === null)

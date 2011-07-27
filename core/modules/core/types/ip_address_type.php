@@ -1,16 +1,16 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
 /**
 *@desc Stores a remote address.
 */
-class IpAddressType extends \nmvc\AppType {
+class IpAddressType extends \melt\AppType {
     public function getSQLType() {
         // Enough to store IPv6.
         return "varbinary(16)";
     }
 
     public function getSQLValue() {
-        return \nmvc\db\strfy($this->value);
+        return \melt\db\strfy($this->value);
     }
 
     public function getInterface($name) {

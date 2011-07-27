@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class TimespanType extends \nmvc\AppType {
+class TimespanType extends \melt\AppType {
     public $title = "";
 
     private function getTokenValue($token) {

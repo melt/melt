@@ -1,4 +1,4 @@
-<?php namespace nmvc\qmi;
+<?php namespace melt\qmi;
 
 class HtmlComponent {
     public $html_interface;
@@ -7,7 +7,7 @@ class HtmlComponent {
     public $label;
     public $type;
 
-    public function __construct($html_interface, $label, $html_error, $id, \nmvc\Type $type) {
+    public function __construct($html_interface, $label, $html_error, $id, \melt\Type $type) {
         $this->html_interface = $html_interface;
         $this->label = $label;
         $this->html_error = $html_error;

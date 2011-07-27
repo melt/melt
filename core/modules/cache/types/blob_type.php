@@ -1,15 +1,15 @@
-<?php namespace nmvc\cache;
+<?php namespace melt\cache;
 
 /**
  * Blob type - only designed to be used internally.
  */
-class BlobType extends \nmvc\AppType {
+class BlobType extends \melt\AppType {
     public function getSQLType() {
         return "MEDIUMBLOB";
     }
 
     public function getSQLValue() {
-        return \nmvc\db\strfy($this->value);
+        return \melt\db\strfy($this->value);
     }
 
     public function  __toString() {

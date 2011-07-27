@@ -1,6 +1,6 @@
-<?php namespace nmvc\core;
+<?php namespace melt\core;
 
-class PictureType extends \nmvc\cache\BlobPointerType {
+class PictureType extends \melt\cache\BlobPointerType {
     public $thumb_width = 35;
     public $thumb_height = 35;
     public $image_upload_status = null;
@@ -152,7 +152,7 @@ class PictureType extends \nmvc\cache\BlobPointerType {
         // Generate thumbnail if it doesn't exist.
         if (!is_file($thumb_path)) {
             // Get blob from database.
-            $blob_model = \nmvc\cache\BlobModel::selectByID($this->value);
+            $blob_model = \melt\cache\BlobModel::selectByID($this->value);
             if ($blob_model === null)
                 return null;
             $data = $blob_model->dta;

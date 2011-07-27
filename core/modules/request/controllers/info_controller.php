@@ -1,6 +1,6 @@
-<?php namespace nmvc\request;
+<?php namespace melt\request;
 
-class InfoController extends \nmvc\AppController {
+class InfoController extends \melt\AppController {
     function _show($topic, $body) {
         $this->topic = $topic;
         $this->body = $body;
