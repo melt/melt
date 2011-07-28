@@ -1,6 +1,6 @@
 <?php namespace melt\core; ?>
 <p>
-    You havn't configured a database yet. Melt Framework requires a database to
+    You haven't configured a database yet. Melt Framework requires a database to
     function correctly.
 </p>
 <h2>Suggested Fix:</h2>
@@ -12,7 +12,7 @@
 </p>
 <p>
     You can also enter the information manually
-    in your config (<code>config.php</code>) like so:
+    in your config (<code>config.php</code>) like this:
 </p>
 <p>
     <?php $this->layout->enterSection("code"); ?>
