@@ -176,7 +176,7 @@ class ConsoleController extends InternalController {
             $print_file_data_fn = function($file) {
                 $data = \file_get_contents($file);
                 $lines = substr_count($data, "\n");
-                echo "$lines lines of code, totaling " . BytesType::byteUnit(\strlen($data), true, true, 2) . "\n";
+                echo "$lines lines, " . BytesType::byteUnit(\strlen($data), true, true, 2) . "\n";
             };
             switch ($type) {
             case "actions":
