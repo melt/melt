@@ -235,6 +235,8 @@ class ConsoleController extends InternalController {
                     die("Class $obj not found among $type.\n");
                 $reflector = new \ReflectionClass($obj);
                 $file_path = $reflector->getFileName();
+                if ($cat)
+                    die(\file_get_contents($file_path));
                 echo "file path: " . \substr($file_path, \strlen(APP_DIR)) . "\n";
                 $print_file_data_fn($file_path);
                 $doc_comment = $reflector->getDocComment();
