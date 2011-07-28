@@ -101,6 +101,18 @@ class ConsoleController extends InternalController {
         exit;
     }
 
+    private function fetchMethodCode(\ReflectionMethod $reflection) {
+        $file = new \SplFileObject($reflection->getFileName());
+        $file->seek($reflection->getStartLine() - 1);
+        $code = "";
+        while ($file->key() < $reflection->getEndLine()) {
+            $code .= $file->current();
+            $file->next();
+        }
+        return $code;
+    }
+    
+    
     public function cmd_obj($type) {
         $this->beginExec();
         $types = array(
@@ -135,9 +147,8 @@ class ConsoleController extends InternalController {
                 foreach (\melt\Controller::getAllControllers() as $identifier => $controller) {
                     if (!$identifier_is_acceptable_fn($identifier))
                         continue;
-                    foreach ($controller::getActions() as $action) {
+                    foreach ($controller::getActions() as $action)
                         echo $controller::getPath($action) . "\n";
-                    }
                 }
             } else {
                 if ($class !== null) {
@@ -169,7 +180,52 @@ class ConsoleController extends InternalController {
             };
             switch ($type) {
             case "actions":
-                
+                $action = $obj;
+                $action_invoke_data = \melt\Controller::pathToInvokeData($action, true, true);
+                if ($action_invoke_data === false)
+                    die("Unknown action specified.\n");
+                $controller = $action_invoke_data->getControllerClass();
+                $action_name = $action_invoke_data->getActionName();
+                $reflector = new \ReflectionMethod($controller, $action_name);
+                if ($cat)
+                    die($this->fetchMethodCode($reflector) . "\n");
+                $file_path = $reflector->getFileName();
+                $action_path = \preg_replace('#/index$#', '', $action);
+                if ($action_path == "")
+                    $action_path = "/";
+                $is_index_path = ($action !== $action_path);
+                $action_test_path = $action_path;
+                if (!$is_index_path) {
+                    foreach ($reflector->getParameters() as $parameter) {
+                        assert($parameter instanceof \ReflectionParameter);
+                        if ($parameter->isOptional()) {
+                            $action_path .= "[";
+                        } else {
+                            $action_test_path .= "/0";
+                        }
+                        $action_path .= "/\$" . $parameter->getName(); 
+                    }
+                    $action_path .= \str_repeat("]", $reflector->getNumberOfParameters() - $reflector->getNumberOfRequiredParameters());
+                }
+                echo "action path: $action_path\n";
+                echo "controller: $controller\n";
+                echo "file path: " . \substr($file_path, \strlen(APP_DIR)) . " "
+                . $reflector->getStartLine() . "-" . $reflector->getEndLine() . "\n";
+                $internal = $action_name[0] === "_";
+                echo "visibility: " . ($internal? "internal": "external") . "\n";
+                echo "rechability: ";
+                if ($internal) {
+                    echo "Internal actions can not be externally invoked.\n";
+                } else {
+                    $rewrite_result = \melt\AppController::rewriteRequest(\explode("/", \substr($action_test_path, 1)));
+                    if ($rewrite_result === null) {
+                        echo "Externally reachable. AppController::rewriteRequest() does not rewrite \"$action_test_path\".\n";
+                        echo "url: " . url($action_test_path) . "\n";
+                    } else {
+                        echo "Unknown. AppController::rewriteRequest() rewrites \"$action_test_path\" to:";
+                        echo ($rewrite_result === false? " 404": \var_export($rewrite_result, true)) . "\n";
+                    }
+                }                
                 break;
             case "classes":
             case "controllers":
