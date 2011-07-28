@@ -1,3 +1,13 @@
+<link rel="stylesheet" href="http://meltframework.org/style.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="http://meltframework.org/buttons.css" type="text/css" media="screen" /> 
+<script type='text/javascript' src='http://meltframework.org/js/cufon-yui.js?ver=3.1.4'></script>
+<script type='text/javascript' src='http://meltframework.org/js/Gotham_300-Gotham_400-Gotham_italic_300-Gotham_italic_400.font.js?ver=3.1.4'></script>
+<script type="text/javascript">                   
+    Cufon.replace('h1, h2.subtitle, h2, h3.not-found',{fontFamily: 'Gotham', hover: true });
+</script>
+<div class="container" style="text-align:center;">
+<img src="http://meltframework.org/images/melt-logo.png" class="logo" alt="Melt Framework" />
+
 <?php
 /** Melt framework project bootstrapping script. */
 function fail($errmsg) {
@@ -56,15 +66,14 @@ file_put_contents("config.php", $config);
 print "Deleting installation script.<br />";
 unlink(__FILE__)
 or fail("Could not delete \"" . __FILE__ . "\". Incorrect file system permissions?");
+print "</pre>";
 ?>
 
 
-<b>Bootstrapping complete.</b>
-
-The developer key is required to access the development console. If you lose it you will have to enter an new key into config.php
-
-Auto generated developer key: <?php echo $dev_key; ?>
-
-
-<a href="core/console">Click here to continue to the application console</a>.
-
+<h2 class="subtitle">Bootstrapping <span>completed</span></h2>
+<p>Successfully installed version <?php echo $version; ?> of the Melt Framework!</b></p>
+<h2 class="subtitle">Developer Key <span></span></h2>
+<h3><?php echo $dev_key; ?></h3>
+<p>The developer key is auto-generated and required to access the console.<br/>If you lose it you need to enter a new key in config.php.</p>
+<ul class="actions"><li><a class="green button" href="core/console">Launch Melt Console<span>The browser-based, unix-like console interface</span></a></li></ul>
+</div>
