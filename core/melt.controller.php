@@ -133,7 +133,7 @@ abstract class Controller {
      * of arguments. Will by default try to squeeze the last argument together
      * into one argument unless $ignore_argument_overflow is true.
      */
-    private static function validateAction($controller_class, $action, &$arguments, $ignore_argument_overflow = false) {
+    private static function validateAction($controller_class, $action, &$arguments, $ignore_argument_overflow = false, $ignore_argument_shortage = false) {
         // Check if controller exists and is not abstract.
         if (!class_exists($controller_class) || core\is_abstract($controller_class))
             return false;
@@ -165,7 +165,7 @@ abstract class Controller {
             return true;
         }
         // Must have a satisfactory number of arguments.
-        if (count($arguments) < $total_req_parameters)
+        if (!$ignore_argument_shortage && count($arguments) < $total_req_parameters)
             return false;
          // If too many arguments are passed, squeeze the last arguments into a single argument.
         $max_parameters = $method_reflector->getNumberOfParameters();
@@ -190,9 +190,13 @@ abstract class Controller {
      * If the path does not satisfy any action false is returned.
      * @param mixed $path Invoke path. Either an array of path tokens or
      * an unsplit string path.
+     * @param bool $ignore_argument_shortage Set to true to return invoke data
+     * even though the number of arguments in path does not satisfy the
+     * action declaration.
+     * @param bool $allow_internal Set to true to allow internal actions.
      * @return core\InvokeData Returns InvokeData or false if path is invalid.
      */
-    public static final function pathToInvokeData($path) {
+    public static final function pathToInvokeData($path, $ignore_argument_shortage = false, $allow_internal = false) {
         $path = self::arrayizePath($path);
         // Try to load application controller first, and if
         // that doesn't exist, try to load module controller.
@@ -204,28 +208,28 @@ abstract class Controller {
             else if ($controller_path_name == "index" || $controller_path_name == "app") // "index" and "app" is reserved.
                 continue;
             // Controller name cannot contain upper case. (Neither can modules, so break).
-            else if ($i == 0 && preg_match("#[A-Z]#", $controller_path_name))
+            else if ($i == 0 && \preg_match("#[A-Z]#", $controller_path_name))
                 return false;
             // Convert controller path name to class name.
-            $controller_class_name = ucfirst(string\underline_to_cased($controller_path_name));
+            $controller_class_name = \ucfirst(string\underline_to_cased($controller_path_name));
             if ($i == 0)
                 $controller_class_name = "melt\\" . $controller_class_name . "Controller";
             else
                 $controller_class_name = "melt\\" . $path[0] . "\\" . $controller_class_name . "Controller";
             // Read action from path.
-            $action_name = strval(@$path[$i + 1]);
-            if (strlen($action_name) == 0)
+            $action_name = \strval(@$path[$i + 1]);
+            if (\strlen($action_name) == 0)
                 $action_name = "index";
             else if ($action_name == "index") // "index" is reserved.
                 return false;
-            else if ($action_name[0] == "_")
+            else if (!$allow_internal && $action_name[0] == "_")
                 continue;
             // Action name cannot contain upper case. (Neither can controllers or modules, so break.)
-            else if (preg_match("#[A-Z]#", $action_name))
+            else if (\preg_match("#[A-Z]#", $action_name))
                 return false;
             // Try to satisfy the action requirements.
-            $arguments = array_slice($path, $i + 2);
-            if (self::validateAction($controller_class_name, $action_name, $arguments, false))
+            $arguments = \array_slice($path, $i + 2);
+            if (self::validateAction($controller_class_name, $action_name, $arguments, false, $ignore_argument_shortage))
                 return new core\InvokeData($controller_class_name, $action_name, $arguments);
         }
         return false;
