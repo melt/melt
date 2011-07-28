@@ -136,7 +136,7 @@ class ConsoleController extends InternalController {
                     if (!$identifier_is_acceptable_fn($identifier))
                         continue;
                     foreach ($controller::getActions() as $action) {
-                         
+                         echo $controller::getPath($action) . "\n";
                     }
                 }
             } else {
