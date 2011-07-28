@@ -175,9 +175,9 @@
             "app": obj_app_tree_fn(true),
             "sys": obj_app_tree_fn(false)
         };
-        var color_command = "#8c8";
-        var color_output = "#ccc"
-        var color_tabhint = "#88c"
+        var color_command = "#8e8";
+        var color_output = "#ddd"
+        var color_tabhint = "#99e"
         var carret_div = $("<div>").css({
             "display": "inline-block",
             "width": "8px",
