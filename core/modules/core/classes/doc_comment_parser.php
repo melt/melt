@@ -200,10 +200,6 @@ class DocCommentParser {
         $this->arguments_descs = array_merge($doc_comment->arguments_descs, $this->arguments_descs);
         $this->argument_types = array_merge($doc_comment->argument_types, $this->argument_types);
         $this->see = array_merge($doc_comment->see, $this->see);
-
-
-
     }
-
 }
 
