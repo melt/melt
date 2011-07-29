@@ -58,7 +58,7 @@ class ConsoleController extends InternalController {
         \melt\request\send_json_data($all_configs);
     }
 
-    public function config($module_name, $config_var_name = null) {
+    public function cmd_config($module_name, $config_var_name = null) {
         $this->beginExec();
         $modules = \melt\internal\get_all_modules();
         if (!isset($modules[$module_name]))
@@ -85,6 +85,7 @@ class ConsoleController extends InternalController {
                 $print_directive($config_var_name, $config_directives[$config_var_name]);
             } else {
                 $new_value = $_GET["set"];
+                $local = @$_GET["local"] === "true";
                 if (\strcasecmp($new_value, "true") === 0)
                     $new_value = true;
                 else if (\strcasecmp($new_value, "false") === 0)
@@ -95,7 +96,7 @@ class ConsoleController extends InternalController {
                     $new_value = (float) $new_value;
                 else
                     $new_value = (string) $new_value;
-                \melt\internal\put_configuration_directive("melt\\$module_name\\config\\$config_var_name", $new_value, true);
+                \melt\internal\put_configuration_directive("melt\\$module_name\\config\\$config_var_name", $new_value, true, $local);
             }
         }
         exit;

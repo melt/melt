@@ -505,14 +505,18 @@
                     print_fn("Missing argument 1: module name\n");
                     complete_fn();
                 } else if (cmd_tokens[2] === undefined) {
-                    exec_ajax_fn(console_base + "/config/" + cmd_tokens[1], complete_fn);
+                    exec_ajax_fn(console_base + "/cmd_config/" + cmd_tokens[1], complete_fn);
                 } else if (cmd_tokens[3] === undefined) {
-                    exec_ajax_fn(console_base + "/config/" + cmd_tokens[1] + "/" + cmd_tokens[2], complete_fn);
+                    exec_ajax_fn(console_base + "/cmd_config/" + cmd_tokens[1] + "/" + cmd_tokens[2], complete_fn);
                 } else if (cmd_tokens[4] !== undefined) {
                     print_fn("Too many arguments.\n");
                     complete_fn();
                 } else {
-                    exec_ajax_fn(console_base + "/config/" + cmd_tokens[1] + "/" + cmd_tokens[2], complete_fn, {set: cmd_tokens[3]});
+                    var param = {
+                        set: cmd_tokens[3],
+                        local: cmd_tokens[0] === "lconfig"? "true": "false"
+                    };
+                    exec_ajax_fn(console_base + "/cmd_config/" + cmd_tokens[1] + "/" + cmd_tokens[2], complete_fn, param);
                 }
                 break;
             case "session":
