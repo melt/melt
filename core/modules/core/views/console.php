@@ -68,44 +68,72 @@
                 tokens.push("");
             return [tokens, trailing_space];
         };
-        var get_file_upload_body_fn = function(event, expected_length, component_name) {
-            var data = event.dataTransfer;
-            if (!data || data.files.length != expected_length)
-                return null;
-            var boundary = '------multipartformboundary' + (new Date).getTime();
-            var dashdash = '--';
-            var crlf     = '\r\n';
-            /* Build RFC2388 string. */
-            var body = '';
-            body += dashdash;
-            body += boundary;
-            body += crlf;
-            /* For each dropped file. */
-            for (var i = 0; i < data.files.length; i++) {
-                var file = data.files[i];
-                /* Generate headers. */
-                body += 'Content-Disposition: form-data; name="' + component_name + '"';
-                if (file.fileName) {
-                  body += '; filename="' + file.fileName + '"';
-                }
-                body += crlf;
-                body += 'Content-Type: application/octet-stream';
-                body += crlf;
-                body += crlf;
-                /* Append binary data. */
-                body += file.getAsBinary();
-                body += crlf;
-                /* Write boundary. */
-                body += dashdash;
-                body += boundary;
-                body += crlf;
+	var read_file_binary_fn = function(file, callback) {
+            if ("FileReader" in window) {
+                var reader = new FileReader();
+                reader.readAsBinaryString(file);
+                reader.onload = function() {
+                    callback(reader.result);
+                };
+            } else {
+                return callback(file.getAsBinary());
             }
-            /* Mark end of the request. */
-            body += dashdash;
-            body += boundary;
-            body += dashdash;
-            body += crlf;
-            return [body, boundary];
+	};
+        var get_file_upload_body_fn = function(event, expected_length, component_name, complete_fn) {
+            var data = event.dataTransfer;
+            if (!data || data.files.length != expected_length) {
+                complete_fn(null, null);
+                return;
+            }
+            // Reading data.files ASAP since chrome resets the FileList
+            // far to early for us to do something sensible with it.
+            var files = [];
+            for (var i = 0; i < data.files.length; i++)
+                files.push(data.files[i]);
+            var loaded_files = 0;
+            var binary_file_data = new Array(files.length);
+            for (var i = 0; i < files.length; i++) {
+                var file = files[i];
+                read_file_binary_fn(file, function(position) { return function(binary_data) {
+                    binary_file_data[position] = binary_data;
+                    loaded_files++;
+                    if (loaded_files === files.length) {
+                        var boundary = '------multipartformboundary' + (new Date).getTime();
+                        var dashdash = '--';
+                        var crlf     = '\r\n';
+                        /* Build RFC2388 string. */
+                        var body = '';
+                        body += dashdash;
+                        body += boundary;
+                        body += crlf;
+                        /* For each dropped file. */
+                        for (var i = 0; i < files.length; i++) {
+                            var file = files[i];
+                            /* Generate headers. */
+                            body += 'Content-Disposition: form-data; name="' + component_name + '"';
+                            if (file.fileName)
+                                body += '; filename="' + file.fileName + '"';
+                            body += crlf;
+                            body += 'Content-Type: application/octet-stream';
+                            body += crlf;
+                            body += crlf;
+                            /* Append binary data. */
+                            body += binary_file_data[i];
+                            body += crlf;
+                            /* Write boundary. */
+                            body += dashdash;
+                            body += boundary;
+                            body += crlf;
+                        }
+                        /* Mark end of the request. */
+                        body += dashdash;
+                        body += boundary;
+                        body += dashdash;
+                        body += crlf;
+                        complete_fn(body, boundary);
+                    }
+                }}(i));
+            }
         };
         var console_base = <?php echo \json_encode(url(REQ_URL)); ?>;
         var sync_get_fn = function(action, data) {
@@ -444,20 +472,20 @@
                             event.preventDefault();
                             if (event.type !== "drop")
                                 return;
-                            var body_params = get_file_upload_body_fn(event, 1, "po_file");
-                            if (body_params === null) {
-                                print_fn("Error: No files or incorrect number of files dropped.\n");
-                            } else {
-                                var xhr = new XMLHttpRequest();
-                                xhr.open("POST", console_base + "/cmd_locale/import", false);
-                                xhr.setRequestHeader('content-type', 'multipart/form-data; boundary=' + body_params[1]);
-                                xhr.sendAsBinary(body_params[0]);
-                                print_fn(xhr.responseText + "\n");
-                                window.removeEventListener("dragover", drop_fn, false);
-                                window.removeEventListener("drop", drop_fn, false);
-                            }
-                            complete_fn();
-                            return;
+                            get_file_upload_body_fn(event, 1, "po_file", function(body, boundary) {
+                                if (body === null) {
+                                    print_fn("Error: No files or incorrect number of files dropped.\n");
+                                } else {
+                                    var xhr = new XMLHttpRequest();
+                                    xhr.open("POST", console_base + "/cmd_locale/import", false);
+                                    xhr.setRequestHeader('content-type', 'multipart/form-data; boundary=' + boundary);
+                                    xhr.send(body);
+                                    print_fn(xhr.responseText + "\n");
+                                    window.removeEventListener("dragover", drop_fn, false);
+                                    window.removeEventListener("drop", drop_fn, false);
+                                }
+                                complete_fn();
+                            });
                         };
                         window.addEventListener("dragover", drop_fn, false);
                         window.addEventListener("drop", drop_fn, false);
