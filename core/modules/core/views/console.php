@@ -231,7 +231,7 @@
         }).text(cmd_line_init).append(command_text).append(carret_div);
         var input = $("<input>").css({
             "position": "fixed",
-            "top": "-1000px"
+            "top": "15000px"
         });
         var input_pipe = false;
         var cmd_line = "";
@@ -270,6 +270,7 @@
             in_container.append(in_span).append(carret_div);
             output_div.append(in_container);
             input_pipe = function(keycode, str) {
+                $(window).scrollTop($("body").height());
                 if (keycode < 0x20) {
                     if (keycode == 0x0d) {
                         input_pipe = old_input_pipe;
@@ -345,7 +346,7 @@
             var xhr = new XMLHttpRequest();
             if (data)
                 url += "?" + $.param(data);
-            xhr.open("GET", url, false);
+            xhr.open("GET", url, true);
             xhr.onreadystatechange = function() {
                 if (xhr.readyState == 3 || xhr.readyState == 4) {
                     if (xhr.status > 0 && xhr.status != 200) {
