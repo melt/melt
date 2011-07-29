@@ -112,7 +112,6 @@ class ConsoleController extends InternalController {
         return $code;
     }
     
-    
     public function cmd_obj($type) {
         $this->beginExec();
         $types = array(
@@ -129,6 +128,45 @@ class ConsoleController extends InternalController {
         $obj = @$_GET['obj'];
         $app_only = @$_GET['app'] === "true";
         $cat = @$_GET['cat'] === "true";
+        if (isset($_GET['make'])) {
+            $name = $_GET['make'];
+            if ($type === "actions")
+                die("Cannot make an action from command line. Edit the respective controller instead.\n");
+            if ($type === "views") {
+                if (!\preg_match('#^(/[a-z0-9_]+)+$#', $name))
+                    die("Invalid view path.\n");
+                $view_tokens = explode("/", substr($name, 1));
+                chdir(APP_DIR . "/views");
+                foreach ($view_tokens as $i => $view_token) {
+                    if ($i === count($view_tokens) - 1) {
+                        if (!copy(APP_DIR . "/core/scaffolding/views/generic.php", $view_token . ".php"))
+                            die("Failed to copy generic.php from scaffolding to target directory.\n");
+                        break;
+                    } else if (!is_dir($view_token)) {
+                        if (!mkdir($view_token))
+                            die("Could not create directory \"$view_token\" in \"" . getcwd() . "\".\n");
+                    }
+                    chdir($view_token); 
+                }
+                die("View was successfully created at $name.php\n");
+            } else {
+                if (!\preg_match('/([a-z]+[a-z0-9]*)(_[a-z]+[a-z0-9]*)*/', $name))
+                    die("Invalid name. For example, supply \"object_name\" to create the class ObjectName.\n");
+                $suffix = $class !== null? "_" . substr($type, 0, -1): "";
+                $file_name = "$name$suffix.php";
+                $class_name = \melt\string\underline_to_cased($name);
+                $file_data = file_get_contents(APP_DIR . "/core/scaffolding/$type/generic.php");
+                if ($file_data === false)
+                    die("Failed to read generic.php from scaffolding.\n");
+                $file_data = str_replace("__template_class_name", $class_name, $file_data);
+                $out_path = APP_DIR . "/$type/$file_name";
+                if (is_file($out_path))
+                    die("Object at $out_path already exists!\n");
+                if (file_put_contents($out_path, $file_data) === false)
+                    die("Failed to write $out_path\n");
+                die(($suffix !== ""? ucfirst(substr($type, 0, -1)): "Class") . " was successfully created at /$type/$file_name\n");
+            }
+        }        
         $identifier_is_acceptable_fn = function($identifier) use ($app_only) {
             return !$app_only || (\strpos($identifier, "__") !== false && \strpos($identifier, "/") !== false);
         };

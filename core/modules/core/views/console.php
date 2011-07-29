@@ -139,13 +139,16 @@
         };
         var cmd_line_init = "melt>";
         var obj_app_tree_fn = function(app, cat) {
+            var get_objects_fn_fn = function(object) {
+                return function() { var r = get_objects_fn(object, app); if (!cat && object !== "actions") r["make"] = true; return r; };
+            };
             var ret = {
-                "classes": function() { return get_objects_fn("classes", app); },
-                "controllers": function() { return get_objects_fn("controllers", app); },
-                "actions": function() { return get_objects_fn("actions", app); },
-                "models": function() { return get_objects_fn("models", app); },
-                "views": function() { return get_objects_fn("views", app); },
-                "types": function() { return get_objects_fn("types", app); }
+                "classes": get_objects_fn_fn("classes"),
+                "controllers": get_objects_fn_fn("controllers"),
+                "actions": get_objects_fn_fn("actions"),
+                "models": get_objects_fn_fn("models"),
+                "views": get_objects_fn_fn("views"),
+                "types": get_objects_fn_fn("types")
             };
             if (!cat)
                 ret["cat"] = obj_app_tree_fn(app, true);
@@ -389,8 +392,18 @@
                 }
                 if (cmd_tokens[0] === "app")
                     get_data["app"] = "true";
-                if (cmd_tokens[2] !== undefined)
-                    get_data["obj"] = cmd_tokens[2];
+                if (cmd_tokens[2] !== undefined) {
+                    if (cmd_tokens[2] === "make") {
+                        if (cmd_tokens[3] === undefined) {
+                            print_fn("Error: No name supplied.\n");
+                            complete_fn();
+                            return;
+                        }
+                        get_data["make"] = cmd_tokens[3];
+                    } else {
+                        get_data["obj"] = cmd_tokens[2];
+                    }
+                }
                 exec_ajax_fn(console_base + "/cmd_obj/" + cmd_tokens[1], complete_fn, get_data);
                 break;
             case "db":
