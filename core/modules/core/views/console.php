@@ -202,11 +202,8 @@
             "white-space": "pre-wrap"
         }).text(cmd_line_init).append(command_text).append(carret_div);
         var input = $("<input>").css({
-            "width": "0px",
-            "height": "0px",
             "position": "fixed",
-            "top": "-1000px",
-            "overflow": "hidden"
+            "top": "-1000px"
         });
         var input_pipe = false;
         var cmd_line = "";
