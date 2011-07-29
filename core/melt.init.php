@@ -21,12 +21,13 @@ function modules_using() {
  * @param string $config_var_fqn
  * @param mixed $new_value
  */
-function put_configuration_directive($config_var_fqn, $new_value, $replace = false) {
+function put_configuration_directive($config_var_fqn, $new_value, $replace = false, $local = false) {
     if (!$replace && \defined($config_var_fqn))
         return;
     \define($config_var_fqn, $new_value);
+    $config_file_path = $local? APP_CONFIG_LOCAL: APP_CONFIG;
     // Add constant to application configuration.
-    $config_file_data = \file_get_contents(APP_CONFIG);
+    $config_file_data = \file_get_contents($config_file_path);
     $new_value = \var_export($new_value, true);
     $namespace = \preg_replace('#\\\\[^\\\\]*$#', '', $config_var_fqn);
     $config_var_name = \preg_replace('#^([^\\\\]*\\\\)*#', '', $config_var_fqn);
@@ -50,7 +51,7 @@ function put_configuration_directive($config_var_fqn, $new_value, $replace = fal
         // Append.
         $config_file_data .= "\r\n\r\nnamespace $namespace {\r\n    const $config_var_name = $new_value;\r\n}\r\n";
     }
-    file_put_contents(APP_CONFIG, $config_file_data);
+    file_put_contents($config_file_path, $config_file_data);
 }
 
 /**
@@ -87,10 +88,10 @@ function read_server_var($var_name, $alt_var_name = null) {
     \define("APP_DIR", $app_dir);
     \define("APP_CORE_DIR", dirname(__FILE__));
     // Read configuration.
-    $local_config = APP_DIR . "/config.local.php";
+    \define("APP_CONFIG_LOCAL", APP_DIR . "/config.local.php");
     \error_reporting(\E_ALL & ~\E_NOTICE & ~\E_STRICT);
-    if (\is_file($local_config))
-        require $local_config;
+    if (\is_file(APP_CONFIG_LOCAL))
+        require APP_CONFIG_LOCAL;
     \define("APP_CONFIG", APP_DIR . "/config.php");
     require APP_CONFIG;
     if (modules_using() === null)
