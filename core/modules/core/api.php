@@ -588,3 +588,11 @@ function pgettext($context, $msgid) {
 function now() {
     return new \DateTime();
 }
+
+/**
+ * Returns the current melt framework version.
+ * @return string 
+ */
+function version() {
+    return \melt\internal\VERSION;
+}
