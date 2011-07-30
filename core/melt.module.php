@@ -65,7 +65,7 @@ abstract class CoreModule extends Module {
     }
 
     public static function getVersion() {
-        return melt\VERSION;
+        return internal\VERSION;
     }
 }
 
