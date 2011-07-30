@@ -1,12 +1,12 @@
-<link rel="stylesheet" href="http://meltframework.org/style.css" type="text/css" media="screen" />
-<link rel="stylesheet" href="http://meltframework.org/buttons.css" type="text/css" media="screen" /> 
-<script type='text/javascript' src='http://meltframework.org/js/cufon-yui.js?ver=3.1.4'></script>
-<script type='text/javascript' src='http://meltframework.org/js/Gotham_300-Gotham_400-Gotham_italic_300-Gotham_italic_400.font.js?ver=3.1.4'></script>
+<link rel="stylesheet" href="http://meltframework.org/static/css/style.css" type="text/css" media="screen" />
+<link rel="stylesheet" href="http://meltframework.org/static/css/buttons.css" type="text/css" media="screen" /> 
+<script type='text/javascript' src='http://meltframework.org/static/js/cufon-yui.js?ver=3.1.4'></script>
+<script type='text/javascript' src='http://meltframework.org/static/js/Gotham_300-Gotham_400-Gotham_italic_300-Gotham_italic_400.font.js?ver=3.1.4'></script>
 <script type="text/javascript">                   
     Cufon.replace('h1, h2.subtitle, h2, h3.not-found',{fontFamily: 'Gotham', hover: true });
 </script>
 <div class="container" style="text-align:center;">
-<img src="http://meltframework.org/images/melt-logo.png" class="logo" alt="Melt Framework" />
+<img src="http://meltframework.org/static/img/melt-logo.png" class="logo" alt="Melt Framework" />
 
 <?php
 /** Melt framework project bootstrapping script. */
