@@ -68,17 +68,24 @@
             }
             // Skip graceful completion of request that crash.
             // At those we'd rather forget everything we done and rollback.
-            if (!$crash && !REQ_IS_CORE_CONSOLE) {
-                // End request handler. Making all side effects permanent.
-                \ignore_user_abort(true);
-                // Write updated session data. (Can't do this automatically
-                // as we need to still require object instancing at that point.)
-                \session_write_close();
-                // If using request level transactionality, now is the time to commit.
-                if (\melt\db\config\REQUEST_LEVEL_TRANSACTIONALITY)
-                    \melt\db\query("COMMIT");
-                // Process any unsent mails in mail queue.
-                \melt\mail\SpooledMailModel::processMailQueue(true);
+            if (!$crash) {
+                if (REQ_IS_CORE_CONSOLE) {
+                    // If using request level transactionality and any query
+                    // has been run, now is the time to commit.
+                    if (\melt\db\config\REQUEST_LEVEL_TRANSACTIONALITY && \melt\db\total_queries() > 0)
+                        \melt\db\run("COMMIT");
+                } else {
+                    // End request handler. Making all side effects permanent.
+                    \ignore_user_abort(true);
+                    // Write updated session data. (Can't do this automatically
+                    // as we need to still require object instancing at that point.)
+                    \session_write_close();
+                    // If using request level transactionality, now is the time to commit.
+                    if (\melt\db\config\REQUEST_LEVEL_TRANSACTIONALITY)
+                        \melt\db\query("COMMIT");
+                    // Process any unsent mails in mail queue.
+                    \melt\mail\SpooledMailModel::processMailQueue(true);
+                }
             }
             \define("MELT_REQUEST_COMPLETE", true);
         });
