@@ -32,7 +32,7 @@ class JsModule extends \melt\CoreModule {
     }
 
     public static function getAuthor() {
-        return "Module maintained by Hannes Landeholm, Omnicloud AB. This module is a compilation of code from various authors listed in getInfo(), which is not related to, nor endorse this software in any way.";
+        return "Module maintained by Hannes Landeholm, Melt Software AB. This module is a compilation of code from various authors listed in getInfo(), which is not related to, nor endorse this software in any way.";
     }
 
     public static function getInfo() {
