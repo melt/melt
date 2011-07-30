@@ -63,15 +63,13 @@ if (!$app_is_64bit)
 $config .= "\n}\n";
 print "Writing initial configuration...<br />";
 file_put_contents("config.php", $config);
-print "Deleting installation script.<br />";
+print "Deleting bootstrap script.<br />";
 unlink(__FILE__)
 or fail("Could not delete \"" . __FILE__ . "\". Incorrect file system permissions?");
 print "</pre>";
 ?>
-
-
 <h2 class="subtitle">Bootstrapping <span>completed</span></h2>
-<p>Successfully installed version <?php echo $version; ?> of the Melt Framework!</b></p>
+<p>Successfully bootstrapped Melt Framework!</b></p>
 <h2 class="subtitle">Developer Key <span></span></h2>
 <h3><?php echo $dev_key; ?></h3>
 <p>The developer key is auto-generated and required to access the console.<br/>If you lose it you need to enter a new key in config.php.</p>
