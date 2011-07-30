@@ -138,6 +138,7 @@ function run($query) {
         echo $query . "\r\n";
         \ob_flush();
     }
+    total_queries(true);
     if (!config\DEBUG_QUERY_BENCHMARK)
         return get_link()->query($query);
     // Benchmark query and log.
@@ -147,6 +148,17 @@ function run($query) {
     $debug_info = \date("r") . ": $query\n^-" . \round($total * 1000, 1) . " ms\ncaller: " . \melt\internal\get_user_callpoint() . "\n\n";
     \file_put_contents(APP_DIR . "/db_debug_query_benchmark.log", $debug_info, FILE_APPEND);
     return $ret;
+}
+
+/**
+ * Returns the total number of queries that has been run during this request.
+ * @return int 
+ */
+function total_queries() {
+    static $total_queries = 0;
+    if (func_num_args() > 0 && func_get_arg(0) === true)
+        $total_queries++;
+    return $total_queries;
 }
 
 /**
