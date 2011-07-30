@@ -18,8 +18,6 @@ print "<pre style=\"white-space: pre-wrap;\">Bootstrapping basic melt framework 
 if (!function_exists("apache_get_modules") || !function_exists("apache_get_version"))
     fail("Apache functions not found. You are not running Melt Framework in Apache! The basic bootstrapper is currently written to bootstrap Melt Framework with Apache + mod_rewrite. To continue anyway, remove this file (" . __FILE__ . ") and copy all files in /core/scaffolding to the root directory yourself.");
 $operating_system = PHP_OS;
-if (stristr($operating_system, "win") !== false)
-    $operating_system = "Windows";
 print "You are using: " . apache_get_version() . " on $operating_system<br />";
 if (!in_array("mod_rewrite", apache_get_modules()))
     fail("Melt Framework detected that you don't have the Apache module mod_rewrite installed/enabled. The basic bootstrapper is currently written to bootstrap Melt Framework with Apache + mod_rewrite. For instructions on how to install mod_rewrite, <a href=\"http://www.google.com/?q=install+mod_rewrite+apache+$operating_system\">go here</a>. To continue anyway, remove this file (" . __FILE__ . ") and copy all files in /core/scaffolding to the root directory yourself.");
