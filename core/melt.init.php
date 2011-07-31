@@ -1,31 +1,28 @@
 <?php namespace melt\internal;
 
-const VERSION = "1.0.0-dev";
-
 /**
- * Configures the non-core modules the application is using
- * (once, in config.php) and then returns them.
- * @return array Configured modules the application is using.
+ * @see core\version()
+ * @internal
  */
-function modules_using() {
-    static $use_modules = null;
-    if ($use_modules === null)
-        $use_modules = \func_get_args();
-    else
-        return $use_modules;
-}
+const VERSION = "1.0.0-dev";
 
 /**
  * Puts a configuration directive in the configuration file.
  * If configuration already exists, it is not added.
  * @param string $config_var_fqn
  * @param mixed $new_value
+ * @internal
  */
 function put_configuration_directive($config_var_fqn, $new_value, $replace = false, $local = false) {
-    if (!$replace && \defined($config_var_fqn))
-        return;
-    \define($config_var_fqn, $new_value);
+    if (\defined($config_var_fqn)) {
+        if (!$replace)
+            return;
+    } else {
+        \define($config_var_fqn, $new_value);
+    }
     $config_file_path = $local? APP_CONFIG_LOCAL: APP_CONFIG;
+    if ($config_file_path === null)
+        return;
     // Add constant to application configuration.
     $config_file_data = \file_get_contents($config_file_path);
     $new_value = \var_export($new_value, true);
@@ -56,6 +53,7 @@ function put_configuration_directive($config_var_fqn, $new_value, $replace = fal
 
 /**
  * Reads a $_SERVER variable.
+ * @internal
  */
 function read_server_var($var_name, $alt_var_name = null) {
     if (!\array_key_exists($var_name, $_SERVER)) {
@@ -92,21 +90,12 @@ function read_server_var($var_name, $alt_var_name = null) {
     \error_reporting(\E_ALL & ~\E_NOTICE & ~\E_STRICT);
     if (\is_file(APP_CONFIG_LOCAL))
         require APP_CONFIG_LOCAL;
-    \define("APP_CONFIG", APP_DIR . "/config.php");
-    require APP_CONFIG;
-    if (modules_using() === null)
-        \trigger_error("Melt Framework initialization failed: config.php did not set what modules the application is using.", \E_USER_ERROR);
-    // Declaring all configuration directives that is used before the loader
-    // has loaded them here.
-    put_configuration_directive('melt\core\config\DEVELOPER_KEY', "");
-    put_configuration_directive('melt\core\config\MAINTENANCE_MODE', true);
-    put_configuration_directive('melt\core\config\FORCE_ERROR_DISPLAY', false);
-    put_configuration_directive('melt\core\config\FORCE_ERROR_FLAGS', false);
-    put_configuration_directive('melt\core\config\ERROR_LOG', null);
-    put_configuration_directive('melt\core\config\PEAR_AUTOLOAD', false);
-    put_configuration_directive('melt\core\config\TRANSLATION_ENABLED', false);
-    put_configuration_directive('melt\core\config\TRANSLATION_MIN_Q', 0.4);
-    put_configuration_directive('melt\core\config\IGNORE_64_BIT_WARNING', false);
+    \define("APP_CONFIG", \is_file(APP_DIR . "/config.php")? APP_DIR . "/config.php": null);
+    if (APP_CONFIG !== null)  
+        require APP_CONFIG;
+    // Declaring all configuration directives that is used before the loader has loaded them here.
+    foreach (require(APP_CORE_DIR . "/modules/core/config.critical.php") as $cfg_name => $default)
+        put_configuration_directive("melt\\core\\config\\$cfg_name", $default);
     // Evaluate whether Melt Framework is compatible with PHP environment.
     \define("APP_64_BIT", PHP_INT_MAX > 0x7FFFFFFF);
     if (\version_compare(\phpversion(), "5.3.3") < 0)

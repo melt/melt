@@ -10,14 +10,20 @@ function get_all_modules() {
     if ($modules !== null)
         return $modules;
     // Scan modules.
-    foreach (modules_using() as $module) {
-        if (!is_dir(APP_DIR . "/modules/" . $module))
-            trigger_error("The module '$module' specified in config.php is not installed!", \E_USER_ERROR);
-        $modules[$module] = array("melt\\$module\\" . underline_to_cased($module) . "Module", APP_DIR . "/modules/" . $module);
+    $modules = array();
+    $app_modules = @scandir(APP_DIR . "/modules");
+    if (!is_array($app_modules))
+        $app_modules = array();
+    foreach ($app_modules as $module) {
+        if ($module[0] === ".")
+            continue;
+        $modules[$module] = array("melt\\$module\\" . underline_to_cased($module) . "Module", APP_DIR . "/modules/$module");
     }
-    foreach (scandir(APP_CORE_DIR . "/modules") as $module)
-        if ($module[0] != ".")
-            $modules[$module] = array("melt\\$module\\" . underline_to_cased($module) . "Module", APP_CORE_DIR . "/modules/" . $module);
+    foreach (scandir(APP_CORE_DIR . "/modules") as $module) {
+        if ($module[0] === ".")
+            continue;
+        $modules[$module] = array("melt\\$module\\" . underline_to_cased($module) . "Module", APP_CORE_DIR . "/modules/" . $module);
+    }
     return $modules;
 }
 
@@ -321,7 +327,13 @@ function pear_autoload($name) {
     array('\melt\AppModel', '\melt\Model', 'app_model.php'),
     array('\melt\AppType', '\melt\Type', 'app_type.php')) as $app_include) {
         list($class, $base, $file) = $app_include;
-        require APP_DIR . "/" . $file;
+        $path = APP_DIR . "/" . $file;
+        if (is_file($path)) {
+            require $path;
+        } else {
+            $class_primary = substr($class, 6);
+            eval("namespace melt; abstract class $class_primary extends $base {}");
+        }
         if (!class_exists($class))
              development_crash("invalid_class_name", array("path" => $path, "expected_name" => $class));
         else if (!is_subclass_of($class, $base))
