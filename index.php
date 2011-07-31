@@ -109,8 +109,8 @@ EOD;
 print "Writing initial configuration...<br />";
 file_put_contents("config.local.php", $config);
 print "Deleting bootstrap script.<br />";
-//unlink(__FILE__)
-//or fail("Could not delete \"" . __FILE__ . "\". Incorrect file system permissions?");
+unlink(__FILE__)
+or fail("Could not delete \"" . __FILE__ . "\". Incorrect file system permissions?");
 print "</pre>";
 ?>
 <h2 class="subtitle">Bootstrapping <span>completed</span></h2>
