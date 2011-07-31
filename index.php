@@ -34,11 +34,7 @@ foreach (glob("core/scaffolding/*", GLOB_BRACE) as $file) {
         print "'$file' already exists, ignoring...<br />";
         continue;
     }
-    if (is_dir($file)) {
-        print "Creating directory \"$file\".<br />";
-        mkdir(basename($file))
-        or fail("Could not create directory \"" . basename($file) . "\". Incorrect file system permissions?");
-    } else {
+    if (!is_dir($file)) {
         print "Creating file \"$file\".<br />";
         copy($file, basename($file))
         or fail("Could not create file \"" . basename($file) . "\". Incorrect file system permissions?");
