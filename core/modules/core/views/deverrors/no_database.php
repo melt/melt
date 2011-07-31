@@ -12,7 +12,7 @@
 </p>
 <p>
     You can also enter the information manually
-    in your config (<code>config.php</code>) like this:
+    in your config (<code>config.local.php</code>) like this:
 </p>
 <p>
     <?php $this->layout->enterSection("code"); ?>
