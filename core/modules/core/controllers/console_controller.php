@@ -85,7 +85,7 @@ class ConsoleController extends InternalController {
                 $print_directive($config_var_name, $config_directives[$config_var_name]);
             } else {
                 $new_value = $_GET["set"];
-                $local = @$_GET["local"] === "true";
+                //$local = @$_GET["local"] === "true";
                 if (\strcasecmp($new_value, "true") === 0)
                     $new_value = true;
                 else if (\strcasecmp($new_value, "false") === 0)
@@ -96,7 +96,7 @@ class ConsoleController extends InternalController {
                     $new_value = (float) $new_value;
                 else
                     $new_value = (string) $new_value;
-                \melt\internal\put_configuration_directive("melt\\$module_name\\config\\$config_var_name", $new_value, true, $local);
+                \melt\internal\put_configuration_directive("melt\\$module_name\\config\\$config_var_name", $new_value, true, true);
             }
         }
         exit;
@@ -140,7 +140,7 @@ class ConsoleController extends InternalController {
                 chdir(APP_DIR . "/views");
                 foreach ($view_tokens as $i => $view_token) {
                     if ($i === count($view_tokens) - 1) {
-                        if (!copy(APP_DIR . "/core/scaffolding/views/generic.php", $view_token . ".php"))
+                        if (!copy(APP_DIR . "/core/modules/core/files/generic-view.php", $view_token . ".php"))
                             die("Failed to copy generic.php from scaffolding to target directory.\n");
                         break;
                     } else if (!is_dir($view_token)) {
@@ -153,10 +153,11 @@ class ConsoleController extends InternalController {
             } else {
                 if (!\preg_match('/([a-z]+[a-z0-9]*)(_[a-z]+[a-z0-9]*)*/', $name))
                     die("Invalid name. For example, supply \"object_name\" to create the class ObjectName.\n");
-                $suffix = $class !== null? "_" . substr($type, 0, -1): "";
+                $type1 = substr($type, 0, -1);
+                $suffix = $class !== null? "_" . $type1: "";
                 $file_name = "$name$suffix.php";
                 $class_name = \melt\string\underline_to_cased($name);
-                $file_data = file_get_contents(APP_DIR . "/core/scaffolding/$type/generic.php");
+                $file_data = file_get_contents(APP_DIR . "/core/modules/core/files/generic-$type1.php");
                 if ($file_data === false)
                     die("Failed to read generic.php from scaffolding.\n");
                 $file_data = str_replace("__template_class_name", $class_name, $file_data);
@@ -165,7 +166,7 @@ class ConsoleController extends InternalController {
                     die("Object at $out_path already exists!\n");
                 if (file_put_contents($out_path, $file_data) === false)
                     die("Failed to write $out_path\n");
-                die(($suffix !== ""? ucfirst(substr($type, 0, -1)): "Class") . " was successfully created at /$type/$file_name\n");
+                die(($suffix !== ""? ucfirst($type1): "Class") . " was successfully created at /$type/$file_name\n");
             }
         }        
         $identifier_is_acceptable_fn = function($identifier) use ($app_only) {
@@ -310,7 +311,115 @@ class ConsoleController extends InternalController {
         }
         exit;
     }
+        
+    private function downloadFile($remote_url, $local_path) {
+        echo "Downloading \"$remote_url\" to \"$local_path\"...\n";
+        $h_remote = fopen($remote_url, "r");
+        if (!is_resource($h_remote))
+            die("Error: Could not open $remote_url\n");
+        $h_local = fopen($local_path, "w+");
+        if (!is_resource($h_local))
+            die("Error: Could not open \"$local_path\" for writing.\n");
+        stream_copy_to_stream($h_remote, $h_local);
+        fclose($h_remote);
+        fclose($h_local);
+    }
+    
+    private function ghDeploy($user, $repo, $to_path) {
+        
+    }
+    
+    public function cmd_ghd_upgrade($module = null) {
+        
+    }
+    
+    public function cmd_ghd_deploy_module($module = null) {
+        
+    }
+    
+    public function cmd_ghd_deploy_sample_app($user = null, $repo = null, $version = null) {
+        if ($user === null) {
+            // Get sample applications.
+            $repos = @file_get_contents("https://api.github.com/users/melt/repos");
+            if ($repos === false)
+                die("Error: Unable to search for melt sample applications.\n");
+            $repos = json_decode($repos);
+            if (!is_array($repos))
+                die("Error: Unexpected data returned. Expected array.\n");
+            echo "Availible sample applications:\n";
+            foreach ($repos as $repo) {
+                if (strpos($repo->name, "sample-app-") !== false)
+                   echo "{$repo->owner->login}/$repo->name\n";
+            }
+            die("\n");
+        } else {
+            // Get repository info.
+            $tags_info = @file_get_contents("https://api.github.com/repos/$user/$repo/tags");
+            if ($tags_info === false)
+                die("Error: Specified repository not found (or not tagged).\n");
+            $tags_info = json_decode($tags_info);
+            if (count($tags_info) === 0)
+                die("Error: Specified repository does not have any tags.\n");
+            $tags_index = array();
+            foreach ($tags_info as $tag_info)
+                $tags_index[$tag_info->name] = $tag_info;
+            if ($version !== null && !isset($version[$version]))
+                die("Error: Specified tag/version does not exist in repository.");
+            uksort($tags_index, function($v1, $v2) {
+                return strnatcasecmp($v2, $v1);
+            });
+            if ($version === "*") {
+                echo "All tags in repository:\n";
+                foreach ($tags_index as $tag => $tag_info)
+                    echo "$tag ";
+                die("\n");
+            }
+            $tag_info = $version !== null? $tags_index[$version]: reset($tags_index);
+            $local_path = APP_DIR . "/sample-app-tmp.tar.gz";
+            if (is_file($local_path)) {
+                if (!@unlink($local_path))
+                    die("Could not delete $local_path!\n");
+            }
+            
+            // TODO: Delete application directories here.
+            
+            $this->downloadFile($tag_info->tarball_url, $local_path);
+            echo "Extracting...\n";
+            $archive = new ArchiveTar($local_path);
+            $internal_path = null;
+            foreach ($archive->listContent() as $path) {
+                $prefix = "$user-$repo";
+                if (\melt\string\starts_with($path["filename"], $prefix)) {
+                    $internal_path = preg_replace('#([/][^/]*)*$#', '', $path["filename"]);
+                    break;
+                }
+            }
+            if ($internal_path === null)
+                die("Could not find internal path in archive!\n");
+            $archive->extractModify(APP_DIR . "/", $internal_path);
+            @unlink(APP_DIR . "/pax_global_header");
+            @unlink($local_path);
+            die("Sample project was successfully deployed.\n");
+        }
+    }
 
+    public function cmd_versions() {
+        $this->beginExec();
+        echo "melt core: " . \melt\internal\VERSION . "\n";
+        echo "**non-core modules**\n";
+        $total = 0;
+        foreach (get_all_modules() as $name => $module) {
+            list($class, $file_path) = $module;
+            if (is($class, 'melt\CoreModule'))
+                continue;
+            echo "$name: " . $class::getVersion() . "\n";
+            $total++;
+        }
+        if ($total === 0)
+            echo "none.\n";
+        exit;
+    }
+    
     public function cmd_info() {
         \phpinfo();
         exit;

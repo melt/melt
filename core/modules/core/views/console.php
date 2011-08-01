@@ -155,8 +155,8 @@
                 config_names = sync_get_fn("config_get_all");
             return config_names;
         };
-        var get_objects_fn = function(object, app) {
-            var objects = sync_get_fn("cmd_obj/" + object, app? {"app": "true"}: {});
+        var get_tokens_fn = function(path, get_params) {
+            var objects = sync_get_fn(path, get_params);
             var ret = {};
             $.each(objects.split(/\s+/), function(i, obj) {
                 if (obj == "")
@@ -164,6 +164,9 @@
                 ret[obj] = true;
             });
             return ret;
+        };
+        var get_objects_fn = function(object, app) {
+            return get_tokens_fn("cmd_obj/" + object, app? {"app": "true"}: {});
         };
         var cmd_line_init = "melt>";
         var obj_app_tree_fn = function(app, cat) {
@@ -201,10 +204,15 @@
             "install": true,
             "reload": true,
             "logout": true,
-            "lconfig": get_configs_names_fn,
             "config": get_configs_names_fn,
             "app": obj_app_tree_fn(true),
-            "sys": obj_app_tree_fn(false)
+            "sys": obj_app_tree_fn(false),
+            "versions": true,
+            "ghd": {
+                "upgrade": true,
+                "deploy-module": true,
+                "deploy-sample-app": true //function() { return get_tokens_fn("cmd_ghd_deploy_sample_app"); }
+            }
         };
         var color_command = "#8e8";
         var color_output = "#ddd"
@@ -432,6 +440,32 @@
                 }
                 exec_ajax_fn(console_base + "/cmd_obj/" + cmd_tokens[1], complete_fn, get_data);
                 break;
+            case "ghd":
+                switch (cmd_tokens[1]) {
+                case "upgrade":
+                case "deploy-module":
+                    print_fn("TODO: This command is not implemented yet.\n");
+                    complete_fn();
+                    break;
+                case "deploy-sample-app":
+                    if (cmd_tokens[2] === undefined) {
+                        exec_ajax_fn(console_base + "/cmd_ghd_deploy_sample_app", complete_fn);
+                        return;
+                    }
+                    print_fn("This will overwrite any existing application data.\nReally continue? [y/N]:");
+                    input_fn(function(input) {
+                        if (yes_eval_fn(input)) {
+                            exec_ajax_fn(console_base + "/cmd_ghd_deploy_sample_app/" + cmd_tokens[2], complete_fn);
+                        } else {
+                            complete_fn();
+                        }
+                    });
+                    break;
+                }
+                break;
+            case "versions":
+                exec_ajax_fn(console_base + "/cmd_versions", complete_fn);
+                break;
             case "db":
                 switch (cmd_tokens[1]) {
                 case "sync":
@@ -499,7 +533,6 @@
                 window.open(console_base + "/cmd_info");
                 complete_fn();
                 break;
-            case "lconfig":
             case "config":
                 if (cmd_tokens[1] === undefined) {
                     print_fn("Missing argument 1: module name\n");
@@ -514,7 +547,7 @@
                 } else {
                     var param = {
                         set: cmd_tokens[3],
-                        local: cmd_tokens[0] === "lconfig"? "true": "false"
+                        local: "false"
                     };
                     exec_ajax_fn(console_base + "/cmd_config/" + cmd_tokens[1] + "/" + cmd_tokens[2], complete_fn, param);
                 }
