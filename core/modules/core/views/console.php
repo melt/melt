@@ -345,9 +345,14 @@
             };
             query_password_fn();
         };
-        var yes_eval_fn = function(input) {
-            return $.trim(input).substr(0, 1) == "y"
-            || $.trim(input).substr(0, 1) == "Y";
+        var yes_eval_fn = function(input, default_yes) {
+            input = $.trim(input);
+            if (input == "") {
+                return default_yes == true;
+            } else {
+                return input.substr(0, 1) == "y"
+                || input.substr(0, 1) == "Y";
+            }
         };
         var exec_ajax_fn = function(url, done_fn, data) {
             var response_offset = 0;
@@ -384,13 +389,21 @@
             };
             xhr.send();
         };
-        var exec_fn = function(current_cmd) {
+        var exec_fn = function(current_cmd, exec_done_fn) {
             var complete_fn = function() {
-                input_pipe = false;
-                input_div.show();
-                update_cmd_line_fn("");
+                if (exec_done_fn !== undefined)
+                    exec_done_fn();
             };
-            input_pipe = function() {};
+            if (input_pipe === false) {
+                complete_fn = function() {
+                    input_pipe = false;
+                    input_div.show();
+                    update_cmd_line_fn("");
+                    if (exec_done_fn !== undefined)
+                        exec_done_fn();
+                };
+                input_pipe = function() {};
+            };
             print_fn(cmd_line_init + current_cmd + "\n", color_command);
             input_div.hide();
             if (cmd_history[cmd_history.length - 1] !== current_cmd) {
@@ -454,7 +467,7 @@
                     }
                     print_fn("This will overwrite any existing application data.\nReally continue? [y/N]:");
                     input_fn(function(input) {
-                        if (yes_eval_fn(input)) {
+                        if (yes_eval_fn(input, false)) {
                             exec_ajax_fn(console_base + "/cmd_ghd_deploy_sample_app/" + cmd_tokens[2], complete_fn);
                         } else {
                             complete_fn();
@@ -474,7 +487,7 @@
                 case "purify":
                     print_fn("Important data could be deleted. Really continue? [y/N]:");
                     input_fn(function(input) {
-                        if (yes_eval_fn(input)) {
+                        if (yes_eval_fn(input, false)) {
                             exec_ajax_fn(console_base + "/cmd_purify", complete_fn);
                         } else {
                             complete_fn();
@@ -562,27 +575,100 @@
                 break;
             case "install":
                 print_fn("Welcome to the melt (re)installation script. Melt needs a working MySQL 5.1+ database to function. Remember that you can use your normal copy/paste hotkeys.\n");
-                mass_input_fn([
-                    ["Database host", "127.0.0.1"],
-                    ["Database port", "3306"],
-                    ["Database username", "root"],
-                    ["Database password", ""],
-                    ["Database name", "melt"],
-                    ["Database prefix", ""],
-                    ["Do you have trigger permissions?", "Y/n"],
-                    ["Do you have InnoDB?", "Y/n"]
-                ], function(result) {
-                    print_fn("Configuring your installation, please wait.\n");
-                    exec_fn("config db host " + cmd_line_escape_fn(result[0]));
-                    exec_fn("config db port " + cmd_line_escape_fn(result[1]));
-                    exec_fn("config db user " + cmd_line_escape_fn(result[2]));
-                    exec_fn("config db password " + cmd_line_escape_fn(result[3]));
-                    exec_fn("config db name " + cmd_line_escape_fn(result[4]));
-                    exec_fn("config db prefix " + cmd_line_escape_fn(result[5]));
-                    exec_fn("config db use_trigger_sequencing " + cmd_line_escape_fn(yes_eval_fn(result[6])? "true": "false"));
-                    exec_fn("config db storage_engine " + cmd_line_escape_fn(yes_eval_fn(result[7])? "innodb": "myisam"));
-                    print_fn("Database configuration complete. Please run the \"db sync\" command to check your settings and start using your database.\n");
+                var configure_db_fn = function(done_fn) {
+                    print_fn("Do you wish to configure your MySQL details? [Y/n]");
+                    input_fn(function(result) {
+                        if (!yes_eval_fn(result, true)) {
+                            done_fn();
+                        } else {
+                            mass_input_fn([
+                                ["Database host", "127.0.0.1"],
+                                ["Database port", "3306"],
+                                ["Database username", "root"],
+                                ["Database password", ""],
+                                ["Database name", "melt"],
+                                ["Database prefix", ""],
+                                ["Do you have trigger permissions?", "Y/n"],
+                                ["Do you have InnoDB?", "Y/n"]
+                            ], function(result) {
+                                print_fn("Configuring your installation, please wait.\n");
+                                exec_fn("config db host " + cmd_line_escape_fn(result[0]));
+                                exec_fn("config db port " + cmd_line_escape_fn(result[1]));
+                                exec_fn("config db user " + cmd_line_escape_fn(result[2]));
+                                exec_fn("config db password " + cmd_line_escape_fn(result[3]));
+                                exec_fn("config db name " + cmd_line_escape_fn(result[4]));
+                                exec_fn("config db prefix " + cmd_line_escape_fn(result[5]));
+                                exec_fn("config db use_trigger_sequencing " + cmd_line_escape_fn(yes_eval_fn(result[6])? "true": "false"));
+                                exec_fn("config db storage_engine " + cmd_line_escape_fn(yes_eval_fn(result[7])? "innodb": "myisam"));
+                                done_fn();
+                            });
+                        }
+                    });
+                };
+                var configure_mail_fn = function(done_fn) {
+                    print_fn("Do you wish to configure your SMTP details? (Skip if your application won't send mail.) [Y/n]");
+                    input_fn(function(result) {
+                        if (!yes_eval_fn(result, true)) {
+                            done_fn();
+                        } else {
+                            mass_input_fn([
+                                ["SMTP name", "127.0.0.1"],
+                                ["SMTP port", "3306"],
+                                ["Does the SMTP server require TLS?", "N/y"],
+                                ["Does the SMTP server require authentication?", "Y/n"],
+                            ], function(result) {
+                                exec_fn("config mail smtp_host " + cmd_line_escape_fn(result[0]));
+                                exec_fn("config mail smtp_port " + cmd_line_escape_fn(result[1]));
+                                exec_fn("config mail smtp_tls_enable " + cmd_line_escape_fn(yes_eval_fn(result[2])? "true": "false"));
+                                exec_fn("config mail smtp_auth_enable " + cmd_line_escape_fn(yes_eval_fn(result[3])? "true": "false"));
+                                if (yes_eval_fn(result[3])) {
+                                    mass_input_fn([
+                                        ["SMTP authentication username", ""],
+                                        ["SMTP authentication password", ""],
+                                    ], function(result) {
+                                        exec_fn("config mail smtp_auth_user " + cmd_line_escape_fn(result[0]));
+                                        exec_fn("config mail smtp_auth_password " + cmd_line_escape_fn(result[1]));
+                                        done_fn();
+                                    });
+                                } else {
+                                    done_fn();
+                                }
+                            });
+                        }
+                    });
+                };
+                var configure_app_fn = function(done_fn) {
+                    print_fn("Do you wish to deploy the default sample application? (Skip if you already have an application installed.) [Y/n]");
+                    input_fn(function(result) {
+                        if (yes_eval_fn(result, true)) {
+                            exec_fn("ghd deploy-sample-app melt/sample-app-default", done_fn);
+                        } else {
+                            done_fn();
+                        }
+                    });
+                };
+                var sync_db_fn = function(done_fn) {
+                    print_fn("Do you wish to syncronize the database with the application now? [Y/n]");
+                    input_fn(function(result) {
+                        if (yes_eval_fn(result, true)) {
+                            exec_fn("db sync", done_fn);
+                        } else {
+                            done_fn();
+                        }
+                    });
+                };
+                var done_fn = function() {
+                    print_fn("Installation script complete.\n");
                     complete_fn();
+                };
+                configure_db_fn(function() {
+                    configure_mail_fn(function() {
+                        configure_app_fn(function() {
+                            sync_db_fn(function() {
+                                done_fn();
+                            });
+                        });
+                    });
                 });
                 break;
             case "reload":
