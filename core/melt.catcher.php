@@ -48,12 +48,12 @@ function error_handler($errno, $errstr, $errfile, $errline) {
     if ((\error_reporting() & $errno) == 0)
         return true;
     // Bypass static function should not be abstract, because it's a useful design pattern.
-    if ($errno == \E_STRICT && substr($errstr, -22) == "should not be abstract")
+    if ($errno === \E_STRICT && stripos($errstr, "should not be abstract") !== false)
         return true;
     $backtrace = \debug_backtrace();
     unset($backtrace[0]["function"]);
     unset($backtrace[0]["args"]);
-    if ($errno == E_USER_ERROR) {
+    if ($errno === E_USER_ERROR) {
         crash("E_USER_ERROR caught: " . $errstr, $errfile, $errline, $backtrace);
         exit;
     }
