@@ -1346,7 +1346,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                     // Inner selection.
                     $sql_select_expr .= " (";
                     $inner_columns_data = array();
-                    \array_push($query_stack, &$columns_data);
+                    \array_push($query_stack, $columns_data);
                     $sql_select_expr .= self::buildSelectQuery($token, false, $inner_columns_data, $alias_offset, null, $query_stack);
                     \array_pop($query_stack);
                     $sql_select_expr .= ")";
