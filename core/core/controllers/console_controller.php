@@ -407,12 +407,12 @@ class ConsoleController extends InternalController {
         $archive = new ArchiveTar($archive_path);
         echo "Extracting...\n";
         $internal_path = $this->ghGetInternalPath($archive, $user, $repo);
-        $archive->extractModify(APP_DIR . "/", $internal_path);
+        $archive->extract(APP_DIR . "/");
         @unlink($archive_path);
-        @unlink(APP_DIR . "/pax_global_header");
-        @unlink(APP_DIR . "/.gitignore");
-        @unlink(APP_DIR . "/index.php");
-        die("Melt $target_tag was successfully deployed. Please reload the console now by typing \"reload\".\n");        
+        if (rename(APP_DIR . "/$internal_path/core", APP_DIR . "/core") === false)
+            die("Could not rename /$internal_path/core module folder to /core.");
+        @unlink(APP_DIR . "/$internal_path");
+        die("Melt core $target_tag was successfully deployed. Please reload the console now by typing \"reload\".\n");        
     }
     
     public function cmd_ghd_deploy_module($user = null, $repo = null, $target_tag = null) {
