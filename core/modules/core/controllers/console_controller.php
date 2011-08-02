@@ -32,7 +32,6 @@ class ConsoleController extends InternalController {
         \header('Content-Type: text/plain; charset=UTF-8');
         \ob_end_clean();
         \ob_end_clean();
-        \ob_start('ob_gzhandler');
         \ob_implicit_flush(true);
         \error_reporting(\E_USER_ERROR | \E_ERROR | \E_CORE_ERROR | \E_COMPILE_ERROR);
         \ob_flush();
@@ -338,6 +337,7 @@ class ConsoleController extends InternalController {
     }
     
     public function cmd_ghd_deploy_sample_app($user = null, $repo = null, $version = null) {
+        $this->beginExec();
         if ($user === null) {
             // Get sample applications.
             $repos = @file_get_contents("https://api.github.com/users/melt/repos");
@@ -364,7 +364,7 @@ class ConsoleController extends InternalController {
             foreach ($tags_info as $tag_info)
                 $tags_index[$tag_info->name] = $tag_info;
             if ($version !== null && !isset($version[$version]))
-                die("Error: Specified tag/version does not exist in repository.");
+                die("Error: Specified tag/version does not exist in repository.\n");
             uksort($tags_index, function($v1, $v2) {
                 return strnatcasecmp($v2, $v1);
             });
@@ -380,9 +380,14 @@ class ConsoleController extends InternalController {
                 if (!@unlink($local_path))
                     die("Could not delete $local_path!\n");
             }
-            
-            // TODO: Delete application directories here.
-            
+            echo "Deleting application files...\n";
+            $skip_delete = array("core", "config.local.php", ".htaccess");
+            foreach (scandir(APP_DIR) as $node) {
+                if ($node[0] === "." || in_array($node, $skip_delete))
+                    continue;
+                unlink_recursive(APP_DIR . "/$node");
+                echo "removed $node\n";
+            }
             $this->downloadFile($tag_info->tarball_url, $local_path);
             echo "Extracting...\n";
             $archive = new ArchiveTar($local_path);
@@ -398,6 +403,7 @@ class ConsoleController extends InternalController {
                 die("Could not find internal path in archive!\n");
             $archive->extractModify(APP_DIR . "/", $internal_path);
             @unlink(APP_DIR . "/pax_global_header");
+            @unlink(APP_DIR . "/.gitignore");
             @unlink($local_path);
             die("Sample project was successfully deployed.\n");
         }
