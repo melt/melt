@@ -324,7 +324,7 @@ class ConsoleController extends InternalController {
         fclose($h_local);
     }
     
-    private function ghDeploy($user, $repo, $target_tag, $repo_description_tag, $prepare_fn) {
+    private function ghDeploy($user, $repo, &$target_tag, $repo_description_tag, $prepare_fn) {
         // Get repository info.
         $repo_info = @file_get_contents("https://api.github.com/repos/$user/$repo");
         if ($repo_info === false)
@@ -353,7 +353,9 @@ class ConsoleController extends InternalController {
             die("\n");
         }
         $prepare_fn();
-        $tag_info = $target_tag !== null? $tags_index[$target_tag]: reset($tags_index);
+        reset($tags_index);
+        $target_tag = $target_tag !== null? $target_tag: key($tags_index);
+        $tag_info = $tags_index[$target_tag];
         $local_path = APP_DIR . "/ghd-deploy-tmp.tar.gz";
         if (is_file($local_path)) {
             if (!@unlink($local_path))
@@ -395,13 +397,20 @@ class ConsoleController extends InternalController {
     
     public function cmd_ghd_deploy_core($target_tag = null) {
         $this->beginExec();
-        $this->ghDeploy("melt", "melt", $target_tag, "#melt", function() {
+        $user = $repo = "melt";
+        $archive_path = $this->ghDeploy($user, $repo, $target_tag, "#melt", function() {
             echo "Deleting melt core...\n";
             unlink_recursive(APP_CORE_DIR);
         });
-        
-        
-        
+        $archive = new ArchiveTar($archive_path);
+        echo "Extracting...\n";
+        $internal_path = $this->ghGetInternalPath($archive, $user, $repo);
+        $archive->extractModify(APP_DIR . "/", $internal_path);
+        @unlink($archive_path);
+        @unlink(APP_DIR . "/pax_global_header");
+        @unlink(APP_DIR . "/.gitignore");
+        @unlink(APP_DIR . "/index.php");
+        die("Melt $target_tag was successfully deployed. Please reload the console now by typing \"reload\".\n");        
     }
     
     public function cmd_ghd_deploy_module($user = null, $repo = null, $target_tag = null) {
@@ -416,17 +425,17 @@ class ConsoleController extends InternalController {
             $modules_path = APP_DIR . "/modules";
             $module_path = "$modules_path/$module_name";
             echo "Deploying module \"$module_name\"...\n";
-            $local_path = $this->ghDeploy($user, $repo, $target_tag, "#melt-module", function() use ($module_name, $module_path) {
+            $archive_path = $this->ghDeploy($user, $repo, $target_tag, "#melt-module", function() use ($module_name, $module_path) {
                 echo "Deleting existing \"$module_name\" files...\n";
                 if (file_exists($module_path))
                     unlink_recursive($module_path);
             });
-            $archive = new ArchiveTar($local_path);
+            $archive = new ArchiveTar($archive_path);
             echo "Extracting...\n";
             $internal_path = $this->ghGetInternalPath($archive, $user, $repo);
             @mkdir($modules_path);
             $archive->extract($modules_path);
-            @unlink($local_path);
+            @unlink($archive_path);
             @unlink("$modules_path/pax_global_header");
             @unlink("$modules_path/.gitignore");
             if (rename("$modules_path/$internal_path", $module_path) === false)
@@ -440,7 +449,7 @@ class ConsoleController extends InternalController {
         if ($user === null) {
             $this->ghSearch("melt sample applications", "sample-app-");
         } else {
-            $local_path = $this->ghDeploy($user, $repo, $target_tag, "#melt-app", function() {
+            $archive_path = $this->ghDeploy($user, $repo, $target_tag, "#melt-app", function() {
                 echo "Deleting application files...\n";
                 $skip_delete = array("core", "config.local.php", ".htaccess");
                 foreach (scandir(APP_DIR) as $node) {
@@ -450,11 +459,11 @@ class ConsoleController extends InternalController {
                     echo "removed $node\n";
                 }
             });
-            $archive = new ArchiveTar($local_path);
+            $archive = new ArchiveTar($archive_path);
             echo "Extracting...\n";
             $internal_path = $this->ghGetInternalPath($archive, $user, $repo);
             $archive->extractModify(APP_DIR . "/", $internal_path);
-            @unlink($local_path);
+            @unlink($archive_path);
             @unlink(APP_DIR . "/pax_global_header");
             @unlink(APP_DIR . "/.gitignore");
             die("Sample project was successfully deployed.\n");
