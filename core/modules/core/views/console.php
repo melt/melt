@@ -465,7 +465,7 @@
                         exec_ajax_fn(console_base + "/cmd_ghd_deploy_sample_app", complete_fn);
                         return;
                     }
-                    print_fn("This will overwrite any existing application data.\nReally continue? [y/N]:");
+                    print_fn("This will overwrite any existing application data.\nReally continue? [N/y]:");
                     input_fn(function(input) {
                         if (yes_eval_fn(input, false)) {
                             exec_ajax_fn(console_base + "/cmd_ghd_deploy_sample_app/" + cmd_tokens[2], complete_fn);
