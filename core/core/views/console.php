@@ -209,9 +209,14 @@
             "sys": obj_app_tree_fn(false),
             "versions": true,
             "ghd": {
-                "upgrade": true,
-                "deploy-module": true,
-                "deploy-sample-app": true //function() { return get_tokens_fn("cmd_ghd_deploy_sample_app"); }
+                "deploy-core": true,
+                "deploy-module": {
+                    "melt/module-data-tables": true
+                },
+                "deploy-sample-app": {
+                    "melt/sample-app-default": true,
+                    "melt/sample-app-facebook": true
+                }
             }
         };
         var color_command = "#8e8";
@@ -455,31 +460,38 @@
                 break;
             case "ghd":
                 switch (cmd_tokens[1]) {
-                case "upgrade":
-                
-                    break;
+                case "deploy-core":
                 case "deploy-module":
                 case "deploy-sample-app":
                     var path, warning_msg;
                     if (cmd_tokens[1] === "deploy-sample-app") {
                         path = "cmd_ghd_deploy_sample_app";
                         warning_msg = "This will overwrite any existing application data.";
-                    } else {
+                    } else if (cmd_tokens[1] == "deploy-module") {
                         path = "cmd_ghd_deploy_module";
                         warning_msg = "This will overwrite any existing module.";
+                    } else {
+                        path = "cmd_ghd_deploy_core";
+                        warning_msg = "WARNING: You are about to redeploy the core. Upgrading the core could break compatibility in your application. If this fails the console might be rendered unusable and you will have to redeploy manually.";
+                        cmd_tokens[2] = cmd_tokens[2] === undefined? "": cmd_tokens[2];
                     }
                     if (cmd_tokens[2] === undefined) {
                         exec_ajax_fn(console_base + "/" + path, complete_fn);
                         return;
                     }
-                    print_fn(warning_msg + "\nReally continue? [N/y]:");
-                    input_fn(function(input) {
+                    var deploy_fn = function(input) {
                         if (yes_eval_fn(input, false)) {
                             exec_ajax_fn(console_base + "/" + path + "/" + cmd_tokens[2], complete_fn);
                         } else {
                             complete_fn();
                         }
-                    });
+                    };
+                    if (cmd_tokens[2].substr(cmd_tokens[2].length - 1) !== "*") {
+                        print_fn(warning_msg + "\nReally continue? [N/y]:");
+                        input_fn(deploy_fn);
+                    } else {
+                        deploy_fn("y");
+                    }
                     break;
                 }
                 break;

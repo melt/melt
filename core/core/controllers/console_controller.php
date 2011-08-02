@@ -346,7 +346,7 @@ class ConsoleController extends InternalController {
         uksort($tags_index, function($v1, $v2) {
             return strnatcasecmp($v2, $v1);
         });
-        if ($target_tag === "*") {
+        if (\melt\string\ends_with((string) $target_tag, "*")) {
             echo "All tags in repository:\n";
             foreach ($tags_index as $tag => $tag_info)
                 echo "$tag ";
@@ -393,7 +393,14 @@ class ConsoleController extends InternalController {
         return $internal_path;
     }
     
-    public function cmd_ghd_upgrade($module = null) {
+    public function cmd_ghd_deploy_core($target_tag = null) {
+        $this->beginExec();
+        $this->ghDeploy("melt", "melt", $target_tag, "#melt", function() {
+            echo "Deleting melt core...\n";
+            unlink_recursive(APP_CORE_DIR);
+        });
+        
+        
         
     }
     
