@@ -357,11 +357,12 @@ class ConsoleController extends InternalController {
         $target_tag = $target_tag !== null? $target_tag: key($tags_index);
         $tag_info = $tags_index[$target_tag];
         $local_path = APP_DIR . "/ghd-deploy-tmp.tar.gz";
+        /*
         if (is_file($local_path)) {
             if (!@unlink($local_path))
                 die("Could not delete $local_path!\n");
         }
-        $this->downloadFile($tag_info->tarball_url, $local_path);
+        $this->downloadFile($tag_info->tarball_url, $local_path);*/
         return $local_path;
     }
     
@@ -402,12 +403,13 @@ class ConsoleController extends InternalController {
         class_exists('melt\core\ArchiveTar');
         $archive_path = $this->ghDeploy($user, $repo, $target_tag, "#melt", function() {
             echo "Deleting melt core...\n";
-            unlink_recursive(APP_CORE_DIR);
+            //unlink_recursive(APP_CORE_DIR);
         });
         $archive = new ArchiveTar($archive_path);
         echo "Extracting...\n";
         $internal_path = $this->ghGetInternalPath($archive, $user, $repo);
         $archive->extract(APP_DIR . "/");
+        exit;
         @unlink($archive_path);
         if (rename(APP_DIR . "/$internal_path/core", APP_DIR . "/core") === false)
             die("Could not rename /$internal_path/core module folder to /core.");

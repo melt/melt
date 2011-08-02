@@ -1314,9 +1314,11 @@ class ArchiveTar
 
         $v_data = unpack("a100filename/a8mode/a8uid/a8gid/a12size/a12mtime/"
 		                 ."a8checksum/a1typeflag/a100link/a6magic/a2version/"
-						 ."a32uname/a32gname/a8devmajor/a8devminor",
+						 ."a32uname/a32gname/a8devmajor/a8devminor/a131prefix",
 						 $v_binary_data);
-
+        if (strlen($v_data["prefix"]) > 0)
+            $v_data["filename"] = "$v_data[prefix]/$v_data[filename]";
+        
         // ----- Extract the checksum
         $v_header['checksum'] = OctDec(trim($v_data['checksum']));
         if ($v_header['checksum'] != $v_checksum) {
@@ -1514,7 +1516,7 @@ class ArchiveTar
 
       if (!$this->_readHeader($v_binary_data, $v_header))
         return false;
-
+      
       if ($v_header['filename'] == '') {
         continue;
       }
