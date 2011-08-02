@@ -195,6 +195,43 @@ function array_merge_recursive_distinct() {
 }
 
 /**
+ * Recursivly deletes all files and directories in given path.
+ * If delete fails the fail callback will be called and the function
+ * will return FALSE. If no fail callback is set an E_USER_ERROR will
+ * be raised.
+ * @param type $path Path to file or directory to delete.
+ * @param callback $fail_callback Optional: Callback that will be invoked
+ * if deleting path fails. The first argument is the path that was failed
+ * to be deleted.
+ * @return bool True on success.
+ */
+function unlink_recursive($path, $fail_callback = null) {
+    if ($fail_callback === null) {
+        $fail_callback = function($path) {
+            trigger_error("Could not delete \"$path\".", E_USER_ERROR);
+        };
+    }
+    if (is_file($path)) {
+        if (@unlink($path) === false) {
+            $fail_callback($path);
+            return false;
+        }
+    } else {
+        foreach (scandir($path) as $node) {
+            if ($node === "." || $node === "..")
+                continue;
+            if (!unlink_recursive("$path/$node"))
+                return false;
+        }
+        if (@rmdir($path) === false) {
+            $fail_callback($path);
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
  * Search the given directory for files which has a path relative to given
  * directory which matches the given regex pattern.
  * If $directory is not a directory, an empty array will be returned.
