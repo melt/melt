@@ -440,7 +440,7 @@ class ConsoleController extends InternalController {
             @unlink("$modules_path/.gitignore");
             if (rename("$modules_path/$internal_path", $module_path) === false)
                 die("Could not rename $internal_path module folder to $module_name.");
-            die("Sample project was successfully deployed.\n");
+            die("Module \"$module_name $target_tag\" by \"$user\" was successfully deployed.\n");
         }
     }
     
@@ -466,7 +466,7 @@ class ConsoleController extends InternalController {
             @unlink($archive_path);
             @unlink(APP_DIR . "/pax_global_header");
             @unlink(APP_DIR . "/.gitignore");
-            die("Sample project was successfully deployed.\n");
+            die("Sample project \"$repo $target_tag\" by \"$user\" was successfully deployed.\n");
         }
     }
 
