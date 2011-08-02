@@ -398,6 +398,8 @@ class ConsoleController extends InternalController {
     public function cmd_ghd_deploy_core($target_tag = null) {
         $this->beginExec();
         $user = $repo = "melt";
+        // Hack: Since this class will be deleted when core is deleted we need to make sure it's loaded now.
+        class_exists('melt\core\ArchiveTar');
         $archive_path = $this->ghDeploy($user, $repo, $target_tag, "#melt", function() {
             echo "Deleting melt core...\n";
             unlink_recursive(APP_CORE_DIR);
