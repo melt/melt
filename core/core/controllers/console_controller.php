@@ -411,7 +411,7 @@ class ConsoleController extends InternalController {
         @unlink($archive_path);
         if (rename(APP_DIR . "/$internal_path/core", APP_DIR . "/core") === false)
             die("Could not rename /$internal_path/core module folder to /core.");
-        @unlink(APP_DIR . "/$internal_path");
+        unlink_recursive(APP_DIR . "/$internal_path", function() {});
         die("Melt core $target_tag was successfully deployed. Please reload the console now by typing \"reload\".\n");        
     }
     
