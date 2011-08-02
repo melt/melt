@@ -19,10 +19,10 @@ function get_all_modules() {
             continue;
         $modules[$module] = array("melt\\$module\\" . underline_to_cased($module) . "Module", APP_DIR . "/modules/$module");
     }
-    foreach (scandir(APP_CORE_DIR . "/modules") as $module) {
-        if ($module[0] === ".")
+    foreach (scandir(APP_CORE_DIR) as $module) {
+        if ($module[0] === "." || is_file($module))
             continue;
-        $modules[$module] = array("melt\\$module\\" . underline_to_cased($module) . "Module", APP_CORE_DIR . "/modules/" . $module);
+        $modules[$module] = array("melt\\$module\\" . underline_to_cased($module) . "Module", APP_CORE_DIR . "/$module");
     }
     return $modules;
 }

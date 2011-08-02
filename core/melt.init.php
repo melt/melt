@@ -94,7 +94,7 @@ function read_server_var($var_name, $alt_var_name = null) {
     if (APP_CONFIG !== null)  
         require APP_CONFIG;
     // Declaring all configuration directives that is used before the loader has loaded them here.
-    foreach (require(APP_CORE_DIR . "/modules/core/config.critical.php") as $cfg_name => $default)
+    foreach (require(APP_CORE_DIR . "/core/config.critical.php") as $cfg_name => $default)
         put_configuration_directive("melt\\core\\config\\$cfg_name", $default);
     // Evaluate whether Melt Framework is compatible with PHP environment.
     \define("APP_64_BIT", PHP_INT_MAX > 0x7FFFFFFF);

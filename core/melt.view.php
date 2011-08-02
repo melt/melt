@@ -214,8 +214,8 @@ final class View {
             return $path_cache[$view_path] = false;
         $module_name = substr($view_path, 1, $dir_pos - 1);
         $view_path = substr($view_path, $dir_pos);
-        $path = "/modules/" . $module_name . "/views" . $view_path . ".php";
-        if (is_file($full_path = APP_DIR . $path))
+        $path = "/$module_name/views$view_path.php";
+        if (is_file($full_path = APP_DIR . "/modules$path"))
             return $path_cache[$view_path] = array($full_path, $module_name);
         else if (is_file($full_path = APP_CORE_DIR . $path))
             return $path_cache[$view_path] = array($full_path, $module_name);

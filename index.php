@@ -73,7 +73,7 @@ ErrorDocument 505 /core/core.php
 RewriteBase $rewrite_base
 
 # Rewrite static module files to their appropriate locations.
-RewriteRule ^static/cmod/([^/]+)/(.*)$ core/modules/$1/static/$2 [L]
+RewriteRule ^static/cmod/([^/]+)/(.*)$ core/$1/static/$2 [L]
 RewriteRule ^static/mod/([^/]+)/(.*)$ modules/$1/static/$2 [L]
 
 # Rewrite everything non-static to melt core.
