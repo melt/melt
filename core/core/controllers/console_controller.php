@@ -324,87 +324,132 @@ class ConsoleController extends InternalController {
         fclose($h_local);
     }
     
-    private function ghDeploy($user, $repo, $to_path) {
-        
+    private function ghDeploy($user, $repo, $target_tag, $repo_description_tag, $prepare_fn) {
+        // Get repository info.
+        $repo_info = @file_get_contents("https://api.github.com/repos/$user/$repo");
+        if ($repo_info === false)
+            die("Error: Specified repository not found (or not tagged).\n");
+        $repo_info = json_decode($repo_info);
+        if (strpos($repo_info->description, $repo_description_tag) === false)
+            die("Error: Did not find $repo_description_tag in repo description. The repository is not a valid target.\n");
+        $tags_info = @file_get_contents("https://api.github.com/repos/$user/$repo/tags");
+        if ($tags_info === false)
+            die("Error: Specified repository not found (or not tagged).\n");
+        $tags_info = json_decode($tags_info);
+        if (count($tags_info) === 0)
+            die("Error: Specified repository does not have any tags.\n");
+        $tags_index = array();
+        foreach ($tags_info as $tag_info)
+            $tags_index[$tag_info->name] = $tag_info;
+        if ($target_tag !== null && !isset($target_tag[$target_tag]))
+            die("Error: Specified tag/version does not exist in repository.\n");
+        uksort($tags_index, function($v1, $v2) {
+            return strnatcasecmp($v2, $v1);
+        });
+        if ($target_tag === "*") {
+            echo "All tags in repository:\n";
+            foreach ($tags_index as $tag => $tag_info)
+                echo "$tag ";
+            die("\n");
+        }
+        $prepare_fn();
+        $tag_info = $target_tag !== null? $tags_index[$target_tag]: reset($tags_index);
+        $local_path = APP_DIR . "/ghd-deploy-tmp.tar.gz";
+        if (is_file($local_path)) {
+            if (!@unlink($local_path))
+                die("Could not delete $local_path!\n");
+        }
+        $this->downloadFile($tag_info->tarball_url, $local_path);
+        return $local_path;
+    }
+    
+    private function ghSearch($name, $prefix) {
+        // Get sample repositories.
+        $repos = @file_get_contents("https://api.github.com/users/melt/repos");
+        if ($repos === false)
+            die("Error: Unable to search for $name.\n");
+        $repos = json_decode($repos);
+        if (!is_array($repos))
+            die("Error: Unexpected data returned. Expected array.\n");
+        echo "Availible $name:\n";
+        foreach ($repos as $repo) {
+            if (strpos($repo->name, $prefix) !== false)
+               echo "{$repo->owner->login}/$repo->name\n";
+        }
+        die("\n");
+    }
+    
+    private function ghGetInternalPath(ArchiveTar $archive, $user, $repo) {
+        $internal_path = null;
+        foreach ($archive->listContent() as $path) {
+            $prefix = "$user-$repo";
+            if (\melt\string\starts_with($path["filename"], $prefix)) {
+                $internal_path = preg_replace('#([/][^/]*)*$#', '', $path["filename"]);
+                break;
+            }
+        }
+        if ($internal_path === null)
+            die("Could not find internal path in archive!\n");
+        return $internal_path;
     }
     
     public function cmd_ghd_upgrade($module = null) {
         
     }
     
-    public function cmd_ghd_deploy_module($module = null) {
-        
-    }
-    
-    public function cmd_ghd_deploy_sample_app($user = null, $repo = null, $version = null) {
+    public function cmd_ghd_deploy_module($user = null, $repo = null, $target_tag = null) {
         $this->beginExec();
         if ($user === null) {
-            // Get sample applications.
-            $repos = @file_get_contents("https://api.github.com/users/melt/repos");
-            if ($repos === false)
-                die("Error: Unable to search for melt sample applications.\n");
-            $repos = json_decode($repos);
-            if (!is_array($repos))
-                die("Error: Unexpected data returned. Expected array.\n");
-            echo "Availible sample applications:\n";
-            foreach ($repos as $repo) {
-                if (strpos($repo->name, "sample-app-") !== false)
-                   echo "{$repo->owner->login}/$repo->name\n";
-            }
-            die("\n");
+            $this->ghSearch("melt modules", "module-");
         } else {
-            // Get repository info.
-            $tags_info = @file_get_contents("https://api.github.com/repos/$user/$repo/tags");
-            if ($tags_info === false)
-                die("Error: Specified repository not found (or not tagged).\n");
-            $tags_info = json_decode($tags_info);
-            if (count($tags_info) === 0)
-                die("Error: Specified repository does not have any tags.\n");
-            $tags_index = array();
-            foreach ($tags_info as $tag_info)
-                $tags_index[$tag_info->name] = $tag_info;
-            if ($version !== null && !isset($version[$version]))
-                die("Error: Specified tag/version does not exist in repository.\n");
-            uksort($tags_index, function($v1, $v2) {
-                return strnatcasecmp($v2, $v1);
+            $offset = strrpos($repo, "module-");
+            if ($offset === false)
+                die("The specified repository does not contain the keyword \"module-\$module_name\"0.\n");
+            $module_name = str_replace("-", "_", strtolower(substr($repo, $offset + strlen("module-"))));
+            $modules_path = APP_DIR . "/modules";
+            $module_path = "$modules_path/$module_name";
+            echo "Deploying module \"$module_name\"...\n";
+            $local_path = $this->ghDeploy($user, $repo, $target_tag, "#melt-module", function() use ($module_name, $module_path) {
+                echo "Deleting existing \"$module_name\" files...\n";
+                if (file_exists($module_path))
+                    unlink_recursive($module_path);
             });
-            if ($version === "*") {
-                echo "All tags in repository:\n";
-                foreach ($tags_index as $tag => $tag_info)
-                    echo "$tag ";
-                die("\n");
-            }
-            $tag_info = $version !== null? $tags_index[$version]: reset($tags_index);
-            $local_path = APP_DIR . "/sample-app-tmp.tar.gz";
-            if (is_file($local_path)) {
-                if (!@unlink($local_path))
-                    die("Could not delete $local_path!\n");
-            }
-            echo "Deleting application files...\n";
-            $skip_delete = array("core", "config.local.php", ".htaccess");
-            foreach (scandir(APP_DIR) as $node) {
-                if ($node[0] === "." || in_array($node, $skip_delete))
-                    continue;
-                unlink_recursive(APP_DIR . "/$node");
-                echo "removed $node\n";
-            }
-            $this->downloadFile($tag_info->tarball_url, $local_path);
-            echo "Extracting...\n";
             $archive = new ArchiveTar($local_path);
-            $internal_path = null;
-            foreach ($archive->listContent() as $path) {
-                $prefix = "$user-$repo";
-                if (\melt\string\starts_with($path["filename"], $prefix)) {
-                    $internal_path = preg_replace('#([/][^/]*)*$#', '', $path["filename"]);
-                    break;
+            echo "Extracting...\n";
+            $internal_path = $this->ghGetInternalPath($archive, $user, $repo);
+            @mkdir($modules_path);
+            $archive->extract($modules_path);
+            @unlink($local_path);
+            @unlink("$modules_path/pax_global_header");
+            @unlink("$modules_path/.gitignore");
+            if (rename("$modules_path/$internal_path", $module_path) === false)
+                die("Could not rename $internal_path module folder to $module_name.");
+            die("Sample project was successfully deployed.\n");
+        }
+    }
+    
+    public function cmd_ghd_deploy_sample_app($user = null, $repo = null, $target_tag = null) {
+        $this->beginExec();
+        if ($user === null) {
+            $this->ghSearch("melt sample applications", "sample-app-");
+        } else {
+            $local_path = $this->ghDeploy($user, $repo, $target_tag, "#melt-app", function() {
+                echo "Deleting application files...\n";
+                $skip_delete = array("core", "config.local.php", ".htaccess");
+                foreach (scandir(APP_DIR) as $node) {
+                    if ($node[0] === "." || in_array($node, $skip_delete))
+                        continue;
+                    unlink_recursive(APP_DIR . "/$node");
+                    echo "removed $node\n";
                 }
-            }
-            if ($internal_path === null)
-                die("Could not find internal path in archive!\n");
+            });
+            $archive = new ArchiveTar($local_path);
+            echo "Extracting...\n";
+            $internal_path = $this->ghGetInternalPath($archive, $user, $repo);
             $archive->extractModify(APP_DIR . "/", $internal_path);
+            @unlink($local_path);
             @unlink(APP_DIR . "/pax_global_header");
             @unlink(APP_DIR . "/.gitignore");
-            @unlink($local_path);
             die("Sample project was successfully deployed.\n");
         }
     }

@@ -456,19 +456,26 @@
             case "ghd":
                 switch (cmd_tokens[1]) {
                 case "upgrade":
-                case "deploy-module":
-                    print_fn("TODO: This command is not implemented yet.\n");
-                    complete_fn();
+                
                     break;
+                case "deploy-module":
                 case "deploy-sample-app":
+                    var path, warning_msg;
+                    if (cmd_tokens[1] === "deploy-sample-app") {
+                        path = "cmd_ghd_deploy_sample_app";
+                        warning_msg = "This will overwrite any existing application data.";
+                    } else {
+                        path = "cmd_ghd_deploy_module";
+                        warning_msg = "This will overwrite any existing module.";
+                    }
                     if (cmd_tokens[2] === undefined) {
-                        exec_ajax_fn(console_base + "/cmd_ghd_deploy_sample_app", complete_fn);
+                        exec_ajax_fn(console_base + "/" + path, complete_fn);
                         return;
                     }
-                    print_fn("This will overwrite any existing application data.\nReally continue? [N/y]:");
+                    print_fn(warning_msg + "\nReally continue? [N/y]:");
                     input_fn(function(input) {
                         if (yes_eval_fn(input, false)) {
-                            exec_ajax_fn(console_base + "/cmd_ghd_deploy_sample_app/" + cmd_tokens[2], complete_fn);
+                            exec_ajax_fn(console_base + "/" + path + "/" + cmd_tokens[2], complete_fn);
                         } else {
                             complete_fn();
                         }
