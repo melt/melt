@@ -402,13 +402,12 @@ class ConsoleController extends InternalController {
         class_exists('melt\core\ArchiveTar');
         $archive_path = $this->ghDeploy($user, $repo, $target_tag, "#melt", function() {
             echo "Deleting melt core...\n";
-            //unlink_recursive(APP_CORE_DIR);
+            unlink_recursive(APP_CORE_DIR);
         });
         $archive = new ArchiveTar($archive_path);
         echo "Extracting...\n";
         $internal_path = $this->ghGetInternalPath($archive, $user, $repo);
         $archive->extract(APP_DIR . "/");
-        exit;
         @unlink($archive_path);
         if (rename(APP_DIR . "/$internal_path/core", APP_DIR . "/core") === false)
             die("Could not rename /$internal_path/core module folder to /core.");
