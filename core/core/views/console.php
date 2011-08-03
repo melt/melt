@@ -493,6 +493,9 @@
                         deploy_fn("y");
                     }
                     break;
+                default:
+                    print_fn("Action missing.\n");
+                    complete_fn();
                 }
                 break;
             case "versions":
