@@ -326,7 +326,7 @@ class ConsoleController extends InternalController {
     
     private function ghDeploy($user, $repo, &$target_tag, $repo_description_tag, $prepare_fn) {
         // Get repository info.
-        $repo_info = @file_get_contents("https://api.github.com/repos/$user/$repo");
+        $repo_info = file_get_contents("https://api.github.com/repos/$user/$repo");
         if ($repo_info === false)
             die("Error: Specified repository not found (or not tagged).\n");
         $repo_info = json_decode($repo_info);
