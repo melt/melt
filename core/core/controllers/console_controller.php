@@ -357,12 +357,11 @@ class ConsoleController extends InternalController {
         $target_tag = $target_tag !== null? $target_tag: key($tags_index);
         $tag_info = $tags_index[$target_tag];
         $local_path = APP_DIR . "/ghd-deploy-tmp.tar.gz";
-        /*
         if (is_file($local_path)) {
             if (!@unlink($local_path))
                 die("Could not delete $local_path!\n");
         }
-        $this->downloadFile($tag_info->tarball_url, $local_path);*/
+        $this->downloadFile($tag_info->tarball_url, $local_path);
         return $local_path;
     }
     
