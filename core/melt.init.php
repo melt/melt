@@ -23,8 +23,17 @@ function put_configuration_directive($config_var_fqn, $new_value, $replace = fal
     $config_file_path = $local? APP_CONFIG_LOCAL: APP_CONFIG;
     if ($config_file_path === null)
         return;
+    // Open and lock application configuration for reading and writing.
+    $handle = @fopen($config_file_path, "r+");
+    if ($handle === false)
+        trigger_error("Could not open \"$config_file_path\" for writing.", E_USER_ERROR);
+    if (@flock($handle, LOCK_EX) === false)
+        trigger_error("Could not aquire lock for \"$config_file_path\".", E_USER_ERROR);
     // Add constant to application configuration.
-    $config_file_data = \file_get_contents($config_file_path);
+    fseek($handle, 0, SEEK_END);
+    $file_length = ftell($handle);
+    fseek($handle, 0, SEEK_SET);
+    $config_file_data = fread($handle, $file_length);
     $new_value = \var_export($new_value, true);
     $namespace = \preg_replace('#\\\\[^\\\\]*$#', '', $config_var_fqn);
     $config_var_name = \preg_replace('#^([^\\\\]*\\\\)*#', '', $config_var_fqn);
@@ -48,7 +57,11 @@ function put_configuration_directive($config_var_fqn, $new_value, $replace = fal
         // Append.
         $config_file_data .= "\r\n\r\nnamespace $namespace {\r\n    const $config_var_name = $new_value;\r\n}\r\n";
     }
-    file_put_contents($config_file_path, $config_file_data);
+    fseek($handle, 0, SEEK_SET);
+    fwrite($handle, $config_file_data);
+    ftruncate($handle, strlen($config_file_data));
+    flock($handle, LOCK_UN);
+    fclose($handle);
 }
 
 /**
