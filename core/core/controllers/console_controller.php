@@ -341,7 +341,7 @@ class ConsoleController extends InternalController {
         $tags_index = array();
         foreach ($tags_info as $tag_info)
             $tags_index[$tag_info->name] = $tag_info;
-        if ($target_tag !== null && !isset($target_tag[$target_tag]))
+        if ($target_tag !== null && !isset($tags_index[$target_tag]))
             die("Error: Specified tag/version does not exist in repository.\n");
         uksort($tags_index, function($v1, $v2) {
             return strnatcasecmp($v2, $v1);
