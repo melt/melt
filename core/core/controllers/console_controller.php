@@ -332,36 +332,43 @@ class ConsoleController extends InternalController {
         $repo_info = json_decode($repo_info);
         if (strpos($repo_info->description, $repo_description_tag) === false)
             die("Error: Did not find $repo_description_tag in repo description. The repository is not a valid target.\n");
-        $tags_info = @file_get_contents("https://api.github.com/repos/$user/$repo/tags");
-        if ($tags_info === false)
-            die("Error: Specified repository not found (or not tagged).\n");
-        $tags_info = json_decode($tags_info);
-        if (count($tags_info) === 0)
-            die("Error: Specified repository does not have any tags.\n");
-        $tags_index = array();
-        foreach ($tags_info as $tag_info)
-            $tags_index[$tag_info->name] = $tag_info;
-        if ($target_tag !== null && !isset($tags_index[$target_tag]))
-            die("Error: Specified tag/version does not exist in repository.\n");
-        uksort($tags_index, function($v1, $v2) {
-            return strnatcasecmp($v2, $v1);
-        });
-        if (\melt\string\ends_with((string) $target_tag, "*")) {
-            echo "All tags in repository:\n";
-            foreach ($tags_index as $tag => $tag_info)
-                echo "$tag ";
-            die("\n");
+        if (strcasecmp($target_tag, "head") === 0) {
+            // Using head.
+            $tarball_url = "https://github.com/$user/$repo/tarball/master";            
+        } else {
+            // Using specific tag.
+            $tags_info = @file_get_contents("https://api.github.com/repos/$user/$repo/tags");
+            if ($tags_info === false)
+                die("Error: Specified repository not found (or not tagged).\n");
+            $tags_info = json_decode($tags_info);
+            if (count($tags_info) === 0)
+                die("Error: Specified repository does not have any tags.\n");
+            $tags_index = array();
+            foreach ($tags_info as $tag_info)
+                $tags_index[$tag_info->name] = $tag_info;
+            if ($target_tag !== null && !isset($tags_index[$target_tag]))
+                die("Error: Specified tag/version does not exist in repository.\n");
+            uksort($tags_index, function($v1, $v2) {
+                return strnatcasecmp($v2, $v1);
+            });
+            if (\melt\string\ends_with((string) $target_tag, "*")) {
+                echo "All tags in repository:\n";
+                foreach ($tags_index as $tag => $tag_info)
+                    echo "$tag ";
+                die("\n");
+            }
+            $prepare_fn();
+            reset($tags_index);
+            $target_tag = $target_tag !== null? $target_tag: key($tags_index);
+            $tag_info = $tags_index[$target_tag];
+            $tarball_url = $tag_info->tarball_url;
         }
-        $prepare_fn();
-        reset($tags_index);
-        $target_tag = $target_tag !== null? $target_tag: key($tags_index);
-        $tag_info = $tags_index[$target_tag];
         $local_path = APP_DIR . "/ghd-deploy-tmp.tar.gz";
         if (is_file($local_path)) {
             if (!@unlink($local_path))
                 die("Could not delete $local_path!\n");
         }
-        $this->downloadFile($tag_info->tarball_url, $local_path);
+        $this->downloadFile($tarball_url, $local_path);
         return $local_path;
     }
     
