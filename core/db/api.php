@@ -365,20 +365,23 @@ function sync_table_layout_with_model($table_name, array $parsed_col_array, arra
         }
     }
     foreach ($current_indexes as $key_name => $current_index) {
-        $melt_index = \melt\string\starts_with($key_name, '_melt_');
-        if (!$melt_index)
-            continue;
-        $unique = $index["Non_unique"] == 0;
-        // Compare index and see if it's still valid.
-        if (isset($expected_indexes[$key_name])
-        && $current_index["is_unique"] == $expected_indexes[$key_name]["is_unique"]) {
-            $expected_index =& $expected_indexes[$key_name];
-            \sort($expected_index["columns"]);
-            \sort($current_index["columns"]);
-            if ($expected_index["columns"] == $current_index["columns"]) {
-                // Index is correct.
-                unset($expected_indexes[$key_name]);
+        // Temporary check that removes indexes from previous framework.
+        if (!\melt\string\starts_with($key_name, '_nmvc_')) {
+            $melt_index = \melt\string\starts_with($key_name, '_melt_');
+            if (!$melt_index)
                 continue;
+            $unique = $index["Non_unique"] == 0;
+            // Compare index and see if it's still valid.
+            if (isset($expected_indexes[$key_name])
+            && $current_index["is_unique"] == $expected_indexes[$key_name]["is_unique"]) {
+                $expected_index =& $expected_indexes[$key_name];
+                \sort($expected_index["columns"]);
+                \sort($current_index["columns"]);
+                if ($expected_index["columns"] == $current_index["columns"]) {
+                    // Index is correct.
+                    unset($expected_indexes[$key_name]);
+                    continue;
+                }
             }
         }
         // Index is wrong, drop it.
