@@ -68,15 +68,15 @@
                 tokens.push("");
             return [tokens, trailing_space];
         };
-	var read_file_binary_fn = function(file, callback) {
+	var read_file_text_fn = function(file, callback) {
             if ("FileReader" in window) {
                 var reader = new FileReader();
-                reader.readAsBinaryString(file);
+                reader.readAsText(file, "UTF-8");
                 reader.onload = function() {
                     callback(reader.result);
                 };
             } else {
-                return callback(file.getAsBinary());
+                return callback(file.getAsText("UTF-8"));
             }
 	};
         var get_file_upload_body_fn = function(event, expected_length, component_name, complete_fn) {
@@ -91,11 +91,11 @@
             for (var i = 0; i < data.files.length; i++)
                 files.push(data.files[i]);
             var loaded_files = 0;
-            var binary_file_data = new Array(files.length);
+            var text_file_data = new Array(files.length);
             for (var i = 0; i < files.length; i++) {
                 var file = files[i];
-                read_file_binary_fn(file, function(position) { return function(binary_data) {
-                    binary_file_data[position] = binary_data;
+                read_file_text_fn(file, function(position) { return function(text_data) {
+                    text_file_data[position] = text_data;
                     loaded_files++;
                     if (loaded_files === files.length) {
                         var boundary = '------multipartformboundary' + (new Date).getTime();
@@ -117,8 +117,8 @@
                             body += 'Content-Type: application/octet-stream';
                             body += crlf;
                             body += crlf;
-                            /* Append binary data. */
-                            body += binary_file_data[i];
+                            /* Append text data. */
+                            body += text_file_data[i];
                             body += crlf;
                             /* Write boundary. */
                             body += dashdash;
