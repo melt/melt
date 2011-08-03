@@ -1,4 +1,4 @@
-# Melt PHP Framework, version 1.0
+# Melt PHP Framework, version 1.2
 
 This is the latest release of Melt. Get up and running in less than five minutes using the [Getting Started Guide](https://github.com/melt/melt/wiki/Getting-Started-with-Melt).
 
