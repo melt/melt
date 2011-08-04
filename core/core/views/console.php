@@ -198,6 +198,7 @@
                 "export": true,
                 "import": true
             },
+            "rewrite": true,
             "clear": true,
             "session": { "restart": true },
             "info": true,
@@ -457,6 +458,15 @@
                     }
                 }
                 exec_ajax_fn(console_base + "/cmd_obj/" + cmd_tokens[1], complete_fn, get_data);
+                break;
+            case "rewrite":
+                var action_path = $.trim(cmd_tokens[1]);
+                if (action_path == "" || action_path.charAt(0) != "/") {
+                    print_fn("Error: Rewrite takes an action path and must start with \"/\".\n");
+                    complete_fn();
+                } else {
+                    exec_ajax_fn(console_base + "/cmd_rewrite" + action_path, complete_fn);
+                }
                 break;
             case "ghd":
                 switch (cmd_tokens[1]) {

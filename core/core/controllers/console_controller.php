@@ -116,6 +116,24 @@ class ConsoleController extends InternalController {
         return $code;
     }
     
+    public function cmd_rewrite($path = null) {
+        $this->beginExec();
+        $path_tokens = explode("/", $path);
+        $rewritten_path_tokens = \melt\AppController::rewriteRequest($path_tokens);
+        if ($rewritten_path_tokens === null) {
+            echo "Not rewritten, null returned.\n";
+            $rewritten_path = "/$path";
+        } else if ($rewritten_path_tokens === false) {
+            die("Rewritten to: 404, false returned\n");
+        } else {
+            $rewritten_path = "/" . implode("/", $rewritten_path_tokens);
+            echo "Rewritten to: $rewritten_path\n";
+        }
+        $invoke_data = \melt\Controller::pathToInvokeData($rewritten_path, true);
+        $target = ($invoke_data === false)? "Non-existing action": $invoke_data->getControllerClass() . "::" . $invoke_data->getActionName() . "()";
+        die("This corresponds to: $target\n");
+    }
+    
     public function cmd_obj($type) {
         $this->beginExec();
         $types = array(
