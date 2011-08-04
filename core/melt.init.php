@@ -97,7 +97,7 @@ function read_server_var($var_name, $alt_var_name = null) {
         \trigger_error("Melt Framework initialization failed: realpath() error when evaluating APP_DIR.", \E_USER_ERROR);
     // Read configuration, local configuration first if it exist.
     \define("APP_DIR", $app_dir);
-    \define("APP_CORE_DIR", dirname(__FILE__));
+    \define("APP_CORE_DIR", "$app_dir/core");
     // Read configuration.
     \define("APP_CONFIG_LOCAL", APP_DIR . "/config.local.php");
     \error_reporting(\E_ALL & ~\E_NOTICE & ~\E_STRICT);
