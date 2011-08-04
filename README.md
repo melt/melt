@@ -11,7 +11,7 @@ The install procedure is as follows:
 * Open your web browser and visit the URL
 * Run "install" in the Melt console to setup your application
 
-Learn more in the [documentation](https://github.com/melt/melt/wiki/).
+Learn more in the [Getting Started Guide](https://github.com/melt/melt/wiki/Getting-Started-with-Melt) and [Documentation](https://github.com/melt/melt/wiki/).
 
 ## Questions
 
