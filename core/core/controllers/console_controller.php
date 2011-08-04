@@ -191,7 +191,7 @@ class ConsoleController extends InternalController {
             }
         }        
         $identifier_is_acceptable_fn = function($identifier) use ($app_only) {
-            return !$app_only || (\strpos($identifier, "__") !== false && \strpos($identifier, "/") !== false);
+            return !$app_only || (\strpos($identifier, "__") === false && \strpos($identifier, "/") === false);
         };
         if ($obj === null) {
             if ($cat)
