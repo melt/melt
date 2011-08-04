@@ -161,7 +161,7 @@ class ConsoleController extends InternalController {
                 chdir(APP_DIR . "/views");
                 foreach ($view_tokens as $i => $view_token) {
                     if ($i === count($view_tokens) - 1) {
-                        if (!copy(APP_DIR . "/core/modules/core/files/generic-view.php", $view_token . ".php"))
+                        if (!copy(APP_CORE_DIR . "/core/files/generic-view.php", $view_token . ".php"))
                             die("Failed to copy generic.php from scaffolding to target directory.\n");
                         break;
                     } else if (!is_dir($view_token)) {
@@ -178,7 +178,7 @@ class ConsoleController extends InternalController {
                 $suffix = $class !== null? "_" . $type1: "";
                 $file_name = "$name$suffix.php";
                 $class_name = \melt\string\underline_to_cased($name);
-                $file_data = file_get_contents(APP_DIR . "/core/modules/core/files/generic-$type1.php");
+                $file_data = file_get_contents(APP_CORE_DIR . "/core/files/generic-$type1.php");
                 if ($file_data === false)
                     die("Failed to read generic.php from scaffolding.\n");
                 $file_data = str_replace("__template_class_name", $class_name, $file_data);
