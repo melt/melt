@@ -174,7 +174,7 @@ class ConsoleController extends InternalController {
             } else {
                 if (!\preg_match('/([a-z]+[a-z0-9]*)(_[a-z]+[a-z0-9]*)*/', $name))
                     die("Invalid name. For example, supply \"object_name\" to create the class ObjectName.\n");
-                $type1 = substr($type, 0, -1);
+                $type1 = $class !== null? substr($type, 0, -1): "class";
                 $suffix = $class !== null? "_" . $type1: "";
                 $file_name = "$name$suffix.php";
                 $class_name = \melt\string\underline_to_cased($name);
@@ -188,7 +188,7 @@ class ConsoleController extends InternalController {
                     die("Object at $out_path already exists!\n");
                 if (file_put_contents($out_path, $file_data) === false)
                     die("Failed to write $out_path\n");
-                die(($suffix !== ""? ucfirst($type1): "Class") . " was successfully created at /$type/$file_name\n");
+                die(ucfirst($type1) . " was successfully created at /$type/$file_name\n");
             }
         }        
         $identifier_is_acceptable_fn = function($identifier) use ($app_only) {
