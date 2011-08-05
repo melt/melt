@@ -10,7 +10,7 @@
 <?php
 /** Melt framework project bootstrapping script. */
 function fail($errmsg) {
-    die("<br /><b>Bootstrapping failed:</b> $errmsg");
+    die("<br /><b>Bootstrapping error:</b> $errmsg");
 }
 ob_implicit_flush(1);
 print "Bootstrapping basic melt framework application structure so developer console can initialize.<br /><br />";
