@@ -15,17 +15,22 @@ function fail($errmsg) {
 }
 ob_implicit_flush(1);
 print "<pre style=\"white-space: pre-wrap;\">Bootstrapping basic melt framework application structure so developer console can initialize.<br /><br />";
-if (!function_exists("apache_get_modules") || !function_exists("apache_get_version"))
-    fail("Apache functions not found. You are not running Melt Framework in Apache! The basic bootstrapper is currently written to bootstrap Melt Framework with Apache + mod_rewrite. To continue anyway, remove this file (" . __FILE__ . ") and copy all files in /core/scaffolding to the root directory yourself.");
+if (!isset($_GET["ignore_apache_warning"])) {
+    if (!function_exists("apache_get_modules") || !function_exists("apache_get_version"))
+        fail("Apache functions not found. You are not running Melt Framework in Apache! The basic bootstrapper is currently written to bootstrap Melt Framework with Apache + mod_rewrite. If you are using a PHP+CGI setup this error is triggered because Melt cannot know what web server you are using. If you are sure that you are using Apache and has mod_rewrite installed, <a href=\"?ignore_apache_warning=1\">click here to continue</a>.");
+    if (!in_array("mod_rewrite", apache_get_modules()))
+        fail("Melt Framework detected that you don't have the Apache module mod_rewrite installed/enabled. The basic bootstrapper is currently written to bootstrap Melt Framework with Apache + mod_rewrite. For instructions on how to install mod_rewrite, <a href=\"http://www.google.com/?q=install+mod_rewrite+apache+$operating_system\">go here</a>. To continue anyway, remove this file (" . __FILE__ . ") and copy all files in /core/scaffolding to the root directory yourself.");
+    $webserver_version = apache_get_version();
+} else {
+    $webserver_version = "[Unknown Webserver]";
+}
 $operating_system = PHP_OS;
-print "You are using: " . apache_get_version() . " on $operating_system<br />";
-if (!in_array("mod_rewrite", apache_get_modules()))
-    fail("Melt Framework detected that you don't have the Apache module mod_rewrite installed/enabled. The basic bootstrapper is currently written to bootstrap Melt Framework with Apache + mod_rewrite. For instructions on how to install mod_rewrite, <a href=\"http://www.google.com/?q=install+mod_rewrite+apache+$operating_system\">go here</a>. To continue anyway, remove this file (" . __FILE__ . ") and copy all files in /core/scaffolding to the root directory yourself.");
+print "You are using: $webserver_version on $operating_system<br />";
 if (version_compare(PHP_VERSION, "5.3") < 0)
     fail("Melt Framework requires at least PHP 5.3 since it uses advanced features such as namespaces and closures. Please upgrade to continue.<br />");
 $app_is_64bit = PHP_INT_MAX > 0x7FFFFFFF;
 if (!$app_is_64bit && !isset($_GET["ignore_32_warning"]))
-    fail("You are not using 64 bit PHP! 32 bit PHP does not support 64 bit integers which has several problems. The most serious problem is that the application will eventually crash when the ID address space runs out. 64 bit PHP also has better performance and memory support. There is no reason to run 32 bit PHP on a 64 bit machine. If you undestand the risks and want to use 32 bit PHP anyway, <a href=\"?ignore_32_warning=1\">click here to continue</a>. <b>(Not recommended for production setups!)</b><br />");
+    fail("You are not using 64 bit PHP! 32 bit PHP does not support 64 bit integers which has several problems. The most serious problem is that the application will eventually crash when the ID address space runs out. 64 bit PHP also has better performance and memory support. There is no reason to run 32 bit PHP on a 64 bit machine. If you undestand the risks and want to use 32 bit PHP anyway, <a href=\"?ignore_32_warning=1&ignore_apache_warning=1\">click here to continue</a>. <b>(Not recommended for production setups!)</b><br />");
 chdir(__DIR__);
 $rewrite_base = str_replace("\\", "/", dirname(@$_SERVER["PHP_SELF"]));
 print "The application seem to be located in path '$rewrite_base'. Writing this to .htaccess RewriteBase directive.<br />";
