@@ -5,19 +5,18 @@
 <script type="text/javascript">                   
     Cufon.replace('h1, h2.subtitle, h2, h3.not-found',{fontFamily: 'Gotham', hover: true });
 </script>
-<div class="container" style="text-align:center;">
+<div class="container" style="width: 800px; margin: 0 auto;">
 <img src="http://meltframework.org/static/img/melt-logo.png" class="logo" alt="Melt Framework" />
-
 <?php
 /** Melt framework project bootstrapping script. */
 function fail($errmsg) {
     die("<br /><b>Bootstrapping failed:</b> $errmsg");
 }
 ob_implicit_flush(1);
-print "<pre style=\"white-space: pre-wrap;\">Bootstrapping basic melt framework application structure so developer console can initialize.<br /><br />";
+print "Bootstrapping basic melt framework application structure so developer console can initialize.<br /><br />";
 if (!isset($_GET["ignore_apache_warning"])) {
-    if (!function_exists("apache_get_modules") || !function_exists("apache_get_version"))
-        fail("Apache functions not found. You are not running Melt Framework in Apache! The basic bootstrapper is currently written to bootstrap Melt Framework with Apache + mod_rewrite. If you are using a PHP+CGI setup this error is triggered because Melt cannot know what web server you are using. If you are sure that you are using Apache and has mod_rewrite installed, <a href=\"?ignore_apache_warning=1\">click here to continue</a>.");
+    if (function_exists("apache_get_modules") || !function_exists("apache_get_version"))
+        fail("Apache functions not found. The basic bootstrapper is currently written to bootstrap Melt Framework with Apache + mod_rewrite. If you are using a PHP+CGI setup this error is triggered because Melt cannot know what web server you are using. Please confirm that you are using Apache and has mod_rewrite installed, <a href=\"?ignore_apache_warning=1\">by clicking here to continue</a>.");
     if (!in_array("mod_rewrite", apache_get_modules()))
         fail("Melt Framework detected that you don't have the Apache module mod_rewrite installed/enabled. The basic bootstrapper is currently written to bootstrap Melt Framework with Apache + mod_rewrite. For instructions on how to install mod_rewrite, <a href=\"http://www.google.com/?q=install+mod_rewrite+apache+$operating_system\">go here</a>. To continue anyway, remove this file (" . __FILE__ . ") and copy all files in /core/scaffolding to the root directory yourself.");
     $webserver_version = apache_get_version();
@@ -116,7 +115,6 @@ file_put_contents("config.local.php", $config);
 print "Deleting bootstrap script.<br />";
 unlink(__FILE__)
 or fail("Could not delete \"" . __FILE__ . "\". Incorrect file system permissions?");
-print "</pre>";
 ?>
 <h2 class="subtitle">Bootstrapping <span>completed</span></h2>
 <p>Successfully bootstrapped Melt Framework!</b></p>
