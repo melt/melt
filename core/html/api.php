@@ -1,14 +1,5 @@
 <?php namespace melt\html;
 
-/** Echos a complete xhtml 1.1 document. */
-function write($head, $body) {
-    echo '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd"><html xmlns="http://www.w3.org/1999/xhtml"><head>';
-    echo $head;
-    echo '<meta http-equiv="Content-type" content="text/html; charset=UTF-8" /></head><body>';
-    echo $body;
-    echo '</body></html>';
-}
-
 /** Escapes given string so it can be safely printed in HTML. */
 function escape($string) {
     if ($string instanceof \melt\Type)
