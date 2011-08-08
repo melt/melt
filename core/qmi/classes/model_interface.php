@@ -64,7 +64,7 @@ class ModelInterface {
     public function finalizeForm($auto_submit = true, $auto_delete = false) {
         $html = '<div><input type="hidden" id="' . $this->identity . '" name="_qmi" value="' . $this->serialize() . '" />';
         if ($auto_submit) {
-            $msg = $this->creating? __("Add New"): __("Save Changes");
+            $msg = $this->creating? __("Submit"): __("Save Changes");
             $html .= '<input type="submit" value="' . $msg . '" />';
         }
         if ($auto_delete && !$this->creating) {
