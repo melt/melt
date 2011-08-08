@@ -1,6 +1,7 @@
 <?php namespace melt\qmi; ?>
 <div class="qmi_default_interface">
     <?php foreach ($this->components as $name => $component): ?>
+        <?php assert($component instanceof HtmlComponent); ?>
         <div class="qmi_component">
             <p>
                 <label for="<?php echo $component->id; ?>">
