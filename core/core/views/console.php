@@ -336,7 +336,7 @@
                 return;
             }
             var query_password_fn = function() {
-                print_fn("Enter password: ");
+                print_fn("Enter developer key: ");
                 input_fn(function(password) {
                     $.cookie('MELT_DEVKEY', password, {expires: 365, path: '/'});
                     var motd = is_logged_in_fn();
