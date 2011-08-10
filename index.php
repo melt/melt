@@ -15,7 +15,7 @@ function fail($errmsg) {
 ob_implicit_flush(1);
 print "Bootstrapping basic melt framework application structure so developer console can initialize.<br /><br />";
 if (!isset($_GET["ignore_apache_warning"])) {
-    if (function_exists("apache_get_modules") || !function_exists("apache_get_version"))
+    if (!function_exists("apache_get_modules") || !function_exists("apache_get_version"))
         fail("Apache functions not found. The basic bootstrapper is currently written to bootstrap Melt Framework with Apache + mod_rewrite. If you are using a PHP+CGI setup this error is triggered because Melt cannot know what web server you are using. Please confirm that you are using Apache and has mod_rewrite installed, <a href=\"?ignore_apache_warning=1\">by clicking here to continue</a>.");
     if (!in_array("mod_rewrite", apache_get_modules()))
         fail("Melt Framework detected that you don't have the Apache module mod_rewrite installed/enabled. The basic bootstrapper is currently written to bootstrap Melt Framework with Apache + mod_rewrite. For instructions on how to install mod_rewrite, <a href=\"http://www.google.com/?q=install+mod_rewrite+apache+$operating_system\">go here</a>. To continue anyway, remove this file (" . __FILE__ . ") and copy all files in /core/scaffolding to the root directory yourself.");
