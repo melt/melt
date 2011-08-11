@@ -47,9 +47,15 @@ function error_handler($errno, $errstr, $errfile, $errline) {
     // Bypass this error if it should not report it.
     if ((\error_reporting() & $errno) == 0)
         return true;
-    // Bypass static function should not be abstract, because it's a useful design pattern.
-    if ($errno === \E_STRICT && stripos($errstr, "should not be abstract") !== false)
-        return true;
+    if ($errno === \E_STRICT) {
+        // Temporary fix for php bug #42269.
+        // (Static abstract functions is a useful design pattern.)
+        if (stripos($errstr, "should not be abstract") !== false)
+            return true;
+        // Temporary fix for php bug #55407.
+        if (stripos($errstr, "DateTime::createFromFormat") !== false)
+            return true;
+    }
     $backtrace = \debug_backtrace();
     unset($backtrace[0]["function"]);
     unset($backtrace[0]["args"]);
