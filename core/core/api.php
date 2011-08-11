@@ -620,10 +620,10 @@ function pgettext($context, $msgid) {
 
 /**
  * Returns the current date/time.
- * @return \DateTime
+ * @return DateTime
  */
 function now() {
-    return new \DateTime();
+    return new DateTime();
 }
 
 /**
