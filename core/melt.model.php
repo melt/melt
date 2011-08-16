@@ -1186,6 +1186,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         $select_query = clone $select_query;
         $out_array = array();
         $is_counting = $select_query->getIsCounting();
+        $is_calc_found_rows = $select_query->getIsCalcFoundRows();
         $sum = 0;
         $child_models = $select_query->getIsIgnoringChildren()
         ? array(\get_called_class()): static::getChildModels();
@@ -1198,12 +1199,16 @@ abstract class Model implements \IteratorAggregate, \Countable {
             if ($is_counting) {
                 $sum += $result;
                 continue;
+            } else if ($is_calc_found_rows) {
+                $sum += self::$_found_rows;
             }
             foreach ($result as $result_row) {
                 $id = \intval(\end($result_row));
                 $out_array[$id] = $model_class_name::instanceFromData($id, $result_row);
             }
         }
+        if ($is_calc_found_rows)
+            self::$_found_rows = $sum;
         return $is_counting? $sum: $out_array;
     }
 
@@ -1221,6 +1226,11 @@ abstract class Model implements \IteratorAggregate, \Countable {
         return $family_tree[$current_model];
     }
 
+    private static $_found_rows = 0;
+
+    public static function getLastFoundRowsCount() {
+        return self::$_found_rows;
+    }
 
     /**
      * Finds and returns snapshot data for the given select query.
@@ -1234,17 +1244,20 @@ abstract class Model implements \IteratorAggregate, \Countable {
         if ($select_query->getFromModel() === null)
             \trigger_error("Selection query has no source/from model set.", \E_USER_ERROR);
         $query = self::buildSelectQuery($select_query, $locking_read);
+        self::$_found_rows = 0;
         $result = db\query($query);
         if ($select_query->getIsCounting()) {
             $row = db\next_array($result);
             return \intval($row[0]);
+        } else if ($select_query->getIsCalcFoundRows()) {
+            $row = db\next_array(db\query("SELECT FOUND_ROWS()"));
+            self::$_found_rows = \intval($row[0]);
         }
         $return_data = array();
         while (false !== ($row = db\next_array($result)))
             $return_data[] = $row;
         return $return_data;
     }
-
 
     /**
      * Builds a selection query in context of called model class.

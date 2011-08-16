@@ -55,8 +55,7 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
             $this->internal_result_count_cache = count($this->internal_result_cache);
         }
         if ($this->is_calc_found_rows) {
-            $found_rows_result = next_array(query("SELECT FOUND_ROWS()"));
-            $this->internal_found_rows_count_cache = intval($found_rows_result[0]);
+            $this->internal_found_rows_count_cache = \melt\Model::getLastFoundRowsCount();
         }
     }
 
