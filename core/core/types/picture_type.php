@@ -57,7 +57,7 @@ class PictureType extends \melt\cache\BlobPointerType {
         if ($picture_url !== null) {
             $thumburl = $this->getUrl($this->thumb_width, $this->thumb_height);
             $remname = $name."_rem";
-            $status = "<br /><a target=\"_blank\" href=\"$picture_url\">" . __("Current image:")
+            $status = "<a target=\"_blank\" href=\"$picture_url\">"
                 . " <img alt=\"" . __("Current image") . "\" src=\"$thumburl\" /></a><input title=\""
                 . __("Check this box to remove the image.") . "\" type=\"checkbox\" name=\"$remname\" value=\"delete\" /> "
                 . __("Remove existing image.") . "<br /><br />" . __("Replace image:");
