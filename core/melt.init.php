@@ -122,7 +122,7 @@ function read_server_var($var_name, $alt_var_name = null) {
         // Evaluate developer mode based on configuration and cookies.
         $devkey_is_blank = \melt\core\config\DEVELOPER_KEY == "";
         $devkey_matches = isset($_COOKIE['MELT_DEVKEY']) && ($_COOKIE['MELT_DEVKEY'] === \melt\core\config\DEVELOPER_KEY);
-        $developer_mode_allowed = ($devkey_is_blank || $devkey_matches);
+        \define("APP_DEVELOPER_LOGGED_IN", ($devkey_is_blank || $devkey_matches));
         // Evaluate application root host, path, port and protocol.
         \define("APP_ROOT_PROTOCOL", (isset($_SERVER["HTTPS"]) && !empty($_SERVER["HTTPS"]))? "https": "http");
         \define("APP_ROOT_HOST", \preg_replace('#:[\d]+$#', "", read_server_var("HTTP_HOST")));
@@ -150,8 +150,8 @@ function read_server_var($var_name, $alt_var_name = null) {
         }
     } else {
         $hostname = \gethostname();
-        // Script request mode does not have a developer validation mechanism.
-        $developer_mode_allowed = true;
+        // Script request mode does not have a developer authentication mechanism.
+        \define("APP_DEVELOPER_LOGGED_IN", true);
         \define("APP_IN_DEVELOPER_MODE", \melt\core\config\MAINTENANCE_MODE);
         // Use appropriate dummy data for these constants.
         \define("APP_ROOT_PROTOCOL", "http");
@@ -186,8 +186,8 @@ function read_server_var($var_name, $alt_var_name = null) {
     \define("REQ_URL_BASE", basename(REQ_URL));
     // Disable some features in critical core requests.
     \define("REQ_IS_CORE_CONSOLE", \strncasecmp(REQ_URL, "/core/console", \strlen("/core/console")) == 0);
-    // Can be in developer mode either when in maintenance or when in console.
-    \define("APP_IN_DEVELOPER_MODE", (REQ_IS_CORE_CONSOLE || \melt\core\config\MAINTENANCE_MODE) && $developer_mode_allowed);
+    // Can be in developer mode when developer is logged in and (is in console or maintenance mode).
+    \define("APP_IN_DEVELOPER_MODE", APP_DEVELOPER_LOGGED_IN && (REQ_IS_CORE_CONSOLE || \melt\core\config\MAINTENANCE_MODE));
     // The gettext extention conflicts with melt and must be disabled.
     if (\melt\core\config\TRANSLATION_ENABLED && \extension_loaded("gettext"))
         \trigger_error("Melt Framework compability error: The Gettext PHP extention is loaded in your installation and must be disabled as it conflicts with the Melt Framework core gettext implementation. Optionally you can disable translation by setting core\config\TRANSLATION_ENABLED to false.", \E_USER_ERROR);

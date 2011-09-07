@@ -3,7 +3,7 @@
 \call_user_func(function() {
     // Enable call tracing if requested.
     static $trace_graph = null;
-    \define('APP_IN_TRACE_MODE', APP_IN_DEVELOPER_MODE && isset($_GET["_trace"]));
+    \define('APP_IN_TRACE_MODE', APP_DEVELOPER_LOGGED_IN && isset($_GET["_trace"]));
     if (APP_IN_TRACE_MODE) {
         $trace_graph = new \melt\core\CallTraceNode(array("call_signature" => "ROOT"));
         \register_tick_function(function() use ($trace_graph) {

@@ -93,7 +93,7 @@ function remove_cache_headers() {
 }
 
 function development_crash($type, $variables) {
-    if (!\melt\core\config\MAINTENANCE_MODE)
+    if (!\melt\core\config\MAINTENANCE_MODE && !\melt\core\config\FORCE_ERROR_DISPLAY)
         trigger_error("Development Error Caught: " . $type, \E_USER_ERROR);
     \melt\request\reset();
     remove_cache_headers();

@@ -3,7 +3,10 @@
 class QmiModule extends \melt\CoreModule {
     public static function beforeRequestProcess() {
         ModelInterface::_checkSubmit();
-        // Auto include required scripts.
-        \melt\View::render("/qmi/include_mutate", null, false, true);
     }
+    
+    public static function beforeLayoutRender() {
+        // Auto include required scripts.
+        return array("/qmi/include_mutate");
+    }    
 }

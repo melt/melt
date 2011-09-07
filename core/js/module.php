@@ -1,7 +1,7 @@
 <?php namespace melt\js;
 
-class JsModule extends \melt\CoreModule {
-    public static function beforeRequestProcess() {
+class JsModule extends \melt\CoreModule {    
+    public static function beforeLayoutRender() {
         // Auto include required scripts that core needs.
         \melt\View::render("/js/include_jquery", null, false, true);
         \melt\View::render("/js/include_sprintf", null, false, true);

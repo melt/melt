@@ -23,6 +23,15 @@ abstract class Module {
     }
 
     /**
+     * Overridable event-function.
+     * Called just before the layout is rendered to inject additional
+     * HTML into any section.
+     */
+    public static function beforeLayoutRender() {
+        return;
+    }
+    
+    /**
      * Allows catching requests that would otherwise have 404'd.
      * @param array $url_tokens Url tokens.
      */

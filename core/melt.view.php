@@ -312,6 +312,13 @@ final class View {
         if ($layout_path != null && $controller->layout->getLevel() == 0) {
             // Throw away any output that was ignored.
             ob_end_clean();
+            // Invoke all modules before layout renders.
+            self::$application_layout = $controller->layout;
+            foreach (internal\get_all_modules() as $module_parameters) {
+                $class_name = $module_parameters[0];
+                \call_user_func(array($class_name, "beforeLayoutRender"));
+            }
+            // Render layout.
             $content = $controller->layout->render($layout_path, $controller);
             // Reset layout now when it has been rendered.
             $controller->layout = $layout_path;
