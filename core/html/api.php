@@ -34,4 +34,12 @@ function attrs(array $attributes) {
     return $html_attr;
 }
 
-
+/**
+ * Initialize the parser and return the result of its transform method.
+ * @param string $text
+ * @return string
+ */
+function markdown($text) {
+    $parser = new MarkdownParser();
+    return $parser->transform($text);
+}
