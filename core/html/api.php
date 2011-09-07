@@ -22,3 +22,16 @@ function escape($string) {
 function decode($html) {
     return html_entity_decode($html, ENT_COMPAT, 'UTF-8');
 }
+
+/**
+ * Converts an array of attributes to HTML tag attribute list encoded.
+ * @param array $attributes
+ */
+function attrs(array $attributes) {    
+    $html_attr = "";
+    foreach ($attributes as $key => $value)
+        $html_attr .= " $key=\"" . escape($value) . "\"";
+    return $html_attr;
+}
+
+
