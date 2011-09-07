@@ -185,7 +185,7 @@ function get_link() {
     $mysqli->options(\MYSQLI_OPT_CONNECT_TIMEOUT, $max_mysql_timeout);
     $connected = $mysqli->real_connect(config\HOST, config\USER, config\PASSWORD, config\NAME, \intval(config\PORT));
     if (!$connected)
-        \trigger_error("The mySQLi connection (" . config\USER . "@" . config\HOST . ":" . config\PORT . ", using password: " . (config\PASSWORD != null? "YES": "NO") . ") could not be established. " . mysqli_error(), \E_USER_ERROR);
+        \trigger_error("The mySQLi session with [" . config\USER . "@" . config\HOST . ":" . config\PORT . "/" . config\NAME . " - using password: " . (config\PASSWORD != null? "YES": "NO") . "] could not be established. " . mysqli_error(), \E_USER_ERROR);
     $mysqli->set_charset('utf8');
     if (config\REQUEST_LEVEL_TRANSACTIONALITY) {
         // Applying per-request transactionality. Rolling back any previous
