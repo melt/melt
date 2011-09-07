@@ -5,8 +5,9 @@
 <script type="text/javascript">                   
     Cufon.replace('h1, h2.subtitle, h2, h3.not-found',{fontFamily: 'Gotham', hover: true });
 </script>
-<div class="container" style="width: 800px; margin: 0 auto;">
+<div class="container" style="width: 800px; margin: 0 auto;text-align: center;">
 <img src="http://meltframework.org/static/img/melt-logo.png" class="logo" alt="Melt Framework" />
+<code>
 <?php
 /** Melt framework project bootstrapping script. */
 function fail($errmsg) {
@@ -116,6 +117,7 @@ print "Deleting bootstrap script.<br />";
 unlink(__FILE__)
 or fail("Could not delete \"" . __FILE__ . "\". Incorrect file system permissions?");
 ?>
+</code>
 <h2 class="subtitle">Bootstrapping <span>completed</span></h2>
 <p>Successfully bootstrapped Melt Framework!</b></p>
 <h2 class="subtitle">Developer Key <span></span></h2>
