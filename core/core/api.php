@@ -500,7 +500,7 @@ function number_trim($str_number) {
  * passed to it.
  */
 function debug() {
-    if (!APP_IN_DEVELOPER_MODE)
+    if (!APP_IN_DEVELOPER_MODE && !config\FORCE_ERROR_DISPLAY)
         return;
     $args = func_get_args();
     ob_start();
