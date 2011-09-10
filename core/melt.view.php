@@ -309,19 +309,17 @@ final class View {
             trigger_error("Melt Framework: After rendering '$view_path.php', a level imbalance was detected! The enterSections() does not have a balanced ammount of exitSections().", \E_USER_ERROR);
         // Should render if it prepared the layout and returned to root level.
         $content = null;
-        if ($layout_path != null && $controller->layout->getLevel() == 0) {
+        if ($layout_path !== null && $controller->layout->getLevel() == 0) {
             // Throw away any output that was ignored.
             ob_end_clean();
             // Invoke all modules before layout renders.
             self::$application_layout = $controller->layout;
-            foreach (internal\get_all_modules() as $module_parameters) {
-                $class_name = $module_parameters[0];
-                \call_user_func(array($class_name, "beforeLayoutRender"));
-            }
             // Render layout.
             $content = $controller->layout->render($layout_path, $controller);
             // Reset layout now when it has been rendered.
             $controller->layout = $layout_path;
+            // Reset application layout in case this is called again.
+            self::$application_layout = null;
         } else {
             // Throw away default level content if outputting by echo and
             // this render is not a sub render.
@@ -391,12 +389,24 @@ class Layout {
         if (count($this->buffer_stack) > 0)
             trigger_error("Rendering layout without exiting all sections! (Bottom of stack: " . $this->buffer_stack[0]->getName() . ")", \E_USER_ERROR);
         // If just a layout render, it should return content.
-        if ($path == self::LAYOUT_RENDER)
+        if ($path === self::LAYOUT_RENDER)
             return $this->readSection("content");
+        // Invoking just in time before layout render event here.
+        foreach (internal\get_all_modules() as $module_parameters) {
+            $class_name = $module_parameters[0];
+            \call_user_func(array($class_name, "beforeLayoutRender"));
+        }
         // Render layout just like a view, but without specified layout.
         $layout_controller = clone $layout_controller;
-        foreach ($this->section_buffers as $name => $section)
+        $sections_rendered = array();
+        foreach ($this->section_buffers as $name => $section) {
+            if (string\ends_with($name, "_head") || string\ends_with($name, "_foot"))
+                $name = substr($name, 0, -5);
+            if (array_key_exists($name, $sections_rendered))
+                continue;
+            $sections_rendered[$name] = true;
             $layout_controller->$name = $this->readSection($name);
+        }
         $layout_controller->layout = self::LAYOUT_RENDER;
         return View::render($path, $layout_controller, true, false, false);
     }

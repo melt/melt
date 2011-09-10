@@ -1,5 +1,5 @@
 <?php namespace melt\js; ?>
-<?php $this->layout->enterSection("head"); ?>
+<?php $this->layout->enterSection("head_head"); ?>
     <script type="text/javascript" src="<?php echo url("/static/cmod/js/jquery-autocomplete/lib/jquery.ajaxQueue.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo url("/static/cmod/js/jquery-autocomplete/lib/jquery.bgiframe.min.js"); ?>"></script>
     <script type="text/javascript" src="<?php echo url("/static/cmod/js/jquery-autocomplete/lib/thickbox-compressed.js"); ?>"></script>
