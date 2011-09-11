@@ -104,6 +104,21 @@ class ConsoleController extends InternalController {
         }
         exit;
     }
+    
+    public function cmd_userx($action, $param = null, $param2 = null) {
+        if ($action === "add") {
+            $user = new \melt\userx\UserModel();
+            if ($param == null || $param2 == null)
+                die("Username or password missing.\n");
+            $user->username = $param;
+            $user->password = $param2;
+            $user->store();
+            die("Testing user with name '$param' and password '$param2' added.\n");
+        } else {
+            die("Unknown userx action.\n");
+        }
+        exit;
+    }
 
     private function fetchMethodCode(\ReflectionMethod $reflection) {
         $file = new \SplFileObject($reflection->getFileName());

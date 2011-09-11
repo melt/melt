@@ -218,6 +218,9 @@
                     "melt/sample-app-default": true,
                     "melt/sample-app-facebook": true
                 }
+            },
+            "userx": {
+                "add": true
             }
         };
         var color_command = "#8e8";
@@ -376,6 +379,8 @@
                             return;
                         } else {
                             print_fn("Error: " + xhr.status + "\n");
+                            if (xhr.status == 500)
+                                print_fn("(Check the brower console tool, e.g. firebug)\n");
                             xhr.onreadystatechange = null;
                             return done_fn();
                         }
@@ -510,6 +515,22 @@
                 break;
             case "versions":
                 exec_ajax_fn(console_base + "/cmd_versions", complete_fn);
+                break;
+            case "userx":
+                switch (cmd_tokens[1]) {
+                case "add":
+                    if (cmd_tokens[2] === undefined || cmd_tokens[3] === undefined) {
+                        print_fn("Please enter both username and password.\n");
+                        complete_fn();
+                        break;
+                    }
+                    exec_ajax_fn(console_base + "/cmd_userx/" + cmd_tokens[1] + "/" + cmd_tokens[2] + "/" + cmd_tokens[3], complete_fn);
+                    break;
+                default:
+                    print_fn("Unknown userx action.\n");
+                    complete_fn();
+                    break;
+                }
                 break;
             case "db":
                 switch (cmd_tokens[1]) {
