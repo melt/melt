@@ -64,7 +64,7 @@ class PictureType extends \melt\cache\BlobPointerType {
         } else
             $status = '<br />' . __('No uploaded image. Upload new one:');
         $supported = $this->getSupportedFormats();
-        return "<div class=\"picture_type_interface\">" . $status . "<br /><input type=\"file\" name=\"$name\" id=\"$name\" /><br /><small>$supported</small></div>";
+        return "<span class=\"picture_type_interface\">" . $status . "<br /><input type=\"file\" name=\"$name\" id=\"$name\" /><br /><small>$supported</small></span>";
     }
 
     public function __toString() {
