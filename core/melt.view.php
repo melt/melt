@@ -116,7 +116,7 @@ final class View {
         $controller = $this->_controller;
         $controller->layout->exitSection();
         $layout_view_path = \array_pop($this->layout_stack);
-        echo $controller->layout->render($layout_view_path, $controller);
+        echo $controller->layout->render($layout_view_path, $controller, false);
         $controller_restore_stack = \array_pop($this->layout_stack);
         foreach ($controller_restore_stack as $key => $old_value)
             $controller->$key = $old_value;
@@ -315,7 +315,7 @@ final class View {
             // Invoke all modules before layout renders.
             self::$application_layout = $controller->layout;
             // Render layout.
-            $content = $controller->layout->render($layout_path, $controller);
+            $content = $controller->layout->render($layout_path, $controller, true);
             // Reset layout now when it has been rendered.
             $controller->layout = $layout_path;
             // Reset application layout in case this is called again.
@@ -385,16 +385,18 @@ class Layout {
     }
 
     /** Displays the layout with it's buffered sections. */
-    public function render($path, Controller $layout_controller) {
+    public function render($path, Controller $layout_controller, $final) {
         if (count($this->buffer_stack) > 0)
             trigger_error("Rendering layout without exiting all sections! (Bottom of stack: " . $this->buffer_stack[0]->getName() . ")", \E_USER_ERROR);
         // If just a layout render, it should return content.
         if ($path === self::LAYOUT_RENDER)
             return $this->readSection("content");
-        // Invoking just in time before layout render event here.
-        foreach (internal\get_all_modules() as $module_parameters) {
-            $class_name = $module_parameters[0];
-            \call_user_func(array($class_name, "beforeLayoutRender"));
+        if ($final) {
+            // Invoking just in time before layout render event here.
+            foreach (internal\get_all_modules() as $module_parameters) {
+                $class_name = $module_parameters[0];
+                \call_user_func(array($class_name, "beforeLayoutRender"));
+            }
         }
         // Render layout just like a view, but without specified layout.
         $layout_controller = clone $layout_controller;
