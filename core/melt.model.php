@@ -87,7 +87,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * been inserted and are ready to be populated with default data.
      * @return void
      */
-    protected abstract function initialize();
+    protected function initialize() {}
 
     /**
      * Overidable event. Called on model instances before they are stored.
@@ -95,7 +95,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * linked in the database. False if it's about to be INSERTED.
      * @return void
      */
-    protected abstract function beforeStore($is_linked);
+    protected function beforeStore($is_linked) {}
 
     /**
      * Overidable event. Called on model instances after they are stored.
@@ -103,28 +103,28 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * database before the store. False if it was INSERTED just now.
      * @return void
      */
-    protected abstract function afterStore($was_linked);
+    protected function afterStore($was_linked) {}
 
     /**
      * Overidable event. Called on model instances that is about to be
      * unlinked in the database.
      * @return void
      */
-    protected abstract function beforeUnlink();
+    protected function beforeUnlink() {}
 
     /**
      * Overidable event. Called on model instances after they have been
      * unlinked in the database.
      * @return void
      */
-    protected abstract function afterUnlink();
+    protected function afterUnlink() {}
 
     /**
      * Overidable event. Called on model instances after they have been
      * loaded from the database.
      * @return void
      */
-    protected abstract function afterLoad();
+    protected function afterLoad() {}
 
     /**
      * Callback function that can is useful when the application requires
@@ -148,7 +148,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * (Custom handling.)
      * @return void
      */
-    protected abstract function disconnectCallback($pointer_name);
+    protected function disconnectCallback($pointer_name) {}
 
     /**
      * Returns a parsed column array for this model.
