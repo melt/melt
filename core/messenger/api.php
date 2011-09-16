@@ -34,3 +34,14 @@ function redirect_message($url, $message, $status = "bad") {
     push_message($message, $status);
     \melt\request\redirect($url);
 }
+
+/**
+ * Returns the HTML that makes up a message box, ready to be injected
+ * into the body.
+ * @param string $message Message to display.
+ * @param string $status Determines how the message is rendered.
+ * Application should at least support good|bad.
+ */
+function get_ajax_message($message, $status = "bad") {
+    return \melt\View::render("/messenger/raw_message", compact("message", "status"), true);
+}
