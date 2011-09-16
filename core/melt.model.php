@@ -235,7 +235,9 @@ abstract class Model implements \IteratorAggregate, \Countable {
         if (!core\is_abstract($model_name)) {
             // Create prototype model instance as a dummy parent for the prototype
             // type instances. See __construct for more information.
+            self::$_skip_initialize = true;
             $prototype_model_instance = new $model_name(true);
+            self::$_skip_initialize = false;
         }
         // Return the parsed column array.
         return $parsed_col_array;
