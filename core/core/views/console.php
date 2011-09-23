@@ -496,12 +496,12 @@
                     }
                     var deploy_fn = function(input) {
                         if (yes_eval_fn(input, false)) {
-                            exec_ajax_fn(console_base + "/" + path + "/" + cmd_tokens[2], complete_fn);
+                            exec_ajax_fn(console_base + "/" + path + "/" + cmd_tokens[2] + (cmd_tokens[3]? "/" + cmd_tokens[3]: ""), complete_fn);
                         } else {
                             complete_fn();
                         }
                     };
-                    if (cmd_tokens[2].substr(cmd_tokens[2].length - 1) !== "*") {
+                    if (cmd_tokens[3] !== undefined && cmd_tokens[3].substr(cmd_tokens[3].length - 1) !== "*") {
                         print_fn(warning_msg + "\nReally continue? [N/y]:");
                         input_fn(deploy_fn);
                     } else {

@@ -362,7 +362,7 @@ class ConsoleController extends InternalController {
         fclose($h_local);
     }
     
-    private function ghDeploy($user, $repo, &$target_tag, $repo_description_tag, $prepare_fn) {
+    private function ghDeploy($user, $repo, &$target_tag, $repo_description_tag, $prepare_fn = null) {
         // Get repository info.
         $repo_info = @file_get_contents("https://api.github.com/repos/$user/$repo");
         if ($repo_info === false)
@@ -370,36 +370,42 @@ class ConsoleController extends InternalController {
         $repo_info = json_decode($repo_info);
         if (strpos($repo_info->description, $repo_description_tag) === false)
             die("Error: Did not find $repo_description_tag in repo description. The repository is not a valid target.\n");
-        $tags_info = @file_get_contents("https://api.github.com/repos/$user/$repo/tags");
-        if ($tags_info === false)
-            die("Error: Specified repository not found (or not tagged).\n");
-        $tags_info = json_decode($tags_info);
-        if (count($tags_info) === 0)
-            die("Error: Specified repository does not have any tags.\n");
-        $tags_index = array();
-        foreach ($tags_info as $tag_info)
-            $tags_index[$tag_info->name] = $tag_info;
-        if ($target_tag !== null && !isset($target_tag[$target_tag]))
-            die("Error: Specified tag/version does not exist in repository.\n");
-        uksort($tags_index, function($v1, $v2) {
-            return strnatcasecmp($v2, $v1);
-        });
-        if (\melt\string\ends_with((string) $target_tag, "*")) {
-            echo "All tags in repository:\n";
-            foreach ($tags_index as $tag => $tag_info)
-                echo "$tag ";
-            die("\n");
+        if (strcasecmp(trim($target_tag), "head") === 0) {
+            $download_url = "https://github.com/$user/$repo/tarball/master";
+        } else {
+            $tags_info = @file_get_contents("https://api.github.com/repos/$user/$repo/tags");
+            if ($tags_info === false)
+                die("Error: Specified repository not found (or not tagged).\n");
+            $tags_info = json_decode($tags_info);
+            if (count($tags_info) === 0)
+                die("Error: Specified repository does not have any tags.\n");
+            $tags_index = array();
+            foreach ($tags_info as $tag_info)
+                $tags_index[$tag_info->name] = $tag_info;
+            uksort($tags_index, function($v1, $v2) {
+                return strnatcasecmp($v2, $v1);
+            });
+            if (\melt\string\ends_with((string) $target_tag, "*")) {
+                echo "All tags in repository:\nHEAD ";
+                foreach ($tags_index as $tag => $tag_info)
+                    echo "$tag ";
+                die("\n");
+            }
+            if ($target_tag !== null && !isset($tags_index[$target_tag]))
+                die("Error: Specified tag/version does not exist in repository.\n");
+            if ($prepare_fn !== null)
+                $prepare_fn();
+            reset($tags_index);
+            $target_tag = $target_tag !== null? $target_tag: key($tags_index);
+            $tag_info = $tags_index[$target_tag];
+            $download_url = $tag_info->tarball_url;
         }
-        $prepare_fn();
-        reset($tags_index);
-        $target_tag = $target_tag !== null? $target_tag: key($tags_index);
-        $tag_info = $tags_index[$target_tag];
         $local_path = APP_DIR . "/ghd-deploy-tmp.tar.gz";
         if (is_file($local_path)) {
             if (!@unlink($local_path))
                 die("Could not delete $local_path!\n");
         }
-        $this->downloadFile($tag_info->tarball_url, $local_path);
+        $this->downloadFile($download_url, $local_path);
         return $local_path;
     }
     
@@ -438,18 +444,21 @@ class ConsoleController extends InternalController {
         $user = $repo = "melt";
         // Hack: Since this class will be deleted when core is deleted we need to make sure it's loaded now.
         class_exists('melt\core\ArchiveTar');
-        $archive_path = $this->ghDeploy($user, $repo, $target_tag, "#melt", function() {
-            echo "Deleting melt core...\n";
-            unlink_recursive(APP_CORE_DIR);
-        });
+        $archive_path = $this->ghDeploy($user, $repo, $target_tag, "#melt");
         $archive = new ArchiveTar($archive_path);
-        echo "Extracting...\n";
         $internal_path = $this->ghGetInternalPath($archive, $user, $repo);
+        echo "Extracting to /$internal_path/core...\n";
         $archive->extract(APP_DIR . "/");
         @unlink($archive_path);
+        echo "Renaming core to core-old and replacing /core with /$internal_path/core...\n";
+        if (rename(APP_DIR . "/core", APP_DIR . "/core-old") === false)
+            die("Could not rename /core to /core-old. Manual cleanup required.\n");
         if (rename(APP_DIR . "/$internal_path/core", APP_DIR . "/core") === false)
-            die("Could not rename /$internal_path/core module folder to /core.");
+            die("Could not rename /$internal_path/core folder to /core. Manual cleanup required.\n");
+        echo "Cleaning up: deleting /core-old and /$internal_path...\n";
+        unlink_recursive(APP_DIR . "/core-old");
         unlink_recursive(APP_DIR . "/$internal_path", function() {});
+        @unlink(APP_DIR . "/pax_global_header");
         die("Melt core $target_tag was successfully deployed. Please reload the console now by typing \"reload\".\n");        
     }
     
@@ -465,21 +474,25 @@ class ConsoleController extends InternalController {
             $modules_path = APP_DIR . "/modules";
             $module_path = "$modules_path/$module_name";
             echo "Deploying module \"$module_name\"...\n";
-            $archive_path = $this->ghDeploy($user, $repo, $target_tag, "#melt-module", function() use ($module_name, $module_path) {
-                echo "Deleting existing \"$module_name\" files...\n";
-                if (file_exists($module_path))
-                    unlink_recursive($module_path);
-            });
+            $archive_path = $this->ghDeploy($user, $repo, $target_tag, "#melt-module");
             $archive = new ArchiveTar($archive_path);
-            echo "Extracting...\n";
             $internal_path = $this->ghGetInternalPath($archive, $user, $repo);
-            @mkdir($modules_path);
-            $archive->extract($modules_path);
+            echo "Extracting to /$internal_path ...\n";
+            $archive->extract(APP_DIR . "/");
+            if (file_exists($module_path)) {
+                echo "Module already exists. Deleting \"/modules/$module_name\"...\n";
+                unlink_recursive($module_path);
+            }
+            if (!file_exists($modules_path)) {
+                echo "Modules directory does not exists. Creating \"/modules\"...\n";
+                mkdir($modules_path);
+            }
+            echo "Moving /$internal_path to /modules/$module_name...\n";
+            @unlink(APP_DIR . "/pax_global_header");
+            @unlink(APP_DIR . "/$internal_path/.gitignore");
+            if (rename(APP_DIR . "/$internal_path", $module_path) === false)
+                die("Could not rename /$internal_path folder to /modules/$module_name. Manual cleanup required.\n");
             @unlink($archive_path);
-            @unlink("$modules_path/pax_global_header");
-            @unlink("$modules_path/.gitignore");
-            if (rename("$modules_path/$internal_path", $module_path) === false)
-                die("Could not rename $internal_path module folder to $module_name.");
             die("Module \"$module_name $target_tag\" by \"$user\" was successfully deployed.\n");
         }
     }
