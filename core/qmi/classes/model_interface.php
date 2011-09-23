@@ -293,8 +293,6 @@ class ModelInterface {
         \assert($instance instanceof \melt\Model);
         \assert($style === null || \is_string($style));
         $html_components = array();
-        // Storing all instance changes on success.
-        $this->attachChanges($instance);
         $ui_fields = $instance->uiGetInterface($this->interface_name, $field_set_name);
         if (!is_array($ui_fields))
             \trigger_error("No '" . $this->interface_name . "', '$field_set_name' interface returned by " . \get_class($instance) . ". (Undeclared?)", \E_USER_ERROR);
@@ -319,6 +317,7 @@ class ModelInterface {
      * @return array[HtmlComponent]
      */
     public function getInterfaceComponents(\melt\Model $instance, $fields, $field_labels = array()) {
+        $this->attachChanges($instance);
         if ($instance->isLinked())
             $this->creating = false;
         if (!\is_array($fields))
@@ -338,6 +337,7 @@ class ModelInterface {
                 });
             }
         }
+        $html_components = array();
         foreach ($fields as $field_name) {
             if (\strlen($field_name) == 0 || $field_name[0] == "_")
                 continue;
