@@ -8,4 +8,5 @@
     "pgettext",
     "jsngettext",
     "now",
+    "first",
 );

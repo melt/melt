@@ -633,3 +633,15 @@ function now() {
 function version() {
     return \melt\internal\VERSION;
 }
+
+/**
+ * Returns the first argument in the array or null if argument is not an array.
+ * If array is empty false is returned.
+ * @param array $array 
+ * @return mixed
+ */
+function first($array) {
+    if (!is_array($array))
+        return null;
+    return reset($array);
+}
