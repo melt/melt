@@ -7,6 +7,6 @@ class QmiModule extends \melt\CoreModule {
     
     public static function beforeLayoutRender() {
         // Auto include required scripts.
-        return array("/qmi/include_mutate");
+        \melt\View::render("/qmi/include_mutate", null, false, true);
     }    
 }
