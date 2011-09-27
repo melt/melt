@@ -12,6 +12,7 @@ class SelectModelType extends PointerType {
 
     public function __construct($target_model, $disconnect_reaction = "SET NULL", $label_column = null) {
         parent::__construct($target_model, $disconnect_reaction);
+        $this->label_column = $label_column;
     }
 
     protected function getOptions() {
