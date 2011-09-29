@@ -22,9 +22,11 @@ class YesNoType extends \melt\AppType {
     public function getSQLType() {
         return "tinyint";
     }
+    
     public function getSQLValue() {
         return $this->value? "1": "0";
     }
+    
     public function getInterface($name) {
         $yes_check = $no_check = "selected=\"selected\"";
         if ($this->value)
@@ -35,9 +37,11 @@ class YesNoType extends \melt\AppType {
         $no = $this->no();
         return "<select name=\"$name\" id=\"$name\"><option value=\"0\" $no_check>$no</option><option value=\"1\" $yes_check>$yes</option></select>";
     }
+    
     public function readInterface($name) {
         $this->value = (@$_POST[$name] == true);
     }
+    
     public function __toString() {
         return $this->value? $this->yes(): $this->no();
     }
