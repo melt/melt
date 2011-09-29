@@ -12,7 +12,7 @@ abstract class GroupPermissionModel_app_overrideable extends \melt\AppModel {
     /** Class name of controller. */
     public $controller = array('core\TextType', 128);
     /** Group id or 0 for guests. */
-    public $group_id = array('core\SelectModelType', 'userx\GroupModel');
+    public $group_id = array('core\SelectModelType', 'userx\GroupModel', 'CASCADE');
 
     public static function getPermission($controller, GroupModel $group) {
         /*$permission = self::select()->where("controller")->is($controller)
