@@ -1427,6 +1427,10 @@ abstract class Model implements \IteratorAggregate, \Countable {
             if (!array_key_exists($parent_pointer_column, $parent_class::getPointerColumns()))
                 \trigger_error("Syntax error in semantic query: The pointer column '$parent_pointer_column' is not declared for '$parent_class'!", \E_USER_ERROR);
             if (!isset($cur_columns_data[$parent_pointer][1])) {
+                if (!isset($cur_columns_data[$parent_pointer])) {
+                    list($column_name, $prototype_type) = $parent_class::getColumnPrototype($parent_pointer_column);
+                    $cur_columns_data[$parent_pointer] = array("$parent_alias.$parent_pointer_column", null, null, null, $prototype_type);
+                }
                 $cur_target_model = $cur_columns_data[$parent_pointer][1] = $parent_class::getTargetModel($parent_pointer_column);
                 $cur_alias = $cur_columns_data[$parent_pointer][2] = string\from_index($alias_offset);
                 $alias_offset++;
