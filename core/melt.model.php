@@ -1533,7 +1533,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         set_time_limit(0);
         $found_count = 0;
         foreach ($model_classes as $table_name => $model_class) {
-            $column_names = $model_class::getColumnNames();
+            $column_names = $model_class::getColumnNames(false);
             $description = db\query("DESCRIBE " . db\table($table_name));
             while (false !== ($column = db\next_assoc($description))) {
                 $field_name = $column["Field"];
