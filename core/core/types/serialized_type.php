@@ -19,7 +19,7 @@ class SerializedType extends \melt\AppType {
         if ($value == "")
             $this->value = null;
         else
-            $this->value = \unserialize($value);
+            $this->value = @\unserialize($value);
     }
     
     public function getInterface($name) {
