@@ -68,4 +68,8 @@ class NullObject implements \ArrayAccess, \Iterator {
     public static function __set_state($array) {
         ;
     }
+    
+    public function __toString() {
+        return "";
+    }
 }
