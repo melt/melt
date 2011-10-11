@@ -1599,7 +1599,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 foreach ($family_tree[$target_model] as $model_child_class)
                     $query[] = "($ptr_name NOT IN (SELECT id FROM " . db\table(self::classNameToTableName($model_child_class)) . "))";
                 $source_table = self::classNameToTableName($model_class);
-                $result = db\query("SELECT id FROM " . db\table($source_table) . " WHERE $ptr_name > 0 AND (" . implode(" OR ", $query) .")");
+                $result = db\query("SELECT id FROM " . db\table($source_table) . " WHERE $ptr_name > 0 AND (" . implode(" AND ", $query) .")");
                 if (db\get_num_rows($result) > 0) {
                     // Found pointers that are broken.
                     $ids = array();
