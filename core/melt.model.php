@@ -623,17 +623,17 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * @return array An array of the column names in the specified model.
      */
     public static final function getColumnNames($include_volatile = true) {
-        $name = get_called_class();
+        $called_class = get_called_class();
         static $columns_name_cache = array();
-        if (isset($columns_name_cache[$include_volatile][$name]))
-            return $columns_name_cache[$include_volatile][$name];
+        if (isset($columns_name_cache[$include_volatile][$called_class]))
+            return $columns_name_cache[$include_volatile][$called_class];
         $columns = array();
         foreach (static::getParsedColumnArray() as $name => $column) {
             if (!$include_volatile && $column->storage_type === VOLATILE)
                 continue;
             $columns[$name] = $name;
         }
-        $columns_name_cache[$include_volatile][$name] = $columns;
+        $columns_name_cache[$include_volatile][$called_class] = $columns;
         return $columns;
     }
 
