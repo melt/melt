@@ -58,6 +58,9 @@ abstract class Model implements \IteratorAggregate, \Countable {
     /** @var array Array of index groups for this model. */
     protected $index_groups = array();
     
+    /** @var boolean True if locking/store/unlink is disabled. */
+    private static $_read_only_snapshot_mode = false;
+    
     /**
      * Returns the ID of this model instance or NULL if unlinked.
      * @return integer
@@ -335,6 +338,26 @@ abstract class Model implements \IteratorAggregate, \Countable {
         core\PointerType::_clearIncommingMemoryObjectPointers();
         // Restart transaction.
         db\query("COMMIT AND CHAIN");
+    }
+    
+    /**
+     * Completely disables transaction locking for the current request.
+     * Disables store/unlink to prevent the database from being
+     * corrupted. Useful for large/long operations that reads a lot of data
+     * and risk blocking/deadlocking other threads.
+     * Note that unlike chainedTransactionCommit() existing local data is
+     * not invalidated/deleted. This means that existing model instances
+     * could be wrong/corrupt after this call. However since this function
+     * also disables writing (store/unlink) it will not affect the database.
+     * A developer will however need to consider this and use the potentially
+     * corrupt application state carefully after this call.
+     * @return void
+     */
+    public static function enableLockFreeReadOnlyMode() {
+        if (!self::$_read_only_snapshot_mode) {
+            db\query("COMMIT AND CHAIN");
+            self::$_read_only_snapshot_mode = true;
+        }
     }
 
     /**
@@ -668,6 +691,9 @@ abstract class Model implements \IteratorAggregate, \Countable {
      * @return void
      */
     public function store() {
+        // Cannot store in read_only_snapshot_mode.
+        if (self::$_read_only_snapshot_mode)
+            return;
         // Volatile models cannot be stored.
         if ($this->_is_volatile)
             return;
@@ -738,6 +764,9 @@ abstract class Model implements \IteratorAggregate, \Countable {
 
     /** Unlinks this model instance from the database. */
     public function unlink() {
+        // Cannot store in read_only_snapshot_mode.
+        if (self::$_read_only_snapshot_mode)
+            return;
         // Volatile models cannot be unlinked.
         if ($this->_is_volatile)
             return;
@@ -980,7 +1009,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
                 $cached_queries[$model_class_name] = $cached_query;
             } else
                 $cached_query = $cached_queries[$model_class_name];
-            $result = db\query($cached_query . $id . " " . ($is_for_update? "FOR UPDATE": "LOCK IN SHARE MODE"));
+            $result = db\query($cached_query . $id . (self::$_read_only_snapshot_mode? "": " " . ($is_for_update? "FOR UPDATE": "LOCK IN SHARE MODE")));
             $row = db\next_array($result);
             if ($row !== false)
                 return $model_class_name::instanceFromData(intval(end($row)), $row);
@@ -1244,7 +1273,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
     public static function getDataForSelection(db\SelectQuery $select_query, $locking_read = false) {
         if ($select_query->getFromModel() === null)
             \trigger_error("Selection query has no source/from model set.", \E_USER_ERROR);
-        $query = self::buildSelectQuery($select_query, $locking_read);
+        $query = self::buildSelectQuery($select_query, self::$_read_only_snapshot_mode? false: $locking_read);
         self::$_found_rows = 0;
         $result = db\query($query);
         if ($select_query->getIsCounting()) {
