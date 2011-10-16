@@ -29,37 +29,42 @@ class IndexRequirement {
         $remaining_columns_base = array();
         foreach ($this->constant_keys as $key)
             $remaining_columns_base[$key] = 1;
-        $total_fields = \count($this->constant_keys) + \count($this->order_keys);
+        $total_fields = count($this->constant_keys) + count($this->order_keys);
         foreach ($indexes as $index) {
-            if (\count($index["columns"]) < $total_fields)
+            if (count($index["columns"]) < $total_fields)
                 continue;
             $remaining_columns = $remaining_columns_base;
+            $index_match_fail = false;
             foreach ($index["columns"] as $id => $column) {
-                if (\count($remaining_columns) == 0)
+                if (count($remaining_columns) == 0)
                     break;
                 // All constant keys must exists in the beginning of the index.
                 $column = trim_id($column);
-                if (!\array_key_exists($column, $remaining_columns))
-                    goto next_index;
+                if (!array_key_exists($column, $remaining_columns)) {
+                    $index_match_fail = true;
+                    break;
+                }
                 unset($remaining_columns[$column]);
                 unset($index["columns"][$id]);
             }
-            if (\count($remaining_columns) > 0)
+            if ($index_match_fail || count($remaining_columns) > 0)
                 continue;
             // The remaining columns are now the order keys
             // which are ordered so they must be in order.
             $remaining_columns = $this->order_keys;
             foreach ($index["columns"] as $column) {
-                if (\count($remaining_columns) == 0)
+                if (count($remaining_columns) == 0)
                     break;
                 $column = trim_id($column);
-                if ($column !== \reset($remaining_columns))
-                    goto next_index;
-                unset($remaining_columns[\key($remaining_columns)]);
+                if ($column !== \reset($remaining_columns)) {
+                    $index_match_fail = true;
+                    break;
+                }
+                unset($remaining_columns[key($remaining_columns)]);
             }
-            // Index verified, prefixed or full.
-            return;
-            next_index:
+            // Index verified to be prefixed or full?
+            if (!$index_match_fail)
+                return;
         }
         \trigger_error("The model '$index_model' does not have an index"
         . " appropriate for the ->byKey selection in given select query.", \E_USER_ERROR);
