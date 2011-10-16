@@ -170,7 +170,7 @@ final class View {
         $fqn_call = $view_path[0] == "/";
         if ($fqn_call) {
             $view = self::findView($view_path);
-            if ($view === false)
+            if ($view === null)
                 \trigger_error("View path '$view_path' not found!", \E_USER_ERROR);
             $foregin_module_context = $view[1];
         } else {
@@ -191,6 +191,29 @@ final class View {
             $this->view_hash = "h" . string\random_alphanum_str(10);
         return $object . $this->view_hash;
     }
+    
+    /**
+     * The real lookup that findView() wraps in caching.
+     */
+    private static function findViewStat($view_path) {
+        $file_path = APP_DIR . "/views" . $view_path . ".php";
+        if (is_file($file_path))
+            return array($file_path, null);
+        // Could be a module view path which means using the first component
+        // of the path as the module in which the view resides.
+        $dir_pos = strpos($view_path, "/", 1);
+        if ($dir_pos === false)
+            return null;
+        $module_name = substr($view_path, 1, $dir_pos - 1);
+        $view_path = substr($view_path, $dir_pos);
+        $file_path = "/$module_name/views$view_path.php";
+        if (is_file($full_path = APP_DIR . "/modules$file_path"))
+            return array($full_path, $module_name);
+        else if (is_file($full_path = APP_CORE_DIR . $file_path))
+            return array($full_path, $module_name);
+        else
+            return null;
+    }
 
     /**
      * Takes a view path and finds the first valid file path to it,
@@ -198,29 +221,22 @@ final class View {
      * @return array (path, module_context)
      */
     private static function findView($view_path) {
-        $path_cache = array();
-        if (isset($path_cache[$view_path]))
+        // Normalize the view path.
+        if (strlen($view_path) === 0 || $view_path[0] !== "/")
+            $view_path = "/$view_path";
+        static $path_cache = array();
+        if (array_key_exists($view_path, $path_cache))
             return $path_cache[$view_path];
-        if (strlen($view_path) == 0 || $view_path[0] != "/")
-            $view_path = "/" . $view_path;
-        $path = APP_DIR . "/views" . $view_path . ".php";
-        if (is_file($path))
-            return $path_cache[$view_path] = array($path, null);
-        // Could be a module view path. Then the first component of the path
-        // is the module in which the view resides. (That way you can always
-        // override views as above.
-        $dir_pos = strpos($view_path, "/", 1);
-        if ($dir_pos === false)
-            return $path_cache[$view_path] = false;
-        $module_name = substr($view_path, 1, $dir_pos - 1);
-        $view_path = substr($view_path, $dir_pos);
-        $path = "/$module_name/views$view_path.php";
-        if (is_file($full_path = APP_DIR . "/modules$path"))
-            return $path_cache[$view_path] = array($full_path, $module_name);
-        else if (is_file($full_path = APP_CORE_DIR . $path))
-            return $path_cache[$view_path] = array($full_path, $module_name);
-        else
-            return $path_cache[$view_path] = false;
+        $lookup = false;
+        if (MELT_APC_NOSTAT_MODE)
+            $lookup = internal\apc_nostat_get($view_path);
+        if ($lookup === false) {
+            $lookup = self::findViewStat($view_path);
+            if (MELT_APC_NOSTAT_MODE)
+                internal\apc_nostat_put($view_path, $lookup);
+        }
+        $path_cache[$view_path] = $lookup;
+        return $lookup;
     }
 
 
@@ -278,7 +294,7 @@ final class View {
         }
         // Get the view file path and module context.
         $ret_view = self::findView($view_path);
-        if ($ret_view === false) {
+        if ($ret_view === null) {
             if (!$just_try)
                 trigger_error("Melt Framework: The view '$view_path.php' could not be found!", \E_USER_NOTICE);
             return false;

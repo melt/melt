@@ -1,5 +1,25 @@
 <?php namespace melt\internal;
 
+
+function apc_nostat_get($key) {
+    return apc_fetch("mans-$key");
+}
+
+function apc_nostat_put($key, $value) {
+    apc_store("mans-$key", $value);
+}
+
+function apc_nostat_is_file($key, $path) {
+    $is_file_result = apc_nostat_get($key);
+    if ($is_file_result === true)
+        return true;
+    else if ($is_file_result === null)
+        return false;
+    $is_file = is_file($path);
+    apc_nostat_put($key, $is_file? true: null);
+    return $is_file;
+}
+
 /**
  * Returns an array of all availible modules.
  * Mapped MODULE_NAME => array(MODULE_CLASSNAME, MODULE_PATH)
@@ -9,6 +29,13 @@ function get_all_modules() {
     // Return result if cached.
     if ($modules !== null)
         return $modules;
+    // Use apc nostat cache if configured.
+    if (MELT_APC_NOSTAT_MODE) {
+        $nostat_modules_key = '$modules';
+        $modules = apc_nostat_get($nostat_modules_key);
+        if (is_array($modules))
+            return $modules;
+    }
     // Scan modules.
     $modules = array();
     $app_modules = @scandir(APP_DIR . "/modules");
@@ -24,6 +51,8 @@ function get_all_modules() {
             continue;
         $modules[$module] = array("melt\\$module\\" . underline_to_cased($module) . "Module", APP_CORE_DIR . "/$module");
     }
+    if (MELT_APC_NOSTAT_MODE)
+        apc_nostat_put($nostat_modules_key, $modules);
     return $modules;
 }
 
@@ -79,21 +108,37 @@ function check_require_prefix($path, $module_name) {
  * Melt Framework applications/modules.
  */
 function autoload($name) {
+    // Class name may not contain underscore. (invalid and won't load)
+    if (strpos($name, "_") !== false)
+        return false;
     $parts = explode("\\", $name);
     // Valid Melt Framework classes are located in the melt namespace.
     if ($parts[0] != "melt")
         return false;
     $part_cnt = count($parts);
-    if ($part_cnt == 1 || $part_cnt > 3)
+    if ($part_cnt === 1 || $part_cnt > 3) {
         // Not Melt Framework.
         return false;
-    else if (($part_cnt >= 2 && $parts[1] == "") || ($part_cnt == 3 && $parts[2] == ""))
+    } else if (($part_cnt >= 2 && $parts[1] == "") || ($part_cnt === 3 && $parts[2] == "")) {
         // Invalid.
         return false;
+    }
+    // Initialize apc nostat cache.
+    if (MELT_APC_NOSTAT_MODE) {
+        $includes = apc_nostat_get($name);
+        if (is_array($includes)) {
+            foreach ($includes as $include)
+                require $include;
+            return true;
+        } else if ($includes === null) {
+            return false;
+        }
+        $apc_includes = array();
+    }
     $pending_app_override = false;
     // When finding a class it has too look in a maximum of 8 places.
     for ($i = 0; $i < 3; $i++) {
-        if ($i == 0) {
+        if ($i === 0) {
             // Application level.
             if ($part_cnt == 3)
                 continue;
@@ -106,23 +151,23 @@ function autoload($name) {
             $file_name = $parts[1];
             $class_name = "melt\\" . ucfirst($parts[1]);
             $app_overridable_declarable = false;
-        } else if ($i == 1) {
+        } else if ($i === 1) {
             // Module.
-            if ($part_cnt == 2)
-                return false;
+            if ($part_cnt === 2)
+                break;
             // Class name may not contain underscore. (invalid and won't load)
             if (strpos($parts[2], "_") !== false)
-                return false;
+                break;
             $modules = get_all_modules();
             $module_name = $parts[1];
             if (!isset($modules[$module_name]))
-                return false;
+                break;
             $path = $modules[$module_name][1];
             $subdir = "";
             $file_name = $parts[2];
             $class_name = "melt\\" . $parts[1] . "\\" . ucfirst($parts[2]);
             $app_overridable_declarable = true;
-        } else if ($i == 2) {
+        } else if ($i === 2) {
             // Application level module extention.
             $path = APP_DIR;
             $subdir = $parts[1] . "/";
@@ -147,12 +192,12 @@ function autoload($name) {
         } else if (\melt\string\ends_with($class_name, "Module")) {
             // Application and application extentions may not have
             // classes ending with "Module".
-            if ($i != 1)
-                return false;
+            if ($i !== 1)
+                break;
             // Check that the classname is correct.
             $module_name = strtolower($parts[1]);
-            if ($name != 'melt\\' . $module_name . '\\' . underline_to_cased($module_name) . 'Module')
-                return false;
+            if ($name !== 'melt\\' . $module_name . '\\' . underline_to_cased($module_name) . 'Module')
+                break;
             $path .= "/" . $subdir . "module.php";
             $must_extend = 'melt\Module';
             $app_overridable_declarable = false;
@@ -172,6 +217,8 @@ function autoload($name) {
         if (\melt\core\config\MAINTENANCE_MODE)
             check_require_prefix($path, $module_name);
         require $path;
+        if (MELT_APC_NOSTAT_MODE)
+            $apc_includes[] = $path;
         if ($required_app_override) {
             $class_ao_name = $class_name . "_app_overrideable";
             if (!(class_exists($class_name) && \melt\core\is_abstract($class_name)) && !class_exists($class_ao_name))
@@ -194,6 +241,8 @@ function autoload($name) {
             }
             if ($trigger_error)
                 development_crash("invalid_class_name", array("path" => $path, "expected_name" => $class_name));
+        } else if ($pending_app_override) {
+            $pending_app_override = false;
         }
         if (\melt\core\config\MAINTENANCE_MODE) {
             // Also check case sensitivity.
@@ -204,8 +253,13 @@ function autoload($name) {
             development_crash("invalid_parent_class", array("path" => $path,  "class_name" => $class_name, "must_extend" => $must_extend));
         if ($pending_app_override)
             continue;
+        if (MELT_APC_NOSTAT_MODE)
+            apc_nostat_put($name, $apc_includes);
         return true;
     }
+    if (MELT_APC_NOSTAT_MODE)
+        apc_nostat_put($name, null);
+    return false;
 }
 
 function get_all_classes($class_type, $class_folder, $include_abstract, $id_module_separator) {
@@ -271,14 +325,17 @@ function pear_autoload($name) {
         $module_path = $module_parameters[1];
         // Include module api.
         $path = "$module_path/api.php";
-        if (\is_file($path)) {
+        $mans_has_api_result = false;
+        $has_api = MELT_APC_NOSTAT_MODE? apc_nostat_is_file('$has-api/' . $module_name, $path): is_file($path);
+        if ($has_api) {
             if (\melt\core\config\MAINTENANCE_MODE)
                 check_require_prefix($path, $module_name);
             require $path;
         }
         // Configure module.
         $mod_cfg_path = $module_path . "/config.php";
-        if (\is_file($mod_cfg_path)) {
+        $has_config = MELT_APC_NOSTAT_MODE? apc_nostat_is_file('$has-config/' . $module_name, $mod_cfg_path): is_file($mod_cfg_path);
+        if ($has_config) {
             $config_directives = require($mod_cfg_path);
             if (!\is_array($config_directives))
                 \trigger_error("The file '$mod_cfg_path' did not return an array as expected!", \E_USER_ERROR);
@@ -294,7 +351,8 @@ function pear_autoload($name) {
         // Import functions from module to other namespaces.
         $module_path = $target_module_parameters[1];
         $path = "$module_path/imports.php";
-        if (!\is_file($path))
+        $has_imports = MELT_APC_NOSTAT_MODE? apc_nostat_is_file('$has-imports/' . $target_module_name, $path): is_file($path);
+        if (!$has_imports)
             continue;
         $imports = require($path);
         if (!\is_array($imports))
@@ -328,11 +386,13 @@ function pear_autoload($name) {
     array('\melt\AppType', '\melt\Type', 'app_type.php')) as $app_include) {
         list($class, $base, $file) = $app_include;
         $path = APP_DIR . "/" . $file;
-        if (is_file($path)) {
+        $path_exists = MELT_APC_NOSTAT_MODE? apc_nostat_is_file($class, $path): is_file($path);
+        if ($path_exists) {
             require $path;
         } else {
             $class_primary = substr($class, 6);
             eval("namespace melt; abstract class $class_primary extends $base {}");
+            $apc_nostat_cache[$class] = false;
         }
         if (!class_exists($class))
              development_crash("invalid_class_name", array("path" => $path, "expected_name" => $class));

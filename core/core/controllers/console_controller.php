@@ -105,6 +105,46 @@ class ConsoleController extends InternalController {
         exit;
     }
     
+    public function cmd_apc($operation = null, $target = null) {
+        if (!extension_loaded("apc"))
+            die("APC is not installed! Type 'info' for more information.\n");
+        switch ($operation) {
+        case "flush":
+            switch ($target) {
+            case "system":
+                apc_clear_cache();
+                break;
+            case "user":
+                apc_clear_cache("user");
+                break;
+            case "all":
+                apc_clear_cache();
+                apc_clear_cache("user");
+                break;
+            default:
+                die("Unknown target: \"$target\"\n");
+            }
+            die("APC flush $target complete!\n");
+        case "info":
+            switch ($target) {
+            case "system":
+                print_r(apc_cache_info());
+                break;
+            case "user":
+                print_r(apc_cache_info("user"));
+                break;
+            case "filehits":
+                print_r(apc_cache_info("filehits"));
+            default:
+                die("Unknown target: \"$target\"\n");
+            }
+            exit;
+        default:
+            die("Unknown operation: \"$operation\"\n");
+        }        
+        die("APC is not installed!\n");
+    }
+    
     public function cmd_userx($action, $param = null, $param2 = null) {
         if ($action === "add") {
             $user = new \melt\userx\UserModel();

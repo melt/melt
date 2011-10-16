@@ -198,6 +198,10 @@
                 "export": true,
                 "import": true
             },
+            "apc": {
+                "info": {"system": true, "user": true, "filehits": true},
+                "flush": {"system": true, "user": true, "all": true}
+            },
             "rewrite": true,
             "clear": true,
             "session": { "restart": true },
@@ -463,6 +467,9 @@
                     }
                 }
                 exec_ajax_fn(console_base + "/cmd_obj/" + cmd_tokens[1], complete_fn, get_data);
+                break;
+            case "apc":
+                exec_ajax_fn(console_base + "/cmd_apc/" + cmd_tokens[1] + "/" + cmd_tokens[2], complete_fn);
                 break;
             case "rewrite":
                 var action_path = $.trim(cmd_tokens[1]);
