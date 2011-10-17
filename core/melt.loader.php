@@ -108,9 +108,6 @@ function check_require_prefix($path, $module_name) {
  * Melt Framework applications/modules.
  */
 function autoload($name) {
-    // Class name may not contain underscore. (invalid and won't load)
-    if (strpos($name, "_") !== false)
-        return false;
     $parts = explode("\\", $name);
     // Valid Melt Framework classes are located in the melt namespace.
     if ($parts[0] != "melt")
