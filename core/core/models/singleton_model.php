@@ -43,6 +43,6 @@ abstract class SingletonModel extends \melt\AppModel {
     protected function initialize() {
         parent::initialize();
         if (!self::$is_getting && !$this->isVolatile())
-            \trigger_error("Only SingletonModel may create new instance of itself. Access the instance trough the ::get() function.", \E_USER_ERROR);
+            \trigger_error("Only SingletonModel may create new instance of itself. Access the instance through the ::get() function.", \E_USER_ERROR);
     }
 }

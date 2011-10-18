@@ -25,7 +25,7 @@ abstract class UserModel_app_overrideable extends \melt\AppModel implements \mel
 
     /**
      * Overridable callback event method.
-     * Called before logging in a user trough "login_challenge".
+     * Called before logging in a user through "login_challenge".
      * If the function returns true, the login attempt will be succeed while
      * returning false forcefully fails the challenge.
      * @return boolean

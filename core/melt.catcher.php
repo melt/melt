@@ -298,7 +298,7 @@ function crash($message, $file, $line, $trace) {
 
 \call_user_func(function() {
     // Never use standard unsafe PHP error handling.
-    // Show informative messages trough Melt Framework on script Exceptions/Assertations.
+    // Show informative messages through Melt Framework on script Exceptions/Assertations.
     \assert_options(ASSERT_CALLBACK, '\melt\internal\assert_failed');
     \set_exception_handler('\melt\internal\exception_handler');
     \set_error_handler('\melt\internal\error_handler');

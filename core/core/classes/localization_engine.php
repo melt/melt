@@ -214,7 +214,7 @@ class LocalizationEngine {
         if (!\array_key_exists($locale, $this->locale_data))
             trigger_error("Locale $locale does not exist!", \E_USER_ERROR);
         $old_locale_strings = $this->locale_data[$locale]["strings"];
-        // Scan trough all source code and update locale strings.
+        // Scan through all source code and update locale strings.
         $new_locale_strings = array();
         $plural_ids = array();
         $references = array();

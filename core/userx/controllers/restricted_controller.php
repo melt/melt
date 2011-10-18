@@ -53,7 +53,7 @@ abstract class RestrictedController extends \melt\AppController {
             return self::getGroupPermitted(null, $controller_class_name, $invoke_data, $special_permissions);
         else if ($group_or_user instanceof UserModel) {
             if (config\MULTIPLE_GROUPS) {
-                // Iterate trough all group membership.
+                // Iterate through all group membership.
                 // If one group is permitted then
                 // user access is granted per definition.
                 $user = $group_or_user;

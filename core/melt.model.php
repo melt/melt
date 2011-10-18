@@ -1678,7 +1678,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
     }
 
     /**
-     * Go trough all unique indexes, select duplicates and delete them.
+     * Go through all unique indexes, select duplicates and delete them.
      */
     public static function cullAllModels() {
         // This maintenance script can run forever.
@@ -1786,7 +1786,7 @@ abstract class Model implements \IteratorAggregate, \Countable {
         // Track all ancestors of all models.
         $family_tree = array();
         foreach ($model_classes as $model_class) {
-            // A self relation allows us to loop trough all models that IS
+            // A self relation allows us to loop through all models that IS
             // that model, and itself IS that model.
             $family_tree[$model_class][] = $model_class;
             foreach (class_parents($model_class) as $model_parent) {

@@ -246,7 +246,7 @@ class ModelInterface {
     }
 
     /**
-     * This function loops trough all attributes for the given instance
+     * This function loops through all attributes for the given instance
      * and calls qmi\attachChange() for every non stored change.
      * Additionally, if it finds pointers that have changed,
      * those relations will be automatically attached.
