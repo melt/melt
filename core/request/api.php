@@ -353,6 +353,24 @@ function send_json_data($data) {
 }
 
 /**
+ * Finalizes this request and sends the specified data in xml format
+ * with correct headers.
+ * @param type $data 
+ */
+function send_xml_data($data) {
+    \melt\request\reset();
+    if ($data instanceof \DOMDocument) {
+        $data = $data->saveXML();
+    } else if ($data instanceof \SimpleXMLElement) {
+        $data = $data->asXML();
+    } else {
+        $data = (string) $data;
+    }
+    header("Content-Type: text/xml");
+    die($data);
+}
+
+/**
  * Returns TRUE if the given local URL is a member of the current request URL.
  */
 function current_url_in($local_url) {
