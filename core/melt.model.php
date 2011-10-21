@@ -1089,31 +1089,32 @@ abstract class Model implements \IteratorAggregate, \Countable {
      */
     public static function getReferences(Model $instance, $is_for_update = true) {
         $out_array = array();
-        $called_class = \get_called_class();
+        $called_class = get_called_class();
         // Populate array with local references to the instance.
         foreach (core\PointerType::getIncommingMemoryObjectPointers($instance) as $reference) {
             list($type, $ptr_field) = $reference;
             $instance = $type->parent;
-            if (is(\get_class($instance), $called_class))
-                $out_array[\spl_object_hash($instance) . "_" . $ptr_field] = $reference;
+            if (is(get_class($instance), $called_class))
+                $out_array[spl_object_hash($instance) . "_" . $ptr_field] = $reference;
         }
         if (!$instance->isLinked())
             return $out_array;
         $instance_id = $instance->id;
         foreach (static::getChildModels() as $model_class_name) {
-            $ptr_fields = $model_class_name::getParentPointers(\get_class($instance), false);
-            if (\count($ptr_fields) == 0)
+            $ptr_fields = $model_class_name::getParentPointers(get_class($instance), false);
+            if (count($ptr_fields) === 0)
                 continue;
-            $select_query = new db\SelectQuery(\get_called_class(), $fields);
+            $select_query = new db\SelectQuery($model_class_name, $ptr_fields);
+            $select_query->setIsIgnoringChildren(true);
             foreach ($ptr_fields as $ptr_field)
-                $select_query->or($ptr_field)->is($id);
+                $select_query->or($ptr_field)->is($instance_id);
             if ($is_for_update)
                 $select_query->forUpdate();
             $instances = $select_query->all();
             foreach ($instances as $instance)
             foreach ($ptr_fields as $ptr_field) {
-                if ($instance->{$ptr_field . "_id"} == $instance_id)
-                    $out_array[\spl_object_hash($instance) . "_" . $ptr_field] = array($instance, $ptr_field);
+                if ($instance->$ptr_field === $instance_id)
+                    $out_array[spl_object_hash($instance) . "_" . $ptr_field] = array($instance, $ptr_field);
             }
         }
         return $out_array;
