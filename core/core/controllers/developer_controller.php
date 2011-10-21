@@ -30,20 +30,6 @@ class DeveloperController extends InternalController {
             exit;
         }
     }
-    
-    public function git_sync() {
-        if (!REQ_IS_CLI)
-            \melt\request\show_invalid("This action should be run in CLI mode. E.g. \"php core/core.php /core/developer/git_sync\"");
-        \melt\request\reset();
-        ob_end_clean();
-        ob_end_clean();
-        chdir(APP_DIR);
-        while (true) {
-            print shell_exec("git pull");
-            print shell_exec("git push");
-            sleep(20);
-        }
-    }
 
     public function _maintenance_info() {
         header("HTTP/1.x 503 Service Temporarly Unavailable");

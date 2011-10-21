@@ -41,6 +41,20 @@ class ConsoleController extends InternalController {
         \ob_flush();
         \flush();
     }
+    
+    public function git_sync() {
+        if (!REQ_IS_CLI)
+            \melt\request\show_invalid("This action should be run in CLI mode. E.g. \"php core/core.php /core/console/git_sync\"");
+        \melt\request\reset();
+        ob_end_clean();
+        ob_end_clean();
+        chdir(APP_DIR);
+        while (true) {
+            print shell_exec("git pull");
+            print shell_exec("git push");
+            sleep(20);
+        }
+    }
 
     public function check_login() {
         \melt\request\send_json_data(config\CONSOLE_MOTD);
