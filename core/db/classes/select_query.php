@@ -62,8 +62,8 @@ class SelectQuery extends WhereCondition implements \IteratorAggregate, \Countab
     private function validateModelName($model_name) {
         if ($model_name === null)
             return;
-        if (!\is_subclass_of($model_name, 'melt\AppModel'))
-            trigger_error("Cannot represent non scalar values in sql!", \E_USER_ERROR);
+        if (!\melt\core\is($model_name, 'melt\AppModel'))
+            trigger_error("Model must be or extend AppModel!", \E_USER_ERROR);
     }
     
     public function __construct($from_model = null, $select_fields = null) {
