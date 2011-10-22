@@ -47,7 +47,7 @@ function get_all_modules() {
         $modules[$module] = array("melt\\$module\\" . underline_to_cased($module) . "Module", APP_DIR . "/modules/$module");
     }
     foreach (scandir(APP_CORE_DIR) as $module) {
-        if ($module[0] === "." || is_file($module))
+        if ($module[0] === "." || !is_dir(APP_CORE_DIR . "/$module"))
             continue;
         $modules[$module] = array("melt\\$module\\" . underline_to_cased($module) . "Module", APP_CORE_DIR . "/$module");
     }
