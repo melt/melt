@@ -4,7 +4,7 @@
  * @see core\version()
  * @internal
  */
-const VERSION = "1.5";
+const VERSION = "1.5+dev";
 
 /**
  * Puts a configuration directive in the configuration file.
