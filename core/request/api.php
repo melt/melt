@@ -345,11 +345,17 @@ function send_file($filepath, $mime = 'application/octet-stream', $filename = nu
  * Finalizes this request and sends the specified data in json format
  * with correct headers.
  * @param mixed $json_data Data to encode and transmit.
+ * @param string $jsonp_function_name Set to a javascript function name
+ * to return data in jsonp form.
  */
-function send_json_data($data) {
+function send_json_data($data, $jsonp_function_name = null) {
     \melt\request\reset();
     header("Content-Type: application/json");
-    die(json_encode($data));
+    if (!is_string($jsonp_function_name) || strlen($jsonp_function_name) <= 0) {
+        die(json_encode($data));
+    } else {
+        die("$jsonp_function_name(" . json_encode($data) . ");");
+    }
 }
 
 /**

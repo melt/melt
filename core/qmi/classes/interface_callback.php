@@ -14,13 +14,14 @@ abstract class InterfaceCallback_app_overrideable {
     private $original_model_interface;
     /** @var \DateTime When the interface was created. */
     private $time_created;
+    private $jsonp_callback_function_name;
 
     /**
      * @var string Contains the message that will be displayed when form validation failed.
      */
     protected $validate_failed_message;
 
-    public final function __construct($interface_name, $instances, $instance_components, $is_deleting, $success_url, $ajax_submit, $time_created, ModelInterface $original_model_interface) {
+    public final function __construct($interface_name, $instances, $instance_components, $is_deleting, $success_url, $ajax_submit, $time_created, $jsonp_callback_function_name, ModelInterface $original_model_interface) {
         $this->interface_name = $interface_name;
         $this->instances = $instances;
         $this->instance_components = $instance_components;
@@ -29,6 +30,7 @@ abstract class InterfaceCallback_app_overrideable {
         $this->validate_failed_message = __("Validation failed. Please check your input.");
         $this->ajax_submit = $ajax_submit;
         $this->time_created = $time_created;
+        $this->jsonp_callback_function_name = $jsonp_callback_function_name;
         $this->original_model_interface = $original_model_interface;
     }
 
@@ -55,6 +57,16 @@ abstract class InterfaceCallback_app_overrideable {
     protected final function getTimeCreated() {
         return clone $this->time_created;
     }
+    
+    /**
+     * Returns the jsonp callback function name if there is one.
+     * Otherwise false.
+     * Useful when doing ajax replies.
+     * @return string
+     */
+    protected final function getJsonpCallbackFunctionName() {
+        return $this->jsonp_callback_function_name; 
+    }
 
     /**
      * Returns matrix of instances used for current interface.
@@ -69,25 +81,36 @@ abstract class InterfaceCallback_app_overrideable {
         return $callback_instances;
     }
 
-    /**
-     * Returns the success url configured.
-     * @return string
-     */
-    public final function getSuccessUrl() {
-        return \str_replace("{id}", $this->iid, $this->success_url);
-    }
-
     private $invalidation_data = array('errors' => array(), 'values' => array());
 
-    protected final function doInvalidRedirect() {
-        if ($this->ajax_submit)
-            \melt\request\send_json_data(array("success" => false, "unlinked" => false, "errors" => $this->invalidation_data['errors']));
-        $this->invalidation_data['values'] = \array_merge($this->invalidation_data['values'], $this->original_model_interface->getComponentFieldValues());
-        // Store invalid and reload this URL.
-        $_SESSION['qmi_invalid'][$this->interface_name] = $this->invalidation_data;
-        \melt\messenger\redirect_message(REQ_URL, $this->validate_failed_message);
+    public final function doInvalidRedirect(array $extra_parameters = array()) {
+        if ($this->ajax_submit) {
+            $response_object = array("success" => false, "redirect" => null, "unlinked" => false, "errors" => $this->invalidation_data['errors']);
+            \melt\request\send_json_data(array_merge($response_object, $extra_parameters), $this->jsonp_callback_function_name);
+        } else {
+            $this->invalidation_data['values'] = \array_merge($this->invalidation_data['values'], $this->original_model_interface->getComponentFieldValues());
+            // Store invalid and reload this URL.
+            $_SESSION['qmi_invalid'][$this->interface_name] = $this->invalidation_data;
+            \melt\messenger\redirect_message(REQ_URL, $this->validate_failed_message);
+        }
     }
-
+    
+    public final function doSuccessRedirect(array $extra_parameters = array()) {
+        $success_url = \str_replace("{id}", $this->iid, $this->success_url);
+        if ($this->ajax_submit) {
+            $response_object = array("success" => true, "redirect" => $success_url, "unlinked" => false, "errors" => array());
+            foreach ($this->instances as $instance) {
+                if ($instance->isLinked())
+                    continue;
+                $response_object["unlinked"] = true;
+                break;
+            }
+            \melt\request\send_json_data(array_merge($response_object, $extra_parameters), $this->jsonp_callback_function_name);
+        } else {
+            \melt\request\redirect($success_url);
+        }
+    }
+    
     protected final function pushError(\melt\Model $instance, $field_name, $error) {
         $instance_key = \array_search($instance, $this->instances, true);
         if ($instance_key === false)

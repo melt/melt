@@ -16,6 +16,7 @@ class ModelInterface {
     private $default_style;
     private $time_created;
     private $identity;
+    private $jsonp_callback;
     private $continuum_steps = array();
 
     const INSTANCE_JIT_REFERENCE = -1;
@@ -29,8 +30,14 @@ class ModelInterface {
      * @param string $default_style
      * @param string $success_url Where default handler should redirect
      * interface on success.
+     * @param string $jsonp_callback To allow jsonp formated response,
+     * set this to the name of the expected incomming $_GET variable that
+     * contains the function name to use in the jsonp padded response.
+     * For jQuery jsonp requests this is "callback".
+     * WARNING: JSONP can result in XSS attacks, allowing other domains
+     * to fetch data from your application. Use with caution.
      */
-    public function __construct($interface_name, $default_style = "default", $success_url = null) {
+    public function __construct($interface_name, $default_style = "default", $success_url = null, $jsonp_callback = false) {
         if ($interface_name === null)
             return;
         if (!\preg_match('#^\w+(\\\\\w+)?$#', $interface_name))
@@ -40,6 +47,7 @@ class ModelInterface {
         $this->success_url = is_null($success_url)? url(REQ_URL): $success_url;
         $this->time_created = new \DateTime();
         $this->identity = "qi" . \melt\string\random_alphanum_str(10);
+        $this->jsonp_callback = $jsonp_callback;
     }
 
     public function hasInstance(UserInterfaceProvider $instance) {
@@ -603,6 +611,7 @@ class ModelInterface {
             $this->time_created,
             $this->identity,
             $this->continuum_steps,
+            $this->jsonp_callback,
         ))));
     }
 
@@ -627,7 +636,8 @@ class ModelInterface {
             $model_interface->default_style,
             $model_interface->time_created,
             $model_interface->identity,
-            $model_interface->continuum_steps
+            $model_interface->continuum_steps,
+            $model_interface->jsonp_callback
         ) = $qmi_data;
         // Restore all instances.
         $new_instance_keys = array();
@@ -768,20 +778,16 @@ class ModelInterface {
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' does not extend 'melt\qmi\InterfaceCallback'!", \E_USER_ERROR);
         if (!is($callback_class, $callback_class . "_app_overrideable"))
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not declared overridable by the responsible module!", \E_USER_ERROR);
-        $ajax_submit = array_key_exists("_qmi_ajax_submit", $_POST) && $_POST["_qmi_ajax_submit"] == true;
+        if (is_string($this->jsonp_callback) && isset($_GET[$this->jsonp_callback])) {
+            $ajax_submit = true;
+            $jsonp_callback_function_name = $_GET[$this->jsonp_callback];
+        } else {
+            $ajax_submit = array_key_exists("_qmi_ajax_submit", $_POST) && $_POST["_qmi_ajax_submit"] == true;
+            $jsonp_callback_function_name = false;
+        }
         $model_interface = $this;
-        $callback_class = new $callback_class($this->interface_name, $this->instances, $instance_components, $is_deleting, $this->success_url, $ajax_submit, $this->time_created, $this);
+        $callback_class = new $callback_class($this->interface_name, $this->instances, $instance_components, $is_deleting, $this->success_url, $ajax_submit, $this->time_created, $jsonp_callback_function_name, $this);
         $callback_class->$callback_method();
-        if ($ajax_submit) {
-            $data = array("success" => true, "unlinked" => false, "errors" => array());
-            foreach ($this->instances as $instance) {
-                if (!$instance->isLinked()) {
-                    $data["unlinked"] = true;
-                    break;
-                }
-            }
-            \melt\request\send_json_data($data);
-        } else
-            \melt\request\redirect($callback_class->getSuccessUrl());
+        $callback_class->doSuccessRedirect();
     }
 }
