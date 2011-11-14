@@ -70,7 +70,7 @@ class ModelInterface {
      * and a closing form tag.
      */
     public function finalizeForm($auto_submit = true, $auto_delete = false) {
-        $html = '<div><input type="hidden" id="' . $this->identity . '" name="_qmi" value="' . $this->serialize() . '" />';
+        $html = '<div><input type="hidden" id="' . $this->identity . '" name="__qmi__" value="' . $this->serialize() . '" />';
         if ($auto_submit) {
             $msg = $this->creating? __("Submit"): __("Save Changes");
             $html .= '<input type="submit" value="' . $msg . '" />';
@@ -666,9 +666,14 @@ class ModelInterface {
     }
     
     public static function _checkSubmit() {
-        if (!\array_key_exists("_qmi", $_POST))
-            return;
-        $model_interface = self::unserialize($_POST["_qmi"]);
+        if (!array_key_exists("__qmi__", $_POST)) {
+            if (!array_key_exists("__qmi__", $_GET))
+                return;
+            // Doing a GET submit (for example when using jsonp).
+            $_POST = array_merge($_GET, $_POST);
+        }
+        $qmi_serialized = $_POST["__qmi__"];
+        $model_interface = self::unserialize($qmi_serialized);
         if ($model_interface === false)
             \melt\messenger\redirect_message(REQ_URL, _("Saving changes failed."));
         $model_interface->processSubmit();
@@ -778,9 +783,9 @@ class ModelInterface {
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' does not extend 'melt\qmi\InterfaceCallback'!", \E_USER_ERROR);
         if (!is($callback_class, $callback_class . "_app_overrideable"))
             \trigger_error(__METHOD__ . " error: The callback class '$callback_class' is not declared overridable by the responsible module!", \E_USER_ERROR);
-        if (is_string($this->jsonp_callback) && isset($_GET[$this->jsonp_callback])) {
+        if (is_string($this->jsonp_callback) && isset($_POST[$this->jsonp_callback])) {
             $ajax_submit = true;
-            $jsonp_callback_function_name = $_GET[$this->jsonp_callback];
+            $jsonp_callback_function_name = $_POST[$this->jsonp_callback];
         } else {
             $ajax_submit = array_key_exists("_qmi_ajax_submit", $_POST) && $_POST["_qmi_ajax_submit"] == true;
             $jsonp_callback_function_name = false;
