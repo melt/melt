@@ -2,11 +2,13 @@
 
 
 function apc_nostat_get($key) {
-    return apc_fetch("mans-$key");
+    static $apc_ns = MELT_APC_NOSTAT_NS;
+    return apc_fetch("$apc_ns/$key");
 }
 
 function apc_nostat_put($key, $value) {
-    apc_store("mans-$key", $value);
+    static $apc_ns = MELT_APC_NOSTAT_NS;
+    apc_store("$apc_ns/$key", $value);
 }
 
 function apc_nostat_is_file($key, $path) {
