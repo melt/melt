@@ -1,19 +1,43 @@
 <?php namespace melt\string;
 
-/** Returns a string from a numeric index. Eg 0 = a, 1 = b... */
+/** Returns a string index from a numeric index. Eg 0 = A, 1 = B... */
 function from_index($index) {
     // Optimization.
     if ($index <= 0)
         return 'A';
-    $out = "";
+    $str_index = "";
     $index = intval($index);
     while (true) {
         $char_index = $index % 26;
-        $out .= chr(0x41 + $char_index);
+        $str_index .= chr(0x41 + $char_index);
         $index = ($index - $char_index - 1) / 26;
         if ($index < 0)
-            return $out;
+            return $str_index;
     }
+}
+
+/** Returns an integer from a string index. Eg. A = 0, B = 1... */
+function to_index($str_index) {
+    $index = 0;
+    $power = 1;
+    $str_index = strtoupper($str_index);
+    $ascii_A = ord("A");
+    $ascii_Z = ord("Z");
+    $base = ($ascii_Z - $ascii_A + 1);
+    for ($i = 0; $i < strlen($str_index); $i++) {
+        $value = ord($str_index[$i]);
+        if ($value < $ascii_A || $value > $ascii_Z) {
+            trigger_error("Got string index with illegal charachers.", E_USER_WARNING);
+            $value = 0;
+        } else {
+            $value -= $ascii_A;
+            if ($power > 1)
+                $value += 1;
+        }
+        $index += $power * $value;
+        $power *= $base;
+    }
+    return $index;
 }
 
 /** Returns a random alpha-numeric string. */
