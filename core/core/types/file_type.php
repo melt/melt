@@ -31,7 +31,7 @@ class FileType extends \melt\AppType {
         else if ($this->only_read_path)
             $this->value = $path;
         else
-            $this->value = get_uploaded_file("file", $name, false);
+            $this->value = get_uploaded_file($name, $this->remote_name, false);
     }
 }
 
