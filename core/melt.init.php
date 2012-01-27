@@ -124,7 +124,7 @@ function read_server_var($var_name, $alt_var_name = null) {
         $devkey_matches = isset($_COOKIE['MELT_DEVKEY']) && ($_COOKIE['MELT_DEVKEY'] === \melt\core\config\DEVELOPER_KEY);
         \define("APP_DEVELOPER_LOGGED_IN", ($devkey_is_blank || $devkey_matches));
         // Evaluate application root host, path, port and protocol.
-        \define("APP_ROOT_PROTOCOL", (isset($_SERVER["HTTPS"]) && !empty($_SERVER["HTTPS"]))? "https": "http");
+        \define("APP_ROOT_PROTOCOL", ((isset($_SERVER["HTTPS"]) && !empty($_SERVER["HTTPS"])) || \melt\core\config\FORCE_HTTPS)? "https": "http");
         \define("APP_ROOT_HOST", \preg_replace('#:[\d]+$#', "", read_server_var("HTTP_HOST")));
         \define("APP_ROOT_PORT", $server_port = intval(read_server_var('SERVER_PORT')));
         \define("APP_USING_STANDARD_PORT", (APP_ROOT_PROTOCOL == "http" && APP_ROOT_PORT == 80) || (APP_ROOT_PROTOCOL == "https" && APP_ROOT_PORT == 443));
