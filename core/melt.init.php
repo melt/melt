@@ -127,7 +127,7 @@ function read_server_var($var_name, $alt_var_name = null) {
         \define("APP_ROOT_PROTOCOL", ((isset($_SERVER["HTTPS"]) && !empty($_SERVER["HTTPS"])) || \melt\core\config\FORCE_HTTPS)? "https": "http");
         \define("APP_ROOT_HOST", \preg_replace('#:[\d]+$#', "", read_server_var("HTTP_HOST")));
         \define("APP_ROOT_PORT", $server_port = intval(read_server_var('SERVER_PORT')));
-        \define("APP_USING_STANDARD_PORT", (APP_ROOT_PROTOCOL == "http" && APP_ROOT_PORT == 80) || (APP_ROOT_PROTOCOL == "https" && APP_ROOT_PORT == 443));
+        \define("APP_USING_STANDARD_PORT", \melt\core\config\IGNORE_LOCAL_PORT || (APP_ROOT_PROTOCOL == "http" && APP_ROOT_PORT == 80) || (APP_ROOT_PROTOCOL == "https" && APP_ROOT_PORT == 443));
          // Evaluate APP_PATH from PHP_SELF.
         $php_self = read_server_var("PHP_SELF");
         if (!\preg_match('#/core/core\.php$#', $php_self))

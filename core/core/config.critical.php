@@ -5,6 +5,7 @@
     "FORCE_ERROR_DISPLAY" => false,
     "FORCE_ERROR_FLAGS" => false,
     "FORCE_HTTPS" => false,
+    "IGNORE_LOCAL_PORT" => false,
     "ERROR_LOG" => null,
     "PEAR_AUTOLOAD" => false,
     "TRANSLATION_ENABLED" => false,
