@@ -356,10 +356,10 @@ class ModelInterface {
             // Generate the html key/id.
             $component_id = "qmiid" . \substr(\sha1($field_name . "," . $instance_key_offset . "," . $this->interface_name), 0, 12);
             // Pre-fill the field with the previous, possibly errorneous, value.
-            if (isset($invalidation_data['values'][$component_id]))
-                $instance->$field_name = $invalidation_data['values'][$component_id];
-            // Make sure sub resolved fields have their parent instances attached.
             $type = $instance->type($field_name);
+            if (isset($invalidation_data['values'][$component_id]))
+                $type->set($invalidation_data['values'][$component_id]);
+            // Make sure sub resolved fields have their parent instances attached.
             if ($type->parent != $instance)
                 $this->attachChanges($type->parent);
             $component_interface = $type->getInterface($component_id);
@@ -687,14 +687,12 @@ class ModelInterface {
      */
     public function getComponentFieldValues() {
         $component_field_values = array();
-        foreach ($this->instances as $instance_key => $instance) {
-            foreach ($instance as $field_name => $field_type) {
-                if (!isset($this->components[$instance_key][$field_name]))
-                    continue;
-                $component_key = $this->components[$instance_key][$field_name];
-                $value = ($field_type instanceof \melt\core\PointerType)? $field_type->getID(): $field_type->get();
-                $component_field_values[$component_key] = $value;
-            }
+        foreach ($this->components as $component_id => $component) {
+            list($instance_key, $field_name) = $component;
+            $instance = $this->instances[$instance_key];
+            $field_type = $instance->type($field_name);
+            $value = ($field_type instanceof \melt\core\PointerType)? $field_type->getID(): $field_type->get();
+            $component_field_values[$component_id] = $value;
         }
         return $component_field_values;
     }
