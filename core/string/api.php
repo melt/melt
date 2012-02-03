@@ -172,7 +172,7 @@ function email_validate($email) {
     $domain = "$sub_domain(\\x2e$sub_domain)*";
     $local_part = "$word(\\x2e$word)*";
     $addr_spec = "$local_part\\x40$domain";
-    return preg_match("!^$addr_spec$!", $email)? 1: 0;
+    return preg_match("!^$addr_spec$!", $email) == 1;
 }
 
 /**
