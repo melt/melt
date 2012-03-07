@@ -188,9 +188,6 @@ function read_server_var($var_name, $alt_var_name = null) {
     \define("REQ_IS_CORE_CONSOLE", \strncasecmp(REQ_URL, "/core/console", \strlen("/core/console")) == 0);
     // Can be in developer mode when developer is logged in and (is in console or maintenance mode).
     \define("APP_IN_DEVELOPER_MODE", APP_DEVELOPER_LOGGED_IN && (REQ_IS_CORE_CONSOLE || \melt\core\config\MAINTENANCE_MODE));
-    // The gettext extention conflicts with melt and must be disabled.
-    if (\melt\core\config\TRANSLATION_ENABLED && \extension_loaded("gettext"))
-        \trigger_error("Melt Framework compability error: The Gettext PHP extention is loaded in your installation and must be disabled as it conflicts with the Melt Framework core gettext implementation. Optionally you can disable translation by setting core\config\TRANSLATION_ENABLED to false.", \E_USER_ERROR);
     // In APC nostat mode melt does various optimization to minimize restat'ing the file system.
     \define("MELT_APC_NOSTAT_MODE", extension_loaded("apc") && @ini_get("apc.stat") === "0");
     \define("MELT_APC_NOSTAT_NS", MELT_APC_NOSTAT_MODE? substr(md5(APP_DIR, false), 0, 10): null);
