@@ -189,7 +189,7 @@ function read_server_var($var_name, $alt_var_name = null) {
     // Can be in developer mode when developer is logged in and (is in console or maintenance mode).
     \define("APP_IN_DEVELOPER_MODE", APP_DEVELOPER_LOGGED_IN && (REQ_IS_CORE_CONSOLE || \melt\core\config\MAINTENANCE_MODE));
     // In APC nostat mode melt does various optimization to minimize restat'ing the file system.
-    \define("MELT_APC_NOSTAT_MODE", extension_loaded("apc") && @ini_get("apc.stat") === "0");
+    \define("MELT_APC_NOSTAT_MODE", extension_loaded("apc") && @ini_get("apc.stat") === "0") && \melt\core\config\APC_AUTO_NOSTAT_ENABLED;
     \define("MELT_APC_NOSTAT_NS", MELT_APC_NOSTAT_MODE? substr(md5(APP_DIR, false), 0, 10): null);
     // \define identifier constants.
     \define("VOLATILE", "VOLATILE");

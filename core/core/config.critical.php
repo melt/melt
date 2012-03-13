@@ -11,4 +11,5 @@
     "TRANSLATION_ENABLED" => false,
     "TRANSLATION_MIN_Q" => 0.4,
     "IGNORE_64_BIT_WARNING" => false,
+    "APC_AUTO_NOSTAT_ENABLED" => true,
 );
