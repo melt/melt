@@ -12,6 +12,12 @@ class DateType extends \melt\AppType {
         $this->resetDateTime();
     }
     
+    public function __clone() {
+        parent::__clone();
+        $this->value = clone $this->value;
+    }
+    
+    
     protected function resetDateTime() {
         $this->value = DateTime::createFromFormat("U", 0);
     }
