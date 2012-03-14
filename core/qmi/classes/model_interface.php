@@ -662,7 +662,7 @@ class ModelInterface {
             $model_interface->setters[$new_instance_keys[$old_instance_key]] = $setter;
         foreach ($model_interface->autolinks as &$autolink) {
             $autolink[0] = $new_instance_keys[$autolink[0]];
-            $autolink[1] = $new_instance_keys[$autolink[1]];
+            $autolink[1] = $autolink[1] !== null? $new_instance_keys[$autolink[1]]: null;
         }
         return $model_interface;
     }
