@@ -162,6 +162,8 @@ class ModelInterface {
      * @return boolean
      */
     private function instanceAdded(\melt\Model $instance = null) {
+        if ($instance === null)
+            return false; 
         $instance_key = spl_object_hash($instance);
         return \array_key_exists($instance_key, $this->instances);
     }
