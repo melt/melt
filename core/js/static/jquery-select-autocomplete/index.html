@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+	"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+	<title>untitled</title>
+	<link rel="stylesheet" type="text/css" href="autocomplete.css">
+	
+	<script type="text/javascript" src="jquery-1.3.1.min.js"></script>
+	<script type="text/javascript" src="jquery.autocomplete.js"></script>
+	<script type="text/javascript" src="jquery.select-autocomplete.js"></script>
+	<script type="text/javascript">
+	$(document).ready(function() {
+      $('select.autocomplete').select_autocomplete();
+      $('select.autocomplete').show();
+  });
+   
+	</script>
+</head>
+
+<body>
+  <h1>jQuery Select Autocomplete Demo</h1>
+  
+  <p>Normally, you'd have the select list hidden, but for the purposes of this demo we'll keep it visible so you can see the selected item change when
+    you make a selection via the auto-complete text input.</p>
+    
+  <select class="autocomplete">
+    <option value="" selected="selected"></option>    
+    <option value="1">One</option>
+    <option value="2">Two</option>
+    <option value="3">Three</option>
+    <option value="4">Four</option>
+    <option value="5">Five</option>
+    <option value="6">Six</option>
+    <option value="7">Seven</option>
+    <option value="8">Eight</option>
+    <option value="9">Nine</option>
+    <option value="10">Ten</option>
+  </select>
+
+</body>
+</html>
