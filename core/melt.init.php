@@ -68,14 +68,12 @@ function put_configuration_directive($config_var_fqn, $new_value, $replace = fal
  * Reads a $_SERVER variable.
  * @internal
  */
-function read_server_var($var_name, $alt_var_name = null) {
-    if (!\array_key_exists($var_name, $_SERVER)) {
-        if ($alt_var_name !== null && \array_key_exists($alt_var_name, $_SERVER))
-            $var_name = $alt_var_name;
-        else
-            \trigger_error("Melt Framework initialization failed: Required \$_SERVER variable '$var_name' is not set! Webserver/PHP incompability?", \E_USER_ERROR);
+function read_server_var() {
+    foreach (func_get_args() as $var_name) {
+        if (\array_key_exists($var_name, $_SERVER))
+            return $_SERVER[$var_name];
     }
-    return $_SERVER[$var_name];
+    \trigger_error("Melt Framework initialization failed: Required \$_SERVER variable '$var_name' is not set! Webserver/PHP incompability?", \E_USER_ERROR);
 }
 
 \call_user_func(function() {
@@ -104,7 +102,7 @@ function read_server_var($var_name, $alt_var_name = null) {
     if (\is_file(APP_CONFIG_LOCAL))
         require APP_CONFIG_LOCAL;
     \define("APP_CONFIG", \is_file(APP_DIR . "/config.php")? APP_DIR . "/config.php": null);
-    if (APP_CONFIG !== null)  
+    if (APP_CONFIG !== null)
         require APP_CONFIG;
     // Declaring all configuration directives that is used before the loader has loaded them here.
     foreach (require(APP_CORE_DIR . "/core/config.critical.php") as $cfg_name => $default)
@@ -116,39 +114,9 @@ function read_server_var($var_name, $alt_var_name = null) {
     if (!APP_64_BIT && !\melt\core\config\IGNORE_64_BIT_WARNING)
         \trigger_error("Melt Framework initialization failed: Melt Framework expects 64 bit PHP. Using 32 bit PHP can result in obscure problems like ID sequence exhaustion after 2147483647. This check can be disabled in configuration (IGNORE_64_BIT_WARNING).", \E_USER_ERROR);
     // Check if running as apache child or in script mode.
-    \define("REQ_IS_CLI", !\function_exists("apache_get_version") || \apache_get_version() === false);
-    $developer_mode_allowed = false;
-    if (!REQ_IS_CLI) {
-        // Evaluate developer mode based on configuration and cookies.
-        $devkey_is_blank = \melt\core\config\DEVELOPER_KEY == "";
-        $devkey_matches = isset($_COOKIE['MELT_DEVKEY']) && ($_COOKIE['MELT_DEVKEY'] === \melt\core\config\DEVELOPER_KEY);
-        \define("APP_DEVELOPER_LOGGED_IN", ($devkey_is_blank || $devkey_matches));
-        // Evaluate application root host, path, port and protocol.
-        \define("APP_ROOT_PROTOCOL", ((isset($_SERVER["HTTPS"]) && !empty($_SERVER["HTTPS"])) || \melt\core\config\FORCE_HTTPS)? "https": "http");
-        \define("APP_ROOT_HOST", \preg_replace('#:[\d]+$#', "", read_server_var("HTTP_HOST")));
-        \define("APP_ROOT_PORT", $server_port = intval(read_server_var('SERVER_PORT')));
-        \define("APP_USING_STANDARD_PORT", \melt\core\config\IGNORE_LOCAL_PORT || (APP_ROOT_PROTOCOL == "http" && APP_ROOT_PORT == 80) || (APP_ROOT_PROTOCOL == "https" && APP_ROOT_PORT == 443));
-         // Evaluate APP_PATH from PHP_SELF.
-        $php_self = read_server_var("PHP_SELF");
-        if (!\preg_match('#/core/core\.php$#', $php_self))
-            \trigger_error("Melt Framework initialization failed: PHP_SELF does not end with '/core/core.php'. Make sure the core is installed properly.", \E_USER_ERROR);
-        \define("APP_ROOT_PATH", \substr($php_self, 0, -\strlen("core/core.php")));
-        // Determine if this is a proxy request or not, allowing melt to act as a proxy.
-        if (isset($_SERVER["REQUEST_URI"]) && \preg_match('#^https?://#', \strtolower($_SERVER["REQUEST_URI"]))) {
-            // For proxy requests the local REQ_URL is actually not defined,
-            // so this special placeholder will be used.
-            \define("REQ_IS_PROXY", true);
-            \define("REQ_PROXY_URL", $_SERVER["REQUEST_URI"]);
-            \define("REQ_URL", "/proxy");
-            \define("REQ_URL_QUERY", REQ_URL);
-        } else {
-            // Parse the request url which is relatie to the application root path.
-            \define("REQ_IS_PROXY", false);
-            \define("REQ_PROXY_URL", null);
-            \define("REQ_URL", \substr(read_server_var("REDIRECT_SCRIPT_URL", "REDIRECT_URL"), \strlen(APP_ROOT_PATH) - 1));
-            \define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
-        }
-    } else {
+    switch (PHP_SAPI) {
+    case "cli": // Command line interface mode.
+        \define("REQ_IS_CLI", true);
         $hostname = \gethostname();
         // Script request mode does not have a developer authentication mechanism.
         \define("APP_DEVELOPER_LOGGED_IN", true);
@@ -180,6 +148,38 @@ function read_server_var($var_name, $alt_var_name = null) {
             $_GET = array();
             \parse_str($req_query_str, $_GET);
         }
+        break;
+    default: // Web server mode.
+        \define("REQ_IS_CLI", false);
+        // Evaluate developer mode based on configuration and cookies.
+        $devkey_is_blank = \melt\core\config\DEVELOPER_KEY == "";
+        $devkey_matches = isset($_COOKIE['MELT_DEVKEY']) && ($_COOKIE['MELT_DEVKEY'] === \melt\core\config\DEVELOPER_KEY);
+        \define("APP_DEVELOPER_LOGGED_IN", ($devkey_is_blank || $devkey_matches));
+        // Evaluate application root host, path, port and protocol.
+        \define("APP_ROOT_PROTOCOL", ((isset($_SERVER["HTTPS"]) && !empty($_SERVER["HTTPS"])) || \melt\core\config\FORCE_HTTPS)? "https": "http");
+        \define("APP_ROOT_HOST", \preg_replace('#:[\d]+$#', "", read_server_var("HTTP_HOST")));
+        \define("APP_ROOT_PORT", $server_port = intval(read_server_var('SERVER_PORT')));
+        \define("APP_USING_STANDARD_PORT", \melt\core\config\IGNORE_LOCAL_PORT || (APP_ROOT_PROTOCOL == "http" && APP_ROOT_PORT == 80) || (APP_ROOT_PROTOCOL == "https" && APP_ROOT_PORT == 443));
+         // Evaluate APP_PATH from PHP_SELF.
+        $php_self = read_server_var("PHP_SELF");
+        if (!\preg_match('#/core/core\.php$#', $php_self))
+            \trigger_error("Melt Framework initialization failed: PHP_SELF does not end with '/core/core.php'. Make sure the core is installed properly.", \E_USER_ERROR);
+        \define("APP_ROOT_PATH", \substr($php_self, 0, -\strlen("core/core.php")));
+        // Determine if this is a proxy request or not, allowing melt to act as a proxy.
+        if (isset($_SERVER["REQUEST_URI"]) && \preg_match('#^https?://#', \strtolower($_SERVER["REQUEST_URI"]))) {
+            // For proxy requests the local REQ_URL is actually not defined,
+            // so this special placeholder will be used.
+            \define("REQ_IS_PROXY", true);
+            \define("REQ_PROXY_URL", $_SERVER["REQUEST_URI"]);
+            \define("REQ_URL", "/proxy");
+            \define("REQ_URL_QUERY", REQ_URL);
+        } else {
+            // Parse the request url which is relatie to the application root path.
+            \define("REQ_IS_PROXY", false);
+            \define("REQ_PROXY_URL", null);
+            \define("REQ_URL", \substr(read_server_var("REDIRECT_SCRIPT_URL", "REDIRECT_URL", "REQUEST_URI"), \strlen(APP_ROOT_PATH) - 1));
+            \define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
+        }
     }
     \define("APP_ROOT_URL", APP_ROOT_PROTOCOL . "://" . APP_ROOT_HOST . (APP_USING_STANDARD_PORT? "": ":" . APP_ROOT_PORT) . APP_ROOT_PATH);
     \define("REQ_URL_DIR", dirname(REQ_URL));
@@ -188,11 +188,8 @@ function read_server_var($var_name, $alt_var_name = null) {
     \define("REQ_IS_CORE_CONSOLE", \strncasecmp(REQ_URL, "/core/console", \strlen("/core/console")) == 0);
     // Can be in developer mode when developer is logged in and (is in console or maintenance mode).
     \define("APP_IN_DEVELOPER_MODE", APP_DEVELOPER_LOGGED_IN && (REQ_IS_CORE_CONSOLE || \melt\core\config\MAINTENANCE_MODE));
-    // The gettext extention conflicts with melt and must be disabled.
-    if (\melt\core\config\TRANSLATION_ENABLED && \extension_loaded("gettext"))
-        \trigger_error("Melt Framework compability error: The Gettext PHP extention is loaded in your installation and must be disabled as it conflicts with the Melt Framework core gettext implementation. Optionally you can disable translation by setting core\config\TRANSLATION_ENABLED to false.", \E_USER_ERROR);
     // In APC nostat mode melt does various optimization to minimize restat'ing the file system.
-    \define("MELT_APC_NOSTAT_MODE", extension_loaded("apc") && @ini_get("apc.stat") === "0");
+    \define("MELT_APC_NOSTAT_MODE", extension_loaded("apc") && @ini_get("apc.stat") === "0") && \melt\core\config\APC_AUTO_NOSTAT_ENABLED;
     \define("MELT_APC_NOSTAT_NS", MELT_APC_NOSTAT_MODE? substr(md5(APP_DIR, false), 0, 10): null);
     // \define identifier constants.
     \define("VOLATILE", "VOLATILE");
