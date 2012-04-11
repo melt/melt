@@ -1,12 +1,5 @@
-<link rel="stylesheet" href="http://meltframework.org/static/css/style.css" type="text/css" media="screen" />
-<link rel="stylesheet" href="http://meltframework.org/static/css/buttons.css" type="text/css" media="screen" /> 
-<script type='text/javascript' src='http://meltframework.org/static/js/cufon-yui.js?ver=3.1.4'></script>
-<script type='text/javascript' src='http://meltframework.org/static/js/Gotham_300-Gotham_400-Gotham_italic_300-Gotham_italic_400.font.js?ver=3.1.4'></script>
-<script type="text/javascript">                   
-    Cufon.replace('h1, h2.subtitle, h2, h3.not-found',{fontFamily: 'Gotham', hover: true });
-</script>
 <div class="container" style="width: 800px; margin: 0 auto;text-align: center;">
-<img src="http://meltframework.org/static/img/melt-logo.png" class="logo" alt="Melt Framework" />
+<h1>A warm and cozy welcome to Melt!</h1>
 <code>
 <?php
 /** Melt framework project bootstrapping script. */
@@ -118,10 +111,21 @@ unlink(__FILE__)
 or fail("Could not delete \"" . __FILE__ . "\". Incorrect file system permissions?");
 ?>
 </code>
-<h2 class="subtitle">Bootstrapping <span>completed</span></h2>
-<p>Successfully bootstrapped Melt Framework!</b></p>
-<h2 class="subtitle">Developer Key <span></span></h2>
-<h3><?php echo $dev_key; ?></h3>
-<p>The developer key is auto-generated and required to access the console.<br/>If you lose it you need to enter a new key in config.php.</p>
-<ul class="actions"><li><a class="green button" href="core/console">Launch Melt Console<span>The browser-based, unix-like console interface</span></a></li></ul>
+<h2>Bootstrapped, broke and happy :-)</h2>
+<p>That's right, we've successfully bootstrapped Melt and you're good to go!</b></p>
+<p>
+    Melt ships with a unix-like console interface that allows you control Melt and perform common tasks using any web browser. 
+    The auto-generated <strong>developer key</strong> below is needed to access the console. If you lose it, check config.php.
+</p>
+<h2><code><?php echo $dev_key; ?></code></h2>
+
+<p>
+    The Melt documentation is available <a target="_blank" href="https://github.com/melt/melt/wiki">on GitHub</a>.<br/>
+    Get started with Melt using the <a target="_blank" href="https://github.com/melt/melt/wiki/Getting-Started-with-Melt">Getting Started Guide</a>
+    and become a pro Melter by reading the <a target="_blank" href="https://github.com/melt/melt/wiki/Solutions">Solutions</a> section.
+    The Melt core team runs the company <a href="http://omnicloudapp.com" target="_blank">Omnicloud</a>, feel free to tweet us at <a href="http://twitter.com/omnicloud" target="_blank">@omnicloud</a> if you need any help.
+</p>
+
+<h2><a href="core/console">Nuff talking, launch the Melt Console and start building apps</a></h2>
+    
 </div>
