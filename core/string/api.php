@@ -183,7 +183,7 @@ function http_url_validate($url) {
     . '[0-9a-z-.]+' // hostname, can be "any" combination of theese charachers
     . '(:[0-9]{1,5})?' // port number- :80
     . '((/?)|' // a slash isn't required if there is no file name
-    . '(/[0-9a-z_!~*\'().;?:@&=+$,%#-]+)+/?)$`';
+    . '(/[0-9a-z_!~*\'().;?:@&=+$,%#-]+)+/?)$`i';
     return preg_match($urlregex, $url) == 1;
 }
 
