@@ -177,8 +177,17 @@ function read_server_var() {
             // Parse the request url which is relatie to the application root path.
             \define("REQ_IS_PROXY", false);
             \define("REQ_PROXY_URL", null);
-            \define("REQ_URL", \substr(read_server_var("REDIRECT_SCRIPT_URL", "REDIRECT_URL", "REQUEST_URI"), \strlen(APP_ROOT_PATH) - 1));
-            \define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
+            switch (php_sapi_name()) {
+            case "fpm-fcgi":
+            case "cgi-fcgi":
+                \define("REQ_URL", preg_replace('/\?[^\?]+$/', '', \substr(read_server_var("REQUEST_URI"), \strlen(APP_ROOT_PATH) - 1)));
+                \define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["QUERY_STRING"])? "?" . $_SERVER["QUERY_STRING"]: ""));
+                break;
+            default:
+                // Apache-like server variables.
+                \define("REQ_URL", \substr(read_server_var("REDIRECT_SCRIPT_URL", "REDIRECT_URL"), \strlen(APP_ROOT_PATH) - 1));
+                \define("REQ_URL_QUERY", REQ_URL . (isset($_SERVER["REDIRECT_QUERY_STRING"])? "?" . $_SERVER["REDIRECT_QUERY_STRING"]: ""));
+            }
         }
     }
     \define("APP_ROOT_URL", APP_ROOT_PROTOCOL . "://" . APP_ROOT_HOST . (APP_USING_STANDARD_PORT? "": ":" . APP_ROOT_PORT) . APP_ROOT_PATH);
