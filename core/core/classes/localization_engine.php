@@ -556,7 +556,7 @@ class LocalizationEngine {
         return new LocalizationEngine($saved_state['locale_data']);
     }
 
-    private function trySetLanguage($locale) {
+    public function trySetLanguage($locale) {
         $locale = \strtolower(\substr($locale, 0, 2));
         if (\strlen($locale) != 2)
             return false;
